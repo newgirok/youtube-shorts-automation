@@ -1,0 +1,29 @@
+{
+  "name": "@shorts/api",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "node --env-file=../../.env.local ../../node_modules/tsx/dist/cli.mjs watch --tsconfig tsconfig.dev.json src/main.ts",
+    "start": "node dist/main.js",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.0.0",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-fastify": "^11.0.0",
+    "@shorts/shared": "workspace:*",
+    "fastify": "^5.8.5",
+    "google-auth-library": "^9.0.0",
+    "googleapis": "^144.0.0",
+    "reflect-metadata": "^0.2.0",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}
