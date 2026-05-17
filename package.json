@@ -1,0 +1,25 @@
+{
+  "name": "youtube-shorts-automation",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "scripts": {
+    "test:tts": "tsx scripts/tools/test-tts.ts",
+    "test:upload": "tsx scripts/tools/test-upload.ts",
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "test": "turbo test"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.7.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2",
+    "googleapis": "^171.4.0",
+    "zod": "^4.4.3"
+  }
+}
