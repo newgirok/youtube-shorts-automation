@@ -1,0 +1,70 @@
+@import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: oklch(0 0 0);
+    --foreground: oklch(1 0 0);
+    --card: oklch(0.14 0 0);
+    --card-foreground: oklch(1 0 0);
+    --popover: oklch(0.18 0 0);
+    --popover-foreground: oklch(1 0 0);
+    --primary: oklch(1 0 0);
+    --primary-foreground: oklch(0 0 0);
+    --secondary: oklch(0.25 0 0);
+    --secondary-foreground: oklch(1 0 0);
+    --muted: oklch(0.23 0 0);
+    --muted-foreground: oklch(0.72 0 0);
+    --accent: oklch(0.32 0 0);
+    --accent-foreground: oklch(1 0 0);
+    --destructive: oklch(0.69 0.20 23.91);
+    --destructive-foreground: oklch(0 0 0);
+    --border: oklch(0.26 0 0);
+    --input: oklch(0.32 0 0);
+    --ring: oklch(0.72 0 0);
+    --radius: 0.5rem;
+    --sidebar: oklch(0.11 0 0);
+    --sidebar-foreground: oklch(1 0 0);
+    --sidebar-primary: oklch(1 0 0);
+    --sidebar-primary-foreground: oklch(0 0 0);
+    --sidebar-accent: oklch(0.22 0 0);
+    --sidebar-accent-foreground: oklch(1 0 0);
+    --sidebar-border: oklch(0.22 0 0);
+    --sidebar-ring: oklch(0.72 0 0);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 9999px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.4);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Geist", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+}
