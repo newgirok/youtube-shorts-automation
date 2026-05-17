@@ -1,0 +1,100 @@
+# 비즈니스 규칙
+
+이 문서는 플랫폼의 핵심 도메인 규칙을 정리합니다. 제품 전체 요구사항은 [PRD](../prd.md), 개발 로드맵은 [로드맵](../roadmap.md)을 참고하세요.
+
+---
+
+## 핵심 운영 규칙
+
+### 1. 채널당 매일 1개 쇼츠 업로드
+
+- EventBridge Scheduler가 채널별 `uploadSchedule` (cron 형식)에 따라 매일 Job을 자동 생성합니다.
+- `Channel.isActive = false`인 채널은 스케줄에서 제외됩니다.
+- 스케줄 기본값: `"0 9 * * *"` (UTC 오전 9시, KST 오후 6시)
+- 채널별로 독립적인 스케줄 설정이 가능합니다.
+
+### 2. 토픽 큐 소진 시 자동 생성
+
+- 채널에 사전 등록된 토픽 큐가 있으면 순서대로 사용합니다.
+- 토픽 큐가 소진되면 script-worker가 Gemini API로 채널 niche에 맞는 토픽을 자동 생성합니다.
+- 자동 생성된 토픽은 다시 큐에 저장되지 않습니다 (매번 새로 생성).
+
+### 3. 보안 규칙
+
+- YouTube `refresh_token`은 **AES-256-GCM**으로 암호화하여 DB에 저장합니다.
+- `access_token`은 DB에 저장하지 않습니다. 런타임에 `refresh_token`으로 재발급합니다.
+- 암호화 키(`ENCRYPTION_KEY`)는 AWS Secrets Manager에서 주입합니다. `.env.local`에 임시 보관 가능하지만 Git 커밋 금지입니다.
+- 설정 방법: [암호화 키 설정 가이드](../runbook/encryption-key-setup.md)
+
+### 4. 쿠팡 파트너스 CTA 자막 삽입
+
+- `Channel.affiliateUrl`이 설정된 채널의 영상에만 적용됩니다.
+- 영상 **마지막 8초**에 `affiliate_cta` 문구가 자막으로 삽입됩니다.
+- CTA 문구는 Gemini API가 스크립트 생성 시 함께 출력합니다(`script.json`의 `affiliate_cta` 필드).
+- 영상 설명란에도 `affiliateUrl`이 포함됩니다.
+- `affiliateUrl`이 null이면 CTA 자막 삽입 및 설명란 링크가 생략됩니다.
+
+### 5. Job 재시도 규칙
+
+- SQS `Max Receive Count = 3`: Worker가 메시지를 3회 실패하면 DLQ로 이동합니다.
+- `Job.retryCount`는 Worker 처리 실패마다 1씩 증가합니다.
+- `Job.failReason`에는 마지막 실패 원인(에러 메시지)이 저장됩니다.
+- 대시보드 `/dashboard/[id]`에서 수동 재시도 가능합니다. 수동 재시도 시 `status = PENDING`으로 초기화됩니다.
+- DLQ 적재 시 CloudWatch 알람 → Slack/Discord 알림 (Phase 4 구현).
+
+### 6. YPP 달성 기준 추적
+
+- **YPP(YouTube Partner Program)** 달성 기준: 구독자 1,000명 + 최근 365일 시청 시간 4,000시간.
+- `Channel.isYPPQualified`는 YouTube Analytics 수집 시 자동으로 업데이트됩니다.
+- 대시보드 `/channels/[id]`에서 YPP 진행률을 확인할 수 있습니다.
+- YPP 달성 후 `estimatedRevenue` 필드에 예상 수익이 기록됩니다.
+
+---
+
+## 스크립트 출력 형식 (`script.json`)
+
+Gemini API가 생성하는 스크립트는 아래 JSON 형식을 따릅니다:
+
+```json
+{
+  "title": "유튜브 제목 (60자 이내, 이모지 포함)",
+  "hook": "첫 1~2문장 — 시청자가 이탈하지 않도록 강렬하게",
+  "script": "전체 스크립트 (45~55초 분량)",
+  "hashtags": ["#shorts", "#관련태그1", "#관련태그2"],
+  "thumbnail_text": "썸네일 텍스트 (10자 이내)",
+  "affiliate_product": "추천 상품명 또는 null",
+  "affiliate_cta": "지금 쿠팡에서 확인하세요! 링크는 설명란에 ↓"
+}
+```
+
+### 각 필드 규칙
+
+| 필드 | 규칙 | 비고 |
+|---|---|---|
+| `title` | 60자 이내, 이모지 포함 권장 | YouTube 제목으로 사용 |
+| `hook` | 첫 1~2문장, 질문이나 놀라운 사실로 시작 | 시청자 이탈 방지용 ([용어 사전 참고](./terminology.md#hook)) |
+| `script` | 45~55초 분량 (TTS 기준 약 350~450자) | 너무 짧으면 Shorts 분류 불이익 가능 |
+| `hashtags` | 최소 `#shorts` 포함, 3~5개 권장 | YouTube 태그로 사용 |
+| `thumbnail_text` | 10자 이내 강렬한 문구 | 썸네일 이미지 오버레이 텍스트 (Phase 5~) |
+| `affiliate_product` | 추천 상품명 또는 `null` | `Channel.affiliateUrl`이 없으면 `null` |
+| `affiliate_cta` | CTA 문구 (30자 이내 권장) | 영상 마지막 8초 자막, `affiliateUrl` 없으면 미사용 |
+
+---
+
+## 멱등성 보장 규칙
+
+SQS Standard Queue는 at-least-once 전달이므로 같은 메시지가 중복 처리될 수 있습니다. 아래 규칙으로 안전성을 보장합니다:
+
+- **S3 덮어쓰기**: 같은 `jobId`로 재처리하면 S3 파일이 덮어써집니다. 최종 결과는 동일합니다.
+- **업로드 중복 방지**: `Job.youtubeVideoId`가 이미 존재하면 upload-worker가 재업로드를 건너뜁니다.
+- **상태 확인**: 각 Worker는 처리 시작 전 `Job.status`를 확인해 이미 완료된 단계를 건너뜁니다.
+
+---
+
+## 관련 문서
+
+- [PRD](../prd.md) — 전체 제품 요구사항
+- [로드맵](../roadmap.md) — Phase별 개발 계획
+- [파이프라인 흐름](../architecture/pipeline-flow.md) — 기술 구현 상세
+- [데이터 모델](../architecture/data-model.md) — DB 스키마
+- [용어 사전](./terminology.md) — 도메인 용어 정의

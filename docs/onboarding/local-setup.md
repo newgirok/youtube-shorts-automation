@@ -1,0 +1,195 @@
+# 로컬 개발 환경 세팅 가이드
+
+## 사전 요구사항
+
+| 도구 | 최소 버전 | 설치 확인 |
+|------|-----------|-----------|
+| Node.js | 20+ | `node -v` |
+| pnpm | 9+ | `pnpm -v` |
+| Docker Desktop | 최신 | `docker -v` |
+| Python | 3.11+ | `python --version` |
+| FFmpeg | 최신 | `ffmpeg -version` |
+
+**Windows 사용자 추가 설정:**
+
+- FFmpeg: [공식 사이트](https://ffmpeg.org/download.html)에서 다운로드 후 PATH 등록
+- Python 3.11+: [python.org](https://www.python.org/downloads/) 또는 `winget install Python.Python.3.11`
+- `edge-tts` 설치: `pip install edge-tts`
+
+---
+
+## 초기 설정 단계
+
+### 1. 레포지토리 클론
+
+```bash
+git clone <repo-url> youtube-shorts-automation
+cd youtube-shorts-automation
+```
+
+### 2. 환경변수 파일 생성
+
+```bash
+# 루트 환경변수 (API, workers 공통)
+cp .env.example .env.local
+
+# web 전용 환경변수 (Next.js)
+cp apps/web/.env.example apps/web/.env.local
+```
+
+이후 각 파일을 열어 실제 값을 입력합니다. 변수별 설명은 [`env-vars.md`](./env-vars.md)를, API 키 발급 방법은 [`api-keys.md`](./api-keys.md)를 참고하세요.
+
+### 3. 의존성 설치
+
+```bash
+pnpm install
+```
+
+### 4. Docker Compose 실행 (LocalStack + PostgreSQL)
+
+```bash
+docker compose up -d
+```
+
+서비스 목록:
+
+| 서비스 | 역할 |
+|--------|------|
+| `postgres` | PostgreSQL 14 |
+| `localstack` | SQS 큐 5개 + DLQ 5개, S3 버킷 자동 생성 |
+| `api` | NestJS API 서버 |
+| `script-worker` | SQS 폴링 → Gemini 스크립트 생성 |
+| `tts-worker` | SQS 폴링 → edge-tts 음성 합성 |
+| `subtitle-worker` | SQS 폴링 → Whisper 자막 생성 |
+| `render-worker` | SQS 폴링 → FFmpeg 영상 렌더링 |
+| `upload-worker` | SQS 폴링 → YouTube 업로드 |
+
+> LocalStack과 PostgreSQL만 먼저 띄우려면: `docker compose up -d postgres localstack`
+
+### 5. DB 마이그레이션
+
+```bash
+pnpm --filter @shorts/shared prisma:migrate
+```
+
+### 6. 개발 서버 실행
+
+```bash
+pnpm dev
+```
+
+---
+
+## 주요 명령어
+
+| 명령어 | 설명 |
+|--------|------|
+| `pnpm dev` | 전체 패키지 개발 서버 실행 (Turborepo) |
+| `pnpm build` | 전체 패키지 빌드 |
+| `pnpm test` | 전체 테스트 실행 |
+| `pnpm lint` | 전체 린트 검사 |
+| `pnpm --filter @shorts/api dev` | API 서버만 실행 |
+| `pnpm --filter @shorts/web dev` | Next.js만 실행 |
+| `pnpm --filter @shorts/shared prisma:migrate` | Prisma 마이그레이션 |
+| `pnpm --filter @shorts/shared prisma:studio` | Prisma Studio (DB GUI) |
+
+---
+
+## 포트 정보
+
+| 서비스 | 포트 | 용도 |
+|--------|------|------|
+| NestJS API | `3000` | REST API |
+| Next.js Web | `3001` | 대시보드 |
+| PostgreSQL | `5432` | 데이터베이스 |
+| LocalStack | `4566` | SQS / S3 에뮬레이터 |
+
+---
+
+## 로컬 동작 확인
+
+Docker Compose 실행 후 다음 명령으로 job 생성 → 파이프라인 전 과정이 트리거되는지 확인합니다.
+
+```bash
+# job 생성 요청
+curl -X POST http://localhost:3000/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"topic": "오늘의 한국사 퀴즈", "channelId": "<채널ID>"}'
+```
+
+응답에서 `jobId`를 확인한 뒤 상태를 폴링합니다:
+
+```bash
+curl http://localhost:3000/jobs/<jobId>
+```
+
+LocalStack SQS 메시지 확인:
+
+```bash
+# 큐 목록 확인
+aws --endpoint-url=http://localhost:4566 sqs list-queues
+
+# 특정 큐의 메시지 수 확인
+aws --endpoint-url=http://localhost:4566 sqs get-queue-attributes \
+  --queue-url http://localhost:4566/000000000000/script-queue \
+  --attribute-names ApproximateNumberOfMessages
+```
+
+---
+
+## Docker 없이 직접 실행 (선택)
+
+Docker를 사용하지 않고 개발할 경우 다음을 직접 준비해야 합니다:
+
+1. **PostgreSQL 직접 실행**: 로컬에 PostgreSQL 14+ 설치 후 `DATABASE_URL` 설정
+2. **LocalStack 대신 실제 AWS**: `AWS_ENDPOINT_URL` 변수를 제거하고 실제 SQS/S3 사용
+3. **각 워커 개별 실행**:
+
+```bash
+pnpm --filter @shorts/script-worker dev
+pnpm --filter @shorts/tts-worker dev
+# ... 나머지 워커
+```
+
+> 직접 실행 시 `.env.local`의 호스트명이 `localhost` 기준으로 설정되어 있는지 확인합니다. Docker 내부 호스트명(`postgres`, `localstack`)은 직접 실행 환경에서 동작하지 않습니다.
+
+---
+
+## Phase 3+: Supabase 사용 시 설정 차이
+
+로컬 Docker PostgreSQL 대신 Supabase를 사용하는 경우:
+
+```bash
+# .env.local
+# Transaction mode (포트 6543) — 일반 쿼리용
+DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true
+
+# Session mode (포트 5432) — 마이그레이션 전용
+DIRECT_URL=postgresql://postgres.[project-ref]:[password]@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres
+```
+
+`schema.prisma`에 `directUrl` 설정이 필요합니다:
+
+```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+```
+
+Lambda/Fargate 환경에서는 연결 풀 고갈 방지를 위해 `connection_limit=1` 추가:
+
+```bash
+DATABASE_URL=postgresql://...?pgbouncer=true&connection_limit=1
+```
+
+자세한 내용은 `docs/runbook/database-setup.md` 및 `docs/adr/007-database-strategy.md`를 참고하세요.
+
+---
+
+## 관련 문서
+
+- [`env-vars.md`](./env-vars.md) — 전체 환경변수 레퍼런스
+- [`api-keys.md`](./api-keys.md) — API 키 발급 가이드
+- [`../runbook/deploy.md`](../runbook/deploy.md) — 프로덕션 배포 절차
