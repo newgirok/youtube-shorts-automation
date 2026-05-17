@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  PENDING
+  SCRIPT_PROCESSING
+  TTS_PROCESSING
+  SUBTITLE_PROCESSING
+  RENDER_PROCESSING
+  UPLOAD_PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Channel {
+  id               String    @id @default(cuid())
+  youtubeId        String    @unique
+  name             String
+  niche            String
+  refreshToken     String
+  uploadSchedule   String    @default("0 9 * * *")
+  affiliateUrl     String?
+  isActive         Boolean   @default(true)
+  subscriberCount  Int       @default(0)
+  totalViews       BigInt    @default(0)
+  isYPPQualified   Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  jobs             Job[]
+  analytics        ChannelAnalytics[]
+}
+
+model Job {
+  id               String    @id @default(cuid())
+  channelId        String
+  topic            String
+  status           JobStatus @default(PENDING)
+  retryCount       Int       @default(0)
+  failReason       String?
+  scriptContent    Json?
+  audioS3Key       String?
+  subtitleS3Key    String?
+  videoS3Key       String?
+  youtubeVideoId   String?
+  viewCount        BigInt    @default(0)
+  likeCount        BigInt    @default(0)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  channel          Channel   @relation(fields: [channelId], references: [id])
+}
+
+model ChannelAnalytics {
+  id                String   @id @default(cuid())
+  channelId         String
+  date              DateTime @db.Date
+  views             BigInt   @default(0)
+  subscribers       Int      @default(0)
+  estimatedRevenue  Float    @default(0)
+
+  channel           Channel  @relation(fields: [channelId], references: [id])
+
+  @@unique([channelId, date])
+}
