@@ -1,0 +1,23 @@
+# 의존성
+node_modules
+**/node_modules
+
+# 빌드 결과물
+dist
+**/.next
+
+# 환경변수 (시크릿 유출 방지)
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+# 로그 및 임시 파일
+*.log
+scripts/output
+
+# 개발 도구
+.turbo
+.git
+.github
+.claude

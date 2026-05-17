@@ -1,0 +1,152 @@
+x-docker-env: &docker-env
+  DATABASE_URL: postgresql://postgres:postgres@postgres:5432/shorts
+  AWS_ENDPOINT_URL: http://localstack:4566
+  SQS_SCRIPT_QUEUE_URL: http://localstack:4566/000000000000/script-queue
+  SQS_TTS_QUEUE_URL: http://localstack:4566/000000000000/tts-queue
+  SQS_SUBTITLE_QUEUE_URL: http://localstack:4566/000000000000/subtitle-queue
+  SQS_RENDER_QUEUE_URL: http://localstack:4566/000000000000/render-queue
+  SQS_UPLOAD_QUEUE_URL: http://localstack:4566/000000000000/upload-queue
+
+services:
+  localstack:
+    image: localstack/localstack:3
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=sqs,s3
+      - DEFAULT_REGION=ap-northeast-2
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - ./infra/localstack/init:/etc/localstack/init/ready.d
+    healthcheck:
+      test: ["CMD", "awslocal", "sqs", "list-queues"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres:
+    image: postgres:14-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=shorts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build:
+      context: .
+      dockerfile: infra/docker/migrate/Dockerfile
+    env_file: .env.local
+    environment:
+      <<: *docker-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    ports:
+      - "3000:3000"
+    env_file: .env.local
+    environment:
+      <<: *docker-env
+      NODE_ENV: production
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      localstack:
+        condition: service_healthy
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+    ports:
+      - "3001:3001"
+    env_file: apps/web/.env.local
+    environment:
+      - NODE_ENV=production
+      - API_INTERNAL_URL=http://api:3000
+    depends_on:
+      api:
+        condition: service_started
+
+  script-worker:
+    build:
+      context: .
+      dockerfile: apps/workers/script/Dockerfile
+    env_file: .env.local
+    environment:
+      <<: *docker-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      localstack:
+        condition: service_healthy
+
+  tts-worker:
+    build:
+      context: .
+      dockerfile: apps/workers/tts/Dockerfile
+    env_file: .env.local
+    environment:
+      <<: *docker-env
+      EDGE_TTS_PATH: edge-tts
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      localstack:
+        condition: service_healthy
+
+  subtitle-worker:
+    build:
+      context: .
+      dockerfile: apps/workers/subtitle/Dockerfile
+    env_file: .env.local
+    environment:
+      <<: *docker-env
+      PYTHON_PATH: python3
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      localstack:
+        condition: service_healthy
+
+  render-worker:
+    build:
+      context: .
+      dockerfile: apps/workers/render/Dockerfile
+    env_file: .env.local
+    environment:
+      <<: *docker-env
+      FFMPEG_PATH: ffmpeg
+      FFPROBE_PATH: ffprobe
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      localstack:
+        condition: service_healthy
+
+  upload-worker:
+    build:
+      context: .
+      dockerfile: apps/workers/upload/Dockerfile
+    env_file: .env.local
+    environment:
+      <<: *docker-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      localstack:
+        condition: service_healthy
