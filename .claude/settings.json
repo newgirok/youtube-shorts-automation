@@ -1,0 +1,34 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "mcp__playwright__browser_.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -ExecutionPolicy Bypass -File \".claude\\playwright-sort.ps1\""
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(curl -s *)",
+      "Bash(curl -sI *)",
+      "Bash(netstat -ano *)",
+      "Bash(Get-ChildItem *)",
+      "Bash(Get-Content *)",
+      "Bash(docker compose logs *)",
+      "Bash(docker compose exec localstack *)",
+      "Bash(docker compose exec postgres psql * -c '\\d *')",
+      "Bash(pnpm --version)",
+      "Bash(where *)",
+      "Bash(diff *)",
+      "Bash(rm *)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(Get-ChildItem * | Remove-Item *)"
+    ],
+    "deny": []
+  }
+}

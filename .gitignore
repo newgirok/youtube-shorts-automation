@@ -30,9 +30,6 @@ public/bg.mp4
 .next/
 out/
 
-# Claude Code 설정
-.claude/
-
 # OS
 .DS_Store
 Thumbs.db
