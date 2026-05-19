@@ -11,8 +11,8 @@ export class ChannelsRepository {
     });
   }
 
-  findById(id: string) {
-    return prisma.channel.findUnique({
+  async findById(id: string) {
+    const row = await prisma.channel.findUnique({
       where: { id },
       select: {
         id: true,
@@ -27,6 +27,8 @@ export class ChannelsRepository {
         updatedAt: true,
       },
     });
+    if (!row) return null;
+    return { ...row, totalViews: Number(row.totalViews) };
   }
 
   updateSchedule(id: string, uploadSchedule: string) {
@@ -60,7 +62,7 @@ export class ChannelsRepository {
   findRefreshToken(channelId: string) {
     return prisma.channel.findUnique({
       where: { id: channelId },
-      select: { refreshToken: true },
+      select: { refreshToken: true, youtubeId: true },
     });
   }
 
@@ -84,5 +86,21 @@ export class ChannelsRepository {
         }),
       ),
     );
+  }
+
+  updateChannelStats(id: string, data: { subscriberCount: number; totalViews: number }) {
+    return prisma.channel.update({
+      where: { id },
+      data,
+      select: { id: true, subscriberCount: true, totalViews: true },
+    });
+  }
+
+  updateTotalViews(id: string, totalViews: number) {
+    return prisma.channel.update({
+      where: { id },
+      data: { totalViews },
+      select: { id: true, totalViews: true },
+    });
   }
 }

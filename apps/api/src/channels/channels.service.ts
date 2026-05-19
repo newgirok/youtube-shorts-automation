@@ -29,6 +29,33 @@ export class ChannelsService {
     return this.repo.getAnalytics(id);
   }
 
+  async syncChannel(channelId: string): Promise<{ synced: number; deleted: number }> {
+    log.info({ channelId }, '채널 통계 + 동영상 동기화 시작');
+
+    const channelRow = await this.repo.findRefreshToken(channelId);
+    if (!channelRow) throw new NotFoundException('채널을 찾을 수 없습니다.');
+
+    const refreshToken = decrypt(channelRow.refreshToken);
+    const client = new OAuth2Client(
+      process.env.YOUTUBE_CLIENT_ID,
+      process.env.YOUTUBE_CLIENT_SECRET,
+    );
+    client.setCredentials({ refresh_token: refreshToken });
+    const yt = google.youtube({ version: 'v3', auth: client });
+
+    const channelRes = await yt.channels.list({ part: ['statistics'], id: [channelRow.youtubeId] });
+    const stats = channelRes.data.items?.[0]?.statistics;
+    if (stats) {
+      await this.repo.updateChannelStats(channelId, {
+        subscriberCount: parseInt(stats.subscriberCount ?? '0', 10),
+        totalViews: parseInt(stats.viewCount ?? '0', 10),
+      });
+      log.info({ channelId, subscriberCount: stats.subscriberCount, viewCount: stats.viewCount }, '채널 통계 갱신 완료');
+    }
+
+    return this.syncVideos(channelId);
+  }
+
   async syncVideos(channelId: string): Promise<{ synced: number; deleted: number }> {
     log.info({ channelId }, 'YouTube 영상 동기화 시작');
 
@@ -82,6 +109,10 @@ export class ChannelsService {
     if (viewCountUpdates.length > 0) {
       await this.repo.updateJobViewCounts(viewCountUpdates);
       log.info({ channelId, updated: viewCountUpdates.length }, '조회수 업데이트 완료');
+
+      // 영상별 조회수 합산을 채널 총 조회수로 반영
+      const totalVideoViews = viewCountUpdates.reduce((sum, v) => sum + v.viewCount, 0);
+      await this.repo.updateTotalViews(channelId, totalVideoViews);
     }
 
     return { synced: jobs.length, deleted: deletedJobs.length };
