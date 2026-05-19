@@ -1,7 +1,6 @@
 FROM node:20-slim
 
-RUN apt-get update && apt-get install -y openssl python3 python3-pip && \
-    pip3 install --no-cache-dir requests faster-whisper==1.1.1 --break-system-packages && \
+RUN apt-get update && apt-get install -y openssl python3 python3-pip ffmpeg && \
     rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -10,7 +9,6 @@ COPY packages/shared/dist ./packages/shared/dist/
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/shared/prisma ./packages/shared/prisma/
 COPY apps/workers/subtitle/dist ./apps/workers/subtitle/dist/
-COPY apps/workers/subtitle/src/transcriber.py ./apps/workers/subtitle/dist/
 COPY apps/workers/subtitle/package.json ./apps/workers/subtitle/
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 RUN npm install -g pnpm prisma@5 && \
