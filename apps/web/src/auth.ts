@@ -1,7 +1,7 @@
-import NextAuth, { type NextAuthResult } from 'next-auth';
+import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
 
-export const { handlers, auth, signIn, signOut }: NextAuthResult = NextAuth({
+const nextAuth = NextAuth({
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   providers: [
     Google({
@@ -18,3 +18,5 @@ export const { handlers, auth, signIn, signOut }: NextAuthResult = NextAuth({
     },
   },
 });
+
+export const { handlers, auth, signIn, signOut } = nextAuth;
