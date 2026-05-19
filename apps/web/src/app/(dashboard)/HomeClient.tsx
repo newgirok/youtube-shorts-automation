@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Video } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Video, Eye } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
 import { useChannelStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
@@ -28,15 +28,32 @@ function useCarouselSize() {
 
 
 function GalleryCard({ job }: { job: JobType }) {
+  const [hovered, setHovered] = useState(false);
   const thumb = job.youtubeVideoId
     ? `https://img.youtube.com/vi/${job.youtubeVideoId}/mqdefault.jpg`
     : null;
 
   return (
-    <div className="w-full rounded-md overflow-hidden bg-white/10 cursor-pointer hover:ring-1 hover:ring-white/30 transition-all">
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        transition: 'box-shadow 0.2s, background-color 0.2s',
+        boxShadow: hovered
+          ? 'inset 0 0 0 2px rgba(255,255,255,0.65)'
+          : 'inset 0 0 0 1px rgba(255,255,255,0.12)',
+        backgroundColor: hovered ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.1)',
+      }}
+      className="w-full rounded-md overflow-hidden cursor-pointer"
+    >
       <div className="aspect-video relative">
         {thumb ? (
-          <img src={thumb} alt={job.topic} className="w-full h-full object-cover" />
+          <img
+            src={thumb}
+            alt={job.topic}
+            style={{ filter: hovered ? 'brightness(1.12)' : 'brightness(1)', transition: 'filter 0.2s' }}
+            className="w-full h-full object-cover"
+          />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-white/5">
             <Video className="w-4 h-4 text-white/30" />
@@ -52,6 +69,12 @@ function GalleryCard({ job }: { job: JobType }) {
         {job.status === 'PENDING' && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <span className="text-[10px] text-white/60">대기</span>
+          </div>
+        )}
+        {job.status === 'COMPLETED' && (job.viewCount ?? 0) > 0 && (
+          <div className="absolute bottom-1 right-1 flex items-center gap-0.5 bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5">
+            <Eye className="w-2.5 h-2.5 text-white/70" />
+            <span className="text-[9px] text-white/80 font-medium">{(job.viewCount ?? 0).toLocaleString()}</span>
           </div>
         )}
       </div>
@@ -113,7 +136,7 @@ function JobCarousel({ jobs }: { jobs: JobType[] }) {
       aria-roledescription="carousel"
       tabIndex={0}
       onKeyDown={handleKeyDown}
-      className="flex items-center gap-2 px-3 w-full focus:outline-none"
+      className="flex items-center gap-2 px-2 w-full focus:outline-none"
     >
       {/* ARIA 라이브 리전 — 스크린 리더용 */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
@@ -176,6 +199,7 @@ function JobCarousel({ jobs }: { jobs: JobType[] }) {
 
 export function HomeClient({ channels }: { channels: Channel[] }) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { selectedChannelId, setSelectedChannelId } = useChannelStore();
 
   const [topic, setTopic] = useState('');
@@ -190,6 +214,14 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
 
   const activeChannelId = selectedChannelId ?? channels[0]?.id ?? '';
 
+  // 채널 변경 시 sync 호출 → 조회수 DB 갱신 후 Jobs 목록 refetch
+  useEffect(() => {
+    if (!activeChannelId) return;
+    apiPost(`/channels/${activeChannelId}/sync`, {})
+      .then(() => queryClient.invalidateQueries({ queryKey: ['jobs', activeChannelId] }))
+      .catch(() => {});
+  }, [activeChannelId, queryClient]);
+
   const { data: realJobs = [] } = useQuery<JobType[]>({
     queryKey: ['jobs', activeChannelId],
     queryFn: () => apiGet<JobType[]>(`/jobs?channelId=${activeChannelId}`),
@@ -197,8 +229,8 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
     refetchInterval: (query) => {
       const data = query.state.data ?? [];
       if (data.length === 0) return 2000;
-      const allDone = data.every((s) => s.status === 'COMPLETED' || s.status === 'FAILED');
-      return allDone ? false : 2000;
+      const hasProcessing = data.some((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED');
+      return hasProcessing ? 2000 : 30000;
     },
   });
 
@@ -299,9 +331,9 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
 
       {/* 갤러리 — 프롬프트 아래 */}
       {jobs.length > 0 && (
-        <div className="w-full max-w-5xl mt-6 md:mt-32 bg-black/30 backdrop-blur-sm rounded-xl overflow-hidden">
+        <div className="w-full max-w-5xl mt-6 md:mt-32 bg-black/30 backdrop-blur-sm rounded-xl">
           {/* 연/월 필터 */}
-          <div className="flex items-center gap-1.5 px-3 pt-2 pb-2 border-b border-white/10 flex-wrap">
+          <div className="flex items-center gap-1.5 px-3 pt-2 pb-2 border-b border-white/10 flex-wrap rounded-t-xl">
             <button
               onClick={() => handleYearSelect(null)}
               className={cn(
@@ -341,7 +373,7 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
               </>
             )}
           </div>
-          <div className="py-2">
+          <div className="py-2 overflow-visible">
             <JobCarousel jobs={filteredJobs} />
           </div>
         </div>

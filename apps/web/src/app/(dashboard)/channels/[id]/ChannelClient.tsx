@@ -1,8 +1,9 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { apiGet } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import type { AnalyticsRow, Channel } from '@/lib/types';
 
 function ProgressBar({ value, max, label }: { value: number; max: number; label: string }) {
@@ -64,13 +65,31 @@ function AnalyticsTable({ analytics }: { analytics: AnalyticsRow[] }) {
 }
 
 export function ChannelClient({ channel: initial }: { channel: Channel }) {
+  const queryClient = useQueryClient();
+
+  const { data: channel = initial } = useQuery<Channel>({
+    queryKey: ['channel', initial.id],
+    queryFn: () => apiGet<Channel>(`/channels/${initial.id}`),
+    initialData: initial,
+    staleTime: 0,
+    refetchInterval: 30000,
+  });
+
   const { data: analytics = [] } = useQuery<AnalyticsRow[]>({
     queryKey: ['analytics', initial.id],
     queryFn: () => apiGet<AnalyticsRow[]>(`/channels/${initial.id}/analytics`),
   });
 
-  const subscriberCount = initial.subscriberCount ?? 0;
-  const totalViews = initial.totalViews ?? 0;
+  useEffect(() => {
+    apiPost(`/channels/${initial.id}/sync`, {})
+      .then(() => {
+        queryClient.invalidateQueries({ queryKey: ['channel', initial.id] });
+      })
+      .catch(() => {});
+  }, [initial.id, queryClient]);
+
+  const subscriberCount = channel.subscriberCount ?? 0;
+  const totalViews = channel.totalViews ?? 0;
   const subPct = Math.min((subscriberCount / 1000) * 100, 100);
   // watch time hours 데이터 미수집 — totalViews는 조회수(views)이며 시청시간(hours)이 아님
   const viewPct = 0;
@@ -180,12 +199,12 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
           <p className="text-sm font-semibold text-white shrink-0">채널 정보</p>
           <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 shrink-0">
             <p className="text-xs text-white/40 mb-0.5">채널 이름</p>
-            <p className="text-base font-semibold text-white">{initial.name}</p>
+            <p className="text-base font-semibold text-white">{channel.name}</p>
           </div>
-          {initial.niche && (
+          {channel.niche && (
             <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 shrink-0">
               <p className="text-xs text-white/40 mb-0.5">카테고리</p>
-              <p className="text-sm font-medium text-white">{initial.niche}</p>
+              <p className="text-sm font-medium text-white">{channel.niche}</p>
             </div>
           )}
           <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 shrink-0">
@@ -204,8 +223,8 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
           <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 flex-1">
             <p className="text-xs text-white/40 mb-1.5">운영 상태</p>
             <div className="flex items-center gap-2">
-              <div className={`w-1.5 h-1.5 rounded-full ${initial.isActive ? 'bg-green-400' : 'bg-white/30'}`} />
-              <span className="text-xs font-medium text-white">{initial.isActive ? '운영 중' : '중지됨'}</span>
+              <div className={`w-1.5 h-1.5 rounded-full ${channel.isActive ? 'bg-green-400' : 'bg-white/30'}`} />
+              <span className="text-xs font-medium text-white">{channel.isActive ? '운영 중' : '중지됨'}</span>
             </div>
           </div>
         </div>

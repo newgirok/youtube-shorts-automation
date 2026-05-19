@@ -5,8 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Eye, ThumbsUp, Clock, RefreshCw, ExternalLink } from 'lucide-react';
 import { apiGet } from '@/lib/api';
 import { StatusTimeline } from '@/components/StatusTimeline';
-import { Badge } from '@/components/ui/badge';
-import type { Job, JobStatus } from '@/lib/types';
+import type { Job } from '@/lib/types';
 
 function formatDateTime(iso: string | null): string {
   if (!iso) return '-';
@@ -19,36 +18,6 @@ function calcProcessingSeconds(startedAt: string | null, completedAt: string | n
   return `${diff}초`;
 }
 
-function StatusBadge({ status, failReason }: { status: JobStatus; failReason?: string | null }) {
-  if (status === 'COMPLETED') return <Badge className="bg-green-700 text-white">완료</Badge>;
-  if (status === 'FAILED') {
-    if (failReason === '유튜브에서 영상이 삭제되었습니다.') {
-      return <Badge variant="outline" className="text-muted-foreground">삭제됨</Badge>;
-    }
-    return <Badge variant="destructive">실패</Badge>;
-  }
-  if (status === 'PENDING') return <Badge variant="outline">대기</Badge>;
-  return <Badge variant="secondary">처리 중</Badge>;
-}
-
-interface StatCardProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}
-
-function StatCard({ icon, label, value }: StatCardProps) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 overflow-hidden">
-      <div className="flex items-center gap-2 mb-2 min-w-0">
-        <div className="bg-white/10 rounded-lg p-1.5 text-white/60 shrink-0">{icon}</div>
-        <span className="text-xs text-white/50 truncate">{label}</span>
-      </div>
-      <p className="text-xl font-bold text-white truncate">{value}</p>
-    </div>
-  );
-}
-
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
 
@@ -58,7 +27,8 @@ export default function JobDetailPage() {
     refetchInterval: (query) => {
       const job = query.state.data;
       if (!job) return 2000;
-      return job.status === 'COMPLETED' || job.status === 'FAILED' ? false : 2000;
+      if (job.status === 'COMPLETED' || job.status === 'FAILED') return 30000;
+      return 2000;
     },
   });
 
@@ -81,10 +51,7 @@ export default function JobDetailPage() {
     <div className="flex flex-col px-4 py-4 md:px-6 gap-3 md:h-screen md:overflow-y-auto">
       {/* 헤더 */}
       <div className="shrink-0 flex items-center gap-3 justify-between">
-        <div className="flex items-center gap-3 min-w-0">
-          <h1 className="text-base font-semibold text-white truncate max-w-xl">{title}</h1>
-          <StatusBadge status={job.status} failReason={job.failReason} />
-        </div>
+        <h1 className="text-base font-semibold text-white truncate">{title}</h1>
         {job.youtubeVideoId && (
           <a
             href={`https://youtube.com/shorts/${job.youtubeVideoId}`}
@@ -98,34 +65,45 @@ export default function JobDetailPage() {
         )}
       </div>
 
-      {/* stat 4개 */}
-      <div className="shrink-0 grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* stat 4개 — 모바일도 4열 한 줄 */}
+      <div className="shrink-0 grid grid-cols-4 gap-2">
         {/* 조회수: 10k 목표 진행 바 */}
-        <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 overflow-hidden">
-          <div className="flex items-center gap-2 mb-2 min-w-0">
-            <div className="bg-white/10 rounded-lg p-1.5 text-white/60 shrink-0"><Eye className="w-4 h-4" /></div>
-            <span className="text-xs text-white/50 truncate">조회수</span>
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-sm p-2.5 overflow-hidden">
+          <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
+            <Eye className="w-3 h-3 text-white/40 shrink-0" />
+            <span className="text-[10px] text-white/40 truncate">조회수</span>
           </div>
-          <p className="text-xl font-bold text-white truncate">{(job.viewCount ?? 0).toLocaleString()}</p>
-          <div className="mt-2 h-1 w-full rounded-full bg-white/10">
-            <div className="h-1 rounded-full bg-white/60 transition-all duration-500" style={{ width: `${Math.min(((job.viewCount ?? 0) / 10000) * 100, 100)}%` }} />
+          <p className="text-base font-bold text-white truncate">{(job.viewCount ?? 0).toLocaleString()}</p>
+          <div className="mt-1.5 h-0.5 w-full rounded-full bg-white/10">
+            <div className="h-0.5 rounded-full bg-white/50 transition-all duration-500" style={{ width: `${Math.min(((job.viewCount ?? 0) / 10000) * 100, 100)}%` }} />
           </div>
-          <p className="text-[10px] text-white/25 mt-1">/ 10,000 목표</p>
+          <p className="text-[9px] text-white/20 mt-0.5">/ 10,000</p>
         </div>
-        {/* 좋아요: 조회수 대비 비율 바 */}
-        <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 overflow-hidden">
-          <div className="flex items-center gap-2 mb-2 min-w-0">
-            <div className="bg-white/10 rounded-lg p-1.5 text-white/60 shrink-0"><ThumbsUp className="w-4 h-4" /></div>
-            <span className="text-xs text-white/50 truncate">좋아요</span>
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-sm p-2.5 overflow-hidden">
+          <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
+            <ThumbsUp className="w-3 h-3 text-white/40 shrink-0" />
+            <span className="text-[10px] text-white/40 truncate">좋아요</span>
           </div>
-          <p className="text-xl font-bold text-white truncate">{(job.likeCount ?? 0).toLocaleString()}</p>
-          <div className="mt-2 h-1 w-full rounded-full bg-white/10">
-            <div className="h-1 rounded-full bg-white/60 transition-all duration-500" style={{ width: `${job.viewCount ? Math.min(((job.likeCount ?? 0) / job.viewCount) * 100, 100) : 0}%` }} />
+          <p className="text-base font-bold text-white truncate">{(job.likeCount ?? 0).toLocaleString()}</p>
+          <div className="mt-1.5 h-0.5 w-full rounded-full bg-white/10">
+            <div className="h-0.5 rounded-full bg-white/50 transition-all duration-500" style={{ width: `${job.viewCount ? Math.min(((job.likeCount ?? 0) / job.viewCount) * 100, 100) : 0}%` }} />
           </div>
-          <p className="text-[10px] text-white/25 mt-1">조회수 대비</p>
+          <p className="text-[9px] text-white/20 mt-0.5">조회 대비</p>
         </div>
-        <StatCard icon={<Clock className="w-4 h-4" />} label="처리 시간" value={processingTime} />
-        <StatCard icon={<RefreshCw className="w-4 h-4" />} label="재시도" value={`${job.retryCount}회`} />
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-sm p-2.5 overflow-hidden">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <Clock className="w-3 h-3 text-white/40 shrink-0" />
+            <span className="text-[10px] text-white/40 truncate">처리시간</span>
+          </div>
+          <p className="text-base font-bold text-white truncate">{processingTime}</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-sm p-2.5 overflow-hidden">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <RefreshCw className="w-3 h-3 text-white/40 shrink-0" />
+            <span className="text-[10px] text-white/40 truncate">재시도</span>
+          </div>
+          <p className="text-base font-bold text-white truncate">{job.retryCount}회</p>
+        </div>
       </div>
 
       {/* 메인 가로 3컬럼 */}
