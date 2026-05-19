@@ -1,4 +1,4 @@
-import { writeFileSync, createWriteStream } from 'node:fs';
+import { createWriteStream } from 'node:fs';
 import { get } from 'node:https';
 
 async function downloadFile(url: string, outputPath: string): Promise<void> {
@@ -16,15 +16,13 @@ async function downloadFile(url: string, outputPath: string): Promise<void> {
   });
 }
 
-export async function generateBackgroundImage(
-  topic: string,
+export async function downloadSceneImage(
+  keyword: string,
   outputPath: string,
   apiKey: string
 ): Promise<void> {
-  // 토픽에서 영문 키워드 추출 (Pexels는 영어 검색이 더 정확)
-  const keyword = encodeURIComponent(topic.replace(/[^\w\s가-힣]/g, ' ').trim());
-
-  const url = `https://api.pexels.com/v1/search?query=${keyword}&orientation=portrait&size=large&per_page=5`;
+  const encoded = encodeURIComponent(keyword);
+  const url = `https://api.pexels.com/v1/search?query=${encoded}&orientation=portrait&size=large&per_page=10`;
 
   const data = await new Promise<string>((resolve, reject) => {
     get(url, { headers: { Authorization: apiKey } }, (res) => {
@@ -40,7 +38,7 @@ export async function generateBackgroundImage(
   };
 
   const photos = json.photos ?? [];
-  if (photos.length === 0) throw new Error(`Pexels 검색 결과 없음: ${topic}`);
+  if (photos.length === 0) throw new Error(`Pexels 검색 결과 없음: ${keyword}`);
 
   const photoUrl = photos[Math.floor(Math.random() * photos.length)]!.src.portrait;
   await downloadFile(photoUrl, outputPath);

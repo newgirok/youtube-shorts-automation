@@ -2,8 +2,8 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { SQSClient, SendMessageCommand, ChangeMessageVisibilityCommand } from '@aws-sdk/client-sqs';
 import { prisma, downloadFromS3, uploadToS3, jobKey, createLogger } from '@shorts/shared';
-import { renderVideo } from './renderer.js';
-import { generateBackgroundImage } from './image-generator.js';
+import { renderSceneClip, concatClipsWithAudio, type SceneEffect } from './renderer.js';
+import { downloadSceneImage } from './image-generator.js';
 import type { Env } from './env.js';
 
 interface Message {
@@ -13,10 +13,19 @@ interface Message {
   subtitleS3Key: string;
 }
 
+interface Scene {
+  start: number;
+  end: number;
+  text: string;
+  keyword: string;
+  effect: SceneEffect;
+}
+
 interface ScriptContent {
   title?: string;
   thumbnail_text?: string;
   affiliate_cta?: string;
+  scenes?: Scene[];
 }
 
 export async function processMessage(
@@ -51,7 +60,6 @@ export async function processMessage(
 
     const audioPath = join(tmpDir, `${jobId}-audio.mp3`);
     const srtPath = join(tmpDir, `${jobId}-subtitle.srt`);
-    const bgImagePath = join(tmpDir, `${jobId}-bg.jpg`);
     const outputPath = join(tmpDir, `${jobId}-output.mp4`);
 
     log.info('S3에서 파일 다운로드 시작');
@@ -61,7 +69,6 @@ export async function processMessage(
     ]);
     writeFileSync(audioPath, audioBuf);
 
-    // Channel.affiliateUrl 확인 후 CTA 세그먼트 추가
     const job = await prisma.job.findUnique({
       where: { id: jobId },
       select: {
@@ -71,50 +78,66 @@ export async function processMessage(
       },
     });
 
-    // AI 배경 이미지 생성
-    let generatedBgPath: string | undefined;
-    try {
-      const imagePrompt = (job?.scriptContent as ScriptContent | null)?.thumbnail_text ?? job?.topic ?? jobId;
-      await generateBackgroundImage(imagePrompt, bgImagePath, env.PEXELS_API_KEY);
-      generatedBgPath = bgImagePath;
-      log.info('AI 배경 이미지 생성 완료');
-    } catch (err) {
-      log.warn({ err }, 'AI 배경 이미지 생성 실패, 검정 배경으로 대체');
+    const scriptContent = job?.scriptContent as ScriptContent | null;
+    const scenes: Scene[] = scriptContent?.scenes ?? [];
+    const fontName = process.platform === 'win32' ? 'Malgun Gothic Bold' : 'NanumGothicExtraBold';
+
+    const clipPaths: string[] = [];
+
+    if (scenes.length > 0) {
+      log.info({ count: scenes.length }, '장면별 렌더링 시작');
+
+      for (let i = 0; i < scenes.length; i++) {
+        const scene = scenes[i]!;
+        const duration = scene.end - scene.start;
+        const imgPath = join(tmpDir, `${jobId}-scene-${i}.jpg`);
+        const clipPath = join(tmpDir, `${jobId}-clip-${i}.mp4`);
+
+        try {
+          await downloadSceneImage(scene.keyword, imgPath, env.PEXELS_API_KEY);
+        } catch (err) {
+          log.warn({ err, keyword: scene.keyword }, 'Pexels 검색 실패, topic으로 재시도');
+          await downloadSceneImage(job?.topic ?? 'nature', imgPath, env.PEXELS_API_KEY);
+        }
+
+        renderSceneClip(imgPath, clipPath, duration, scene.effect, env.FFMPEG_PATH);
+        clipPaths.push(clipPath);
+        log.info({ scene: i + 1, total: scenes.length }, '장면 클립 생성 완료');
+      }
+    } else {
+      log.warn('scenes 없음, topic 키워드로 단일 이미지 fallback');
+      const imgPath = join(tmpDir, `${jobId}-scene-0.jpg`);
+      const clipPath = join(tmpDir, `${jobId}-clip-0.mp4`);
+      await downloadSceneImage(job?.topic ?? 'nature', imgPath, env.PEXELS_API_KEY);
+      renderSceneClip(imgPath, clipPath, 50, 'zoom-in', env.FFMPEG_PATH);
+      clipPaths.push(clipPath);
     }
 
+    // CTA 자막 추가
     let finalSrt = srtBuf.toString('utf-8');
-    if (job?.channel?.affiliateUrl && job.scriptContent) {
-      const scriptContent = job.scriptContent as ScriptContent;
+    if (job?.channel?.affiliateUrl && scriptContent?.affiliate_cta) {
       const ctaText = scriptContent.affiliate_cta;
-      if (ctaText) {
-        // 마지막 세그먼트 종료 시간 파악 후 CTA 추가
-        const lastTimeMatch = finalSrt.match(/(\d{2}:\d{2}:\d{2},\d{3}) -->/g);
-        if (lastTimeMatch) {
-          // SRT에서 마지막 end time 찾기
-          const allTimes = finalSrt.match(/\d{2}:\d{2}:\d{2},\d{3}/g) ?? [];
-          const lastEndTime = allTimes[allTimes.length - 1];
-          if (lastEndTime) {
-            const [h, m, s] = lastEndTime.replace(',', '.').split(':').map(Number);
-            const totalSec = (h ?? 0) * 3600 + (m ?? 0) * 60 + (s ?? 0);
-            const ctaStart = Math.max(0, totalSec - 8);
-            const formatTime = (sec: number) => {
-              const hh = Math.floor(sec / 3600);
-              const mm = Math.floor((sec % 3600) / 60);
-              const ss = Math.floor(sec % 60);
-              const ms = Math.round((sec % 1) * 1000);
-              return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
-            };
-            const segCount = (finalSrt.match(/^\d+$/gm) ?? []).length + 1;
-            finalSrt += `\n${segCount}\n${formatTime(ctaStart)} --> ${lastEndTime}\n${ctaText}\n\n`;
-          }
-        }
+      const allTimes = finalSrt.match(/\d{2}:\d{2}:\d{2},\d{3}/g) ?? [];
+      const lastEndTime = allTimes[allTimes.length - 1];
+      if (lastEndTime) {
+        const [h, m, s] = lastEndTime.replace(',', '.').split(':').map(Number);
+        const totalSec = (h ?? 0) * 3600 + (m ?? 0) * 60 + (s ?? 0);
+        const ctaStart = Math.max(0, totalSec - 8);
+        const formatTime = (sec: number) => {
+          const hh = Math.floor(sec / 3600);
+          const mm = Math.floor((sec % 3600) / 60);
+          const ss = Math.floor(sec % 60);
+          const ms = Math.round((sec % 1) * 1000);
+          return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+        };
+        const segCount = (finalSrt.match(/^\d+$/gm) ?? []).length + 1;
+        finalSrt += `\n${segCount}\n${formatTime(ctaStart)} --> ${lastEndTime}\n${ctaText}\n\n`;
       }
     }
     writeFileSync(srtPath, finalSrt, 'utf-8');
 
-    log.info('FFmpeg 렌더링 시작');
-    const fontName = process.platform === 'win32' ? 'Malgun Gothic' : 'NanumGothic';
-    renderVideo(audioPath, srtPath, outputPath, env.FFMPEG_PATH, fontName, generatedBgPath);
+    log.info('FFmpeg 최종 합성 시작');
+    concatClipsWithAudio(clipPaths, audioPath, srtPath, outputPath, env.FFMPEG_PATH, fontName, tmpDir);
 
     const videoBuf = readFileSync(outputPath);
     const videoS3Key = jobKey(jobId, 'output.mp4');
