@@ -1,8 +1,6 @@
 name: Deploy API
 on:
-  push:
-    branches: [main]
-    paths: [apps/api/**, packages/**]
+  workflow_dispatch:
 
 jobs:
   deploy:
