@@ -1,8 +1,8 @@
 import 'reflect-metadata';
 
-// BigInt는 JSON.stringify 기본 지원 없음 — 문자열로 직렬화
-(BigInt.prototype as unknown as { toJSON: () => string }).toJSON = function () {
-  return this.toString();
+// BigInt는 JSON.stringify 기본 지원 없음 — 숫자로 직렬화 (YouTube 조회수는 MAX_SAFE_INTEGER 이하)
+(BigInt.prototype as unknown as { toJSON: () => number }).toJSON = function () {
+  return Number(this);
 };
 
 const REQUIRED_ENV_VARS = [

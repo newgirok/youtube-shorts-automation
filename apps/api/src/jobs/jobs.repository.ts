@@ -11,7 +11,7 @@ export class JobsRepository {
   }
 
   async findById(id: string) {
-    return prisma.job.findUnique({
+    const row = await prisma.job.findUnique({
       where: { id },
       select: {
         id: true, channelId: true, topic: true, status: true, retryCount: true,
@@ -20,6 +20,8 @@ export class JobsRepository {
         createdAt: true, startedAt: true, completedAt: true,
       },
     });
+    if (!row) return null;
+    return { ...row, viewCount: Number(row.viewCount), likeCount: Number(row.likeCount) };
   }
 
   async resetToRetry(id: string, retryCount: number) {
@@ -31,12 +33,13 @@ export class JobsRepository {
   }
 
   async findMany(channelId?: string) {
-    return prisma.job.findMany({
+    const rows = await prisma.job.findMany({
       where: channelId ? { channelId } : undefined,
       orderBy: { createdAt: 'desc' },
       take: 50,
       select: { id: true, channelId: true, topic: true, status: true, retryCount: true, createdAt: true, youtubeVideoId: true, viewCount: true, scriptContent: true, failReason: true },
     });
+    return rows.map((r) => ({ ...r, viewCount: Number(r.viewCount) }));
   }
 
   async markFailed(id: string, failReason: string) {
