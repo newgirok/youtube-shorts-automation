@@ -12,10 +12,15 @@ function formatDateTime(iso: string | null): string {
   return new Date(iso).toLocaleString('ko-KR');
 }
 
-function calcProcessingSeconds(startedAt: string | null, completedAt: string | null): string {
+function calcProcessingTime(startedAt: string | null, completedAt: string | null): string {
   if (!startedAt || !completedAt) return '-';
   const diff = Math.round((new Date(completedAt).getTime() - new Date(startedAt).getTime()) / 1000);
-  return `${diff}초`;
+  const h = Math.floor(diff / 3600);
+  const m = Math.floor((diff % 3600) / 60);
+  const s = diff % 60;
+  if (h > 0) return `${h}시간 ${m}분 ${s}초`;
+  if (m > 0) return `${m}분 ${s}초`;
+  return `${s}초`;
 }
 
 export default function JobDetailPage() {
@@ -41,14 +46,15 @@ export default function JobDetailPage() {
   }
 
   const title = job.scriptContent?.title ?? job.topic;
-  const processingTime = calcProcessingSeconds(job.startedAt, job.completedAt);
+  const processingTime = calcProcessingTime(job.startedAt, job.completedAt);
+  const isYoutubeDeleted = job.status === 'FAILED' && job.failReason === '유튜브에서 영상이 삭제되었습니다.';
   const thumbnailUrl = job.youtubeVideoId
     ? `https://img.youtube.com/vi/${job.youtubeVideoId}/mqdefault.jpg`
     : null;
   const sc = job.scriptContent;
 
   return (
-    <div className="flex flex-col px-4 py-4 md:px-6 gap-3 md:h-screen md:overflow-y-auto">
+    <div className="flex flex-col px-4 py-4 md:px-6 gap-3 lg:h-screen lg:overflow-y-auto">
       {/* 헤더 */}
       <div className="shrink-0 flex items-center gap-3 justify-between">
         <h1 className="text-base font-semibold text-white truncate">{title}</h1>
@@ -65,8 +71,8 @@ export default function JobDetailPage() {
         )}
       </div>
 
-      {/* stat 4개 — 모바일도 4열 한 줄 */}
-      <div className="shrink-0 grid grid-cols-4 gap-2">
+      {/* stat 4개 */}
+      <div className="shrink-0 grid grid-cols-2 md:grid-cols-4 gap-2">
         {/* 조회수: 10k 목표 진행 바 */}
         <div className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-sm p-2.5 overflow-hidden">
           <div className="flex items-center gap-1.5 mb-1.5 min-w-0">
@@ -107,9 +113,9 @@ export default function JobDetailPage() {
       </div>
 
       {/* 메인 가로 3컬럼 */}
-      <div className="flex flex-col md:grid md:grid-cols-12 gap-3 flex-1 md:min-h-0">
-        {/* 좌: 썸네일 + 날짜 */}
-        <div className="order-3 md:order-1 md:col-span-3 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 flex flex-col gap-3 min-h-[300px] md:min-h-0">
+      <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 flex-1 lg:min-h-0">
+        {/* 좌: 영상 정보 — 모바일 1순위 */}
+        <div className="lg:col-span-3 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 flex flex-col gap-3 min-h-[200px] lg:min-h-0">
           <p className="text-xs font-semibold text-white shrink-0">영상 정보</p>
           <div className="shrink-0">
             {thumbnailUrl ? (
@@ -120,7 +126,37 @@ export default function JobDetailPage() {
               </div>
             )}
           </div>
-          <p className="text-xs text-white/70 leading-snug line-clamp-2 shrink-0">{title}</p>
+          {/* 상태 */}
+          <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 shrink-0 flex items-center justify-between gap-2">
+            <p className="text-xs text-white/40 shrink-0">상태</p>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+                job.status === 'COMPLETED' ? 'bg-green-500/20 text-green-400' :
+                isYoutubeDeleted ? 'bg-white/10 text-white/50' :
+                job.status === 'FAILED' ? 'bg-red-500/20 text-red-400' :
+                'bg-white/10 text-white/60'
+              }`}>
+                {isYoutubeDeleted ? '삭제' : { PENDING: '대기', SCRIPT_PROCESSING: '스크립트', TTS_PROCESSING: 'TTS',
+                   SUBTITLE_PROCESSING: '자막', RENDER_PROCESSING: '렌더링',
+                   UPLOAD_PROCESSING: '업로드', COMPLETED: '완료', FAILED: '실패' }[job.status]}
+              </span>
+              {job.status === 'COMPLETED' && (
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                  job.privacyStatus === 'public' ? 'bg-blue-500/20 text-blue-400' :
+                  job.privacyStatus === 'unlisted' ? 'bg-yellow-500/20 text-yellow-400' :
+                  'bg-white/10 text-white/50'
+                }`}>
+                  {{ public: '공개', unlisted: '일부공개', private: '비공개' }[job.privacyStatus] ?? job.privacyStatus}
+                </span>
+              )}
+            </div>
+          </div>
+          {/* 주제 */}
+          <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 shrink-0">
+            <p className="text-xs text-white/40 mb-0.5">주제</p>
+            <p className="text-xs text-white/70 leading-relaxed">{job.topic}</p>
+          </div>
+          {/* 날짜 */}
           <div className="flex flex-col gap-1.5 shrink-0">
             {[
               { label: '생성', value: formatDateTime(job.createdAt) },
@@ -135,14 +171,14 @@ export default function JobDetailPage() {
           </div>
         </div>
 
-        {/* 중: 처리 단계 */}
-        <div className="order-1 md:order-2 md:col-span-4 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 overflow-y-auto min-h-[300px] md:min-h-0">
+        {/* 중: 처리 단계 — 모바일 2순위 */}
+        <div className="lg:col-span-4 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 overflow-y-auto min-h-[200px] lg:min-h-0">
           <p className="text-sm font-semibold text-white mb-4">처리 단계</p>
           <StatusTimeline job={job} />
         </div>
 
-        {/* 우: 스크립트 */}
-        <div className="order-2 md:order-3 md:col-span-5 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 overflow-y-auto min-h-[300px] md:min-h-0">
+        {/* 우: 스크립트 — 모바일 3순위 */}
+        <div className="lg:col-span-5 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 overflow-y-auto min-h-[200px] lg:min-h-0">
           <p className="text-sm font-semibold text-white mb-4">스크립트 내용</p>
           {sc ? (
             <div className="space-y-4">
@@ -180,11 +216,10 @@ export default function JobDetailPage() {
                   </div>
                 </div>
               )}
-              {(sc.affiliate_product || sc.affiliate_cta) && (
+              {sc.comment_bait && (
                 <div>
-                  <p className="text-xs text-white/40 mb-1.5">제휴 정보</p>
-                  {sc.affiliate_product && <p className="text-xs text-white/50">상품: {sc.affiliate_product}</p>}
-                  {sc.affiliate_cta && <p className="text-xs text-white/50 mt-0.5">CTA: {sc.affiliate_cta}</p>}
+                  <p className="text-xs text-white/40 mb-1.5">댓글 유도</p>
+                  <p className="text-xs text-white/60">{sc.comment_bait}</p>
                 </div>
               )}
             </div>
@@ -194,12 +229,6 @@ export default function JobDetailPage() {
                 <p className="text-xs text-white/40 mb-1.5">주제</p>
                 <p className="text-sm text-white/80 leading-relaxed">{job.topic}</p>
               </div>
-              {job.status === 'FAILED' && job.failReason && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/10 p-4">
-                  <p className="text-xs text-red-400/70 mb-1">실패 사유</p>
-                  <p className="text-xs text-red-300/80 leading-relaxed">{job.failReason}</p>
-                </div>
-              )}
               {job.status !== 'FAILED' && (
                 <div className="rounded-xl bg-white/5 p-4 flex flex-col gap-2">
                   <p className="text-xs text-white/30">

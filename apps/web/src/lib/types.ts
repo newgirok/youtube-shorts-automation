@@ -15,6 +15,8 @@ export interface Channel {
   isActive: boolean;
   subscriberCount?: number;
   totalViews?: number;
+  uploadCount90d?: number;
+  shortsViews90d?: number;
 }
 
 export interface Job {
@@ -30,8 +32,7 @@ export interface Job {
     script?: string;
     hashtags?: string[];
     thumbnail_text?: string;
-    affiliate_cta?: string;
-    affiliate_product?: string;
+    comment_bait?: string;
   } | null;
   viewCount: number;
   likeCount: number;
@@ -39,6 +40,7 @@ export interface Job {
   startedAt: string | null;
   completedAt: string | null;
   youtubeVideoId: string | null;
+  privacyStatus: string;
 }
 
 export interface AnalyticsRow {
@@ -46,4 +48,5 @@ export interface AnalyticsRow {
   views: number;
   subscribers: number;
   estimatedRevenue: number;
+  watchTimeMinutes: number;
 }
