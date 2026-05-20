@@ -49,6 +49,7 @@ model Job {
   subtitleS3Key    String?
   videoS3Key       String?
   youtubeVideoId   String?
+  privacyStatus    String    @default("public")
   viewCount        BigInt    @default(0)
   likeCount        BigInt    @default(0)
   startedAt        DateTime?
@@ -66,6 +67,7 @@ model ChannelAnalytics {
   views             BigInt   @default(0)
   subscribers       Int      @default(0)
   estimatedRevenue  Float    @default(0)
+  watchTimeMinutes  BigInt   @default(0)
 
   channel           Channel  @relation(fields: [channelId], references: [id])
 
