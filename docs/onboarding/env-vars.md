@@ -116,13 +116,15 @@ cp apps/web/.env.example apps/web/.env.local
 
 | 변수명 | 필수 | 설명 |
 |--------|------|------|
-| `AUTH_SECRET` | ✅ | NextAuth v5 JWT 서명 시크릿 |
+| `AUTH_SECRET` | ✅ | NextAuth v5 JWT 서명 시크릿 (`openssl rand -base64 32`) |
 | `NEXTAUTH_SECRET` | ✅ | NextAuth v4 호환용 (`AUTH_SECRET`과 동일 값) |
 | `AUTH_URL` | ✅ | NextAuth v5 앱 URL (`http://localhost:3001`) |
 | `NEXTAUTH_URL` | ✅ | NextAuth v4 호환용 (`AUTH_URL`과 동일 값) |
-| `GOOGLE_CLIENT_ID` | ✅ | NextAuth Google 로그인용 OAuth2 Client ID |
-| `GOOGLE_CLIENT_SECRET` | ✅ | NextAuth Google 로그인용 OAuth2 Client Secret |
-| `NEXT_PUBLIC_API_URL` | ✅ | NestJS API 서버 주소 (`http://localhost:3000`) |
+| `GOOGLE_CLIENT_ID` | ✅ | NextAuth Google 로그인용 OAuth2 Client ID (루트 `YOUTUBE_CLIENT_ID`와 동일 클라이언트 재사용 가능) |
+| `GOOGLE_CLIENT_SECRET` | ✅ | NextAuth Google 로그인용 OAuth2 Client Secret (루트 `YOUTUBE_CLIENT_SECRET`와 동일) |
+| `NEXT_PUBLIC_API_URL` | ✅ | NestJS API 서버 주소 (`http://localhost:3000`) — 브라우저에서 직접 호출 시 사용 |
+| `API_INTERNAL_URL` | - | 서버 컴포넌트 전용 API 주소 (Docker 내부 호스트명 등). 미설정 시 `NEXT_PUBLIC_API_URL` 사용 |
+| `NEXT_PUBLIC_API_SECRET` | - | Web → API 내부 통신 인증 키 (`openssl rand -hex 32`). 루트 `API_INTERNAL_SECRET`과 동일 값 설정 |
 
 ---
 

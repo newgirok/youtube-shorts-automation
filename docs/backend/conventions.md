@@ -135,14 +135,16 @@ Lambda 환경에서 매 호출마다 새 Prisma Client를 생성하면 DB 연결
 
 ```typescript
 // packages/shared/src/prisma.ts
-const globalForPrisma = globalThis as { __prisma?: PrismaClient };
+const globalForPrisma = globalThis as unknown as { prisma: PrismaClient | undefined };
 
 export const prisma =
-  globalForPrisma.__prisma ??
-  new PrismaClient({ log: ['error'] });
+  globalForPrisma.prisma ??
+  new PrismaClient({
+    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  });
 
 if (process.env.NODE_ENV !== 'production') {
-  globalForPrisma.__prisma = prisma;
+  globalForPrisma.prisma = prisma;
 }
 ```
 

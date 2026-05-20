@@ -29,11 +29,14 @@ docker compose logs -f script-worker
 
 | 서비스 | 포트 | 설명 |
 |--------|------|------|
+| postgres | 5432 | PostgreSQL 14 |
+| localstack | 4566 | SQS / S3 에뮬레이터 |
+| migrate | - | Prisma 마이그레이션 (one-shot) |
 | api | 3000 | NestJS API |
 | web | 3001 | Next.js 웹 |
 | script-worker | - | Gemini 스크립트 생성 |
 | tts-worker | - | TTS 음성 합성 |
-| subtitle-worker | - | Whisper 자막 추출 |
+| subtitle-worker | - | 스크립트 기반 SRT 자막 생성 |
 | render-worker | - | FFmpeg 영상 렌더링 |
 | upload-worker | - | YouTube 업로드 |
 
@@ -41,8 +44,12 @@ docker compose logs -f script-worker
 
 ## API 배포 (ECS, Phase 3+)
 
+GitHub Actions `deploy-api.yml` 워크플로우 (`workflow_dispatch` 트리거)가 빌드 → ECR 푸시를 자동으로 수행합니다.
+
+수동 배포가 필요한 경우:
+
 ```bash
-# 1. 빌드
+# 1. 빌드 (ESM 모듈, tsc 컴파일 후 dist/ 생성)
 pnpm --filter @shorts/api build
 
 # 2. Docker 이미지 빌드
@@ -60,6 +67,8 @@ aws ecs update-service \
   --force-new-deployment
 ```
 
+> **ESM 주의**: `@shorts/api`, `@shorts/shared`를 포함한 모든 패키지가 `"type": "module"` (ESM)로 전환되어 있습니다. `require()` 또는 CommonJS 전용 라이브러리 추가 시 호환성을 확인하세요. `tsconfig.base.json`의 `module`은 `NodeNext`로 고정합니다.
+
 ### 배포 확인
 
 ```bash
@@ -75,7 +84,7 @@ aws ecs describe-services \
 
 ## Lambda Workers 배포 (Serverless Framework, Phase 3+)
 
-GitHub Actions `_deploy-worker.yml` 워크플로우가 main 브랜치 push 시 자동 배포한다.
+GitHub Actions `_deploy-worker.yml` 워크플로우는 재사용 가능한 워크플로우(reusable workflow)로, 현재 자동 트리거는 비활성화되어 있습니다. 배포는 수동으로 진행합니다.
 
 수동 배포가 필요한 경우:
 
@@ -95,7 +104,9 @@ cd apps/workers/upload && serverless deploy --stage prod
 
 ## Fargate Workers 배포 (Phase 3+)
 
-subtitle-worker (faster-whisper)와 render-worker (FFmpeg)는 Fargate로 운영된다.
+subtitle-worker (스크립트 기반 SRT 생성)와 render-worker (FFmpeg)는 Fargate로 운영된다.
+
+> subtitle-worker는 faster-whisper를 사용하지 않습니다. S3의 `script.json`에서 스크립트를 읽어 직접 SRT를 생성하므로 GPU/모델 의존성이 없습니다.
 
 ```bash
 # 1. Docker 이미지 빌드
@@ -120,6 +131,37 @@ render-worker도 동일한 절차로 배포한다 (`service: render-worker`).
 |--------|------|--------|
 | subtitle-worker | 2 | 8 GB |
 | render-worker | 4 | 16 GB |
+
+---
+
+## DB 마이그레이션
+
+### 로컬 (Docker Compose)
+
+`migrate` 서비스가 `postgres` healthy 이후 자동으로 `prisma migrate deploy`를 실행하고 종료합니다. 별도 수동 실행은 필요하지 않습니다.
+
+새 마이그레이션을 추가할 경우:
+
+```bash
+# 개발 환경에서 마이그레이션 파일 생성 (로컬 postgres 직접 연결 필요)
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/shorts \
+  pnpm --filter @shorts/shared exec prisma migrate dev --name <이름>
+```
+
+### 프로덕션 (Supabase)
+
+```bash
+# DIRECT_URL(Session mode 포트 5432)로 마이그레이션 적용
+pnpm --filter @shorts/shared prisma:migrate
+```
+
+### 최근 마이그레이션 이력
+
+| 파일 | 내용 |
+|------|------|
+| `20260511123832_init` | 초기 스키마 생성 |
+| `20260519000000_add_watch_time_minutes` | `ChannelAnalytics.watchTimeMinutes` 컬럼 추가 |
+| `20260520000000_add_privacy_status` | `Job.privacyStatus` 컬럼 추가 (기본값 `public`) |
 
 ---
 

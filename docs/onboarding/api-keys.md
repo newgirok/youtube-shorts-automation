@@ -1,6 +1,6 @@
 # API 키 및 자격증명 설정 가이드
 
-이 프로젝트에서 필요한 4가지 자격증명을 한 곳에서 설명합니다.  
+이 프로젝트에서 필요한 5가지 자격증명을 한 곳에서 설명합니다.  
 설정 완료 후 [전체 체크리스트](#전체-설정-완료-체크리스트)를 확인하세요.
 
 ---
@@ -36,7 +36,7 @@ GEMINI_API_KEY=AIzaSy...
 
 ### 무료 티어 한도
 
-이 프로젝트는 `gemini-2.0-flash` 모델만 사용합니다.
+이 프로젝트는 `gemini-2.5-flash` 모델을 사용합니다.
 
 | 항목 | 무료 티어 한도 |
 |------|--------------|
@@ -58,9 +58,9 @@ curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:g
 
 ---
 
-## 섹션 2: YouTube Data API v3 + OAuth2
+## 섹션 2: YouTube Data API v3 + Analytics API + OAuth2
 
-upload-worker가 YouTube 채널에 영상을 업로드할 때 사용합니다.
+upload-worker의 YouTube 업로드 및 API 서버의 채널 동기화·Analytics 조회에 사용합니다.
 
 ### 필요한 자격증명
 
@@ -78,8 +78,10 @@ upload-worker가 YouTube 채널에 영상을 업로드할 때 사용합니다.
 URL: [https://console.cloud.google.com/apis/library](https://console.cloud.google.com/apis/library)
 
 1. 상단 프로젝트 선택기에서 **[새 프로젝트]** 생성 또는 기존 프로젝트 선택
-2. 검색창에 `YouTube Data API v3` 입력 후 클릭
-3. 파란색 **[사용(Enable)]** 버튼 클릭
+2. 검색창에 `YouTube Data API v3` 입력 후 클릭 → **[사용(Enable)]** 클릭
+3. 검색창에 `YouTube Analytics API` 입력 후 클릭 → **[사용(Enable)]** 클릭
+
+> YouTube Analytics API는 채널 sync 시 일별 views, watchTimeMinutes, estimatedRevenue 조회에 필요합니다.
 
 ### 2단계: OAuth 동의 화면 설정
 
@@ -126,9 +128,13 @@ URL: [https://developers.google.com/oauthplayground](https://developers.google.c
    - **Use your own OAuth credentials** 체크
    - 3단계에서 복사한 Client ID / Client Secret 입력 → **[Close]**
 
-2. 좌측 Step 1 — 스코프 선택:
-   - `YouTube Data API v3` → `https://www.googleapis.com/auth/youtube` 선택
+2. 좌측 Step 1 — 스코프 선택 (3개 모두 필요):
+   - `YouTube Data API v3` → `https://www.googleapis.com/auth/youtube.upload` 선택
+   - `YouTube Data API v3` → `https://www.googleapis.com/auth/youtube.readonly` 선택
+   - `YouTube Analytics API` → `https://www.googleapis.com/auth/yt-analytics.readonly` 선택
    - **[Authorize APIs]** 클릭
+
+> 세 스코프 모두 선택해야 합니다. 누락 시 채널 sync(`POST /channels/:id/sync`) 호출 시 403 오류가 발생합니다.
 
 3. Google 계정 로그인 및 권한 **[허용]**
    - 경고창이 뜨면 **고급 → 이동** 클릭
@@ -147,10 +153,13 @@ YOUTUBE_REFRESH_TOKEN=1//04...
 
 1. Google Cloud 콘솔 → OAuth 동의 화면 → Test users에 새 계정 이메일 등록
 2. OAuth 2.0 Playground에서 **[Authorize APIs]** 클릭 후 **새 계정으로 로그인**
-3. Step 2에서 새로 발급된 `refresh_token` 복사
-4. `.env.local`의 `YOUTUBE_REFRESH_TOKEN` 값만 교체
+3. 스코프 3개(`youtube.upload`, `youtube.readonly`, `yt-analytics.readonly`) 모두 선택
+4. Step 2에서 새로 발급된 `refresh_token` 복사
+5. `.env.local`의 `YOUTUBE_REFRESH_TOKEN` 값만 교체
 
 > `YOUTUBE_CLIENT_ID`와 `YOUTUBE_CLIENT_SECRET`은 변경하지 않습니다.
+
+> 웹 대시보드에서 채널을 연결할 경우(`GET /auth/youtube` → OAuth 플로우) refresh_token은 DB에 암호화 저장됩니다. 이 경우 `.env.local`의 `YOUTUBE_REFRESH_TOKEN`은 테스트 스크립트(`scripts/tools/test-upload.ts`) 전용으로만 사용됩니다.
 
 ### 일일 할당량
 
@@ -209,7 +218,34 @@ GOOGLE_CLIENT_SECRET=YOUTUBE_CLIENT_SECRET와_동일한_값
 
 ---
 
-## 섹션 4: ENCRYPTION_KEY
+## 섹션 4: Pexels API
+
+render-worker가 씬별 배경 이미지를 검색·다운로드할 때 사용합니다.
+
+### 발급 단계
+
+URL: [https://www.pexels.com/api](https://www.pexels.com/api)
+
+1. Pexels 계정으로 로그인
+2. **[Your API Key]** 또는 **[Get Started]** 클릭
+3. 발급된 API 키 복사 → `.env.local`에 저장:
+
+```bash
+PEXELS_API_KEY=563492ad6f91700001000001...
+```
+
+### 무료 티어 한도
+
+| 항목 | 한도 |
+|------|------|
+| 월 요청 수 | 200,000 req |
+| 시간당 요청 수 | 20,000 req |
+
+쇼츠 1건 렌더링 시 씬 수(4~6개)만큼 소비 → 하루 수백 건 생성 시에도 무료 한도 내 충분.
+
+---
+
+## 섹션 5: ENCRYPTION_KEY
 
 DB에 저장되는 `Channel.refreshToken`을 AES-256-GCM으로 암호화·복호화하는 데 사용합니다.
 
@@ -277,6 +313,7 @@ URL: [https://console.aws.amazon.com/secretsmanager/](https://console.aws.amazon
 - [ ] `YOUTUBE_CLIENT_SECRET` — Google Cloud Console에서 발급
 - [ ] `YOUTUBE_REFRESH_TOKEN` — OAuth 2.0 Playground에서 발급
 - [ ] `YOUTUBE_REDIRECT_URI` — `https://developers.google.com/oauthplayground`
+- [ ] `PEXELS_API_KEY` — Pexels 대시보드에서 발급
 - [ ] `ENCRYPTION_KEY` — 64자리 hex 직접 생성
 - [ ] SQS 큐 URL 변수들 (`SQS_SCRIPT_QUEUE_URL`, `SQS_TTS_QUEUE_URL`, `SQS_SUBTITLE_QUEUE_URL`, `SQS_RENDER_QUEUE_URL`, `SQS_UPLOAD_QUEUE_URL`)
 
@@ -291,6 +328,7 @@ URL: [https://console.aws.amazon.com/secretsmanager/](https://console.aws.amazon
 Google Cloud Console 설정:
 
 - [ ] YouTube Data API v3 활성화
+- [ ] YouTube Analytics API 활성화
 - [ ] OAuth 동의 화면 생성 (외부 사용자)
 - [ ] 테스트 사용자에 업로드 계정 이메일 등록
 - [ ] OAuth 클라이언트에 리디렉션 URI 2개 등록:

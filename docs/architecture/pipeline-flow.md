@@ -18,8 +18,8 @@
 │  1단계: script-worker (Lambda)                           │
 │                                                         │
 │  SQS script-queue 수신                                   │
-│  → Gemini 2.0 Flash API 호출                             │
-│  → script.json 생성                                      │
+│  → Gemini 2.5 Flash API 호출                             │
+│  → script.json 생성 (scenes 포함)                        │
 │  → S3 저장: jobs/{jobId}/script.json                    │
 │  → Job status: SCRIPT_PROCESSING → (다음 단계)           │
 │  → SQS tts-queue 발행                                    │
@@ -42,9 +42,10 @@
 │  3단계: subtitle-worker (ECS Fargate, 상시 실행)          │
 │                                                         │
 │  SQS subtitle-queue Long Polling 수신                    │
-│  → S3에서 audio.mp3 다운로드                              │
-│  → faster-whisper large-v3 자막 생성                     │
-│  → SRT 형식 변환                                         │
+│  → S3에서 audio.mp3, script.json 다운로드                │
+│  → ffprobe로 오디오 길이 측정                             │
+│  → script.script 문장 분할 → 시간 비례 SRT 생성           │
+│  → 시사 키워드(빨강) + 숫자(노랑) 하이라이트 적용           │
 │  → S3 저장: jobs/{jobId}/subtitle.srt                   │
 │  → Job status: SUBTITLE_PROCESSING → (다음 단계)         │
 │  → SQS render-queue 발행                                 │
@@ -56,8 +57,9 @@
 │                                                         │
 │  SQS render-queue Long Polling 수신                      │
 │  → S3에서 audio.mp3, subtitle.srt 다운로드               │
-│  → 배경영상 선택 (내장 스톡 풀)                            │
-│  → FFmpeg: 배경 + 오디오 + 자막 합성 (1080×1920)         │
+│  → scenes별 Pexels 이미지 다운로드 (keyword 영어 검색)     │
+│  → FFmpeg: 이미지 → zoompan 클립 (zoom-in/out, pan-l/r) │
+│  → FFmpeg: 클립 concat + 오디오 + 자막 burn-in (1080×1920)│
 │  → S3 저장: jobs/{jobId}/output.mp4                     │
 │  → Job status: RENDER_PROCESSING → (다음 단계)           │
 │  → SQS upload-queue 발행                                 │
@@ -86,7 +88,7 @@
 | **실행 환경** | AWS Lambda (Node.js 20) |
 | **SQS 큐** | `script-queue` |
 | **입력** | `jobId`, `channelId`, `topic` |
-| **처리** | Gemini 2.0 Flash API — 토픽 + 채널 niche 기반 스크립트 생성 |
+| **처리** | Gemini 2.5 Flash API — 뉴스 시사 특화, 25~35초 분량 스크립트 + scenes 생성 |
 | **출력** | `jobs/{jobId}/script.json` (S3) |
 | **다음 큐** | `tts-queue` |
 | **상태 전이** | `PENDING` → `SCRIPT_PROCESSING` |
@@ -128,7 +130,7 @@ interface TTSMessage {
 | **실행 환경** | ECS Fargate (상시 실행, `desired_count: 1`) |
 | **SQS 큐** | `subtitle-queue` |
 | **입력** | `jobId`, `channelId`, `audioS3Key` |
-| **처리** | faster-whisper large-v3 — 한국어 자막 생성 (인식률 93%) |
+| **처리** | ffprobe로 오디오 길이 측정 → script.json의 script 필드를 문장 분할하여 시간 비례 SRT 생성, 시사 키워드/숫자 하이라이트 적용 |
 | **출력** | `jobs/{jobId}/subtitle.srt` (S3) |
 | **다음 큐** | `render-queue` |
 | **상태 전이** | `TTS_PROCESSING` → `SUBTITLE_PROCESSING` |
@@ -149,7 +151,7 @@ interface SubtitleMessage {
 | **실행 환경** | ECS Fargate (상시 실행, `desired_count: 1`) |
 | **SQS 큐** | `render-queue` |
 | **입력** | `jobId`, `channelId`, `audioS3Key`, `subtitleS3Key` |
-| **처리** | FFmpeg: 배경영상 + 오디오 + 자막 합성, 1080×1920 |
+| **처리** | scenes별 Pexels 이미지 다운로드 → zoompan 클립 생성 → FFmpeg concat + 오디오 + 자막 burn-in, 1080×1920 |
 | **출력** | `jobs/{jobId}/output.mp4` (S3) |
 | **다음 큐** | `upload-queue` |
 | **상태 전이** | `SUBTITLE_PROCESSING` → `RENDER_PROCESSING` |

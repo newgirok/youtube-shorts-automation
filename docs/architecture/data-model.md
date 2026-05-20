@@ -39,37 +39,48 @@ model Channel {
 }
 
 model Job {
-  id             String    @id @default(cuid())
-  channelId      String
-  topic          String
-  status         JobStatus @default(PENDING)
-  retryCount     Int       @default(0)
-  failReason     String?
-  scriptContent  Json?
-  audioS3Key     String?
-  subtitleS3Key  String?
-  videoS3Key     String?
-  youtubeVideoId String?
-  viewCount      BigInt    @default(0)
-  likeCount      BigInt    @default(0)
-  startedAt      DateTime?
-  completedAt    DateTime?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  channel        Channel   @relation(fields: [channelId], references: [id])
+  id               String    @id @default(cuid())
+  channelId        String
+  topic            String
+  status           JobStatus @default(PENDING)
+  retryCount       Int       @default(0)
+  failReason       String?
+  scriptContent    Json?
+  audioS3Key       String?
+  subtitleS3Key    String?
+  videoS3Key       String?
+  youtubeVideoId   String?
+  privacyStatus    String    @default("public")
+  viewCount        BigInt    @default(0)
+  likeCount        BigInt    @default(0)
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  channel          Channel   @relation(fields: [channelId], references: [id])
 }
 
 model ChannelAnalytics {
-  id               String   @id @default(cuid())
-  channelId        String
-  date             DateTime @db.Date
-  views            BigInt   @default(0)
-  subscribers      Int      @default(0)
-  estimatedRevenue Float    @default(0)
-  channel          Channel  @relation(fields: [channelId], references: [id])
+  id                String   @id @default(cuid())
+  channelId         String
+  date              DateTime @db.Date
+  views             BigInt   @default(0)
+  subscribers       Int      @default(0)
+  estimatedRevenue  Float    @default(0)
+  watchTimeMinutes  BigInt   @default(0)
+  channel           Channel  @relation(fields: [channelId], references: [id])
   @@unique([channelId, date])
 }
 ```
+
+---
+
+## 마이그레이션 이력
+
+| 마이그레이션 | 변경 내용 |
+|---|---|
+| `20260519000000_add_watch_time_minutes` | `ChannelAnalytics.watchTimeMinutes BigInt @default(0)` 추가 |
+| `20260520000000_add_privacy_status` | `Job.privacyStatus String @default("public")` 추가 |
 
 ---
 
@@ -110,6 +121,7 @@ model ChannelAnalytics {
 │ subtitleS3Key  String?               │
 │ videoS3Key     String?               │
 │ youtubeVideoId String?               │
+│ privacyStatus  String                │
 │ viewCount      BigInt                │
 │ likeCount      BigInt                │
 │ startedAt      DateTime?             │
@@ -127,6 +139,7 @@ model ChannelAnalytics {
 │ views            BigInt              │
 │ subscribers      Int                 │
 │ estimatedRevenue Float               │
+│ watchTimeMinutes BigInt              │
 │ ──────────────────────────────────── │
 │ UNIQUE (channelId, date)             │
 └──────────────────────────────────────┘
@@ -203,12 +216,17 @@ EventBridge Scheduler는 **Unix cron** 형식을 사용합니다:
 | `subtitleS3Key` | `String?` | S3 경로: `jobs/{jobId}/subtitle.srt` |
 | `videoS3Key` | `String?` | S3 경로: `jobs/{jobId}/output.mp4` |
 | `youtubeVideoId` | `String?` | 업로드 완료 후 YouTube 영상 ID |
+| `privacyStatus` | `String` | YouTube 영상 공개 상태 (기본값: `"public"`). sync 시 YouTube API에서 실시간 갱신. |
 | `viewCount` | `BigInt` | YouTube Analytics에서 동기화한 조회수 |
 | `likeCount` | `BigInt` | YouTube Analytics에서 동기화한 좋아요 수 |
 | `startedAt` | `DateTime?` | 첫 번째 Worker 시작 시각 |
 | `completedAt` | `DateTime?` | `COMPLETED` 전환 시각 |
 | `createdAt` | `DateTime` | Job 생성 시각 |
 | `updatedAt` | `DateTime` | 마지막 상태 변경 시각 |
+
+### privacyStatus 값
+
+upload-worker가 YouTube 업로드 완료 시 `"public"`으로 저장합니다. 이후 `POST /channels/:id/sync` 호출 시 `videos.list(part: status)` 응답의 실제 값으로 덮어씁니다. YouTube에서 영상이 삭제된 경우 해당 Job의 `status`는 `FAILED`, `failReason`은 `'유튜브에서 영상이 삭제되었습니다.'`로 업데이트됩니다.
 
 ### viewCount / likeCount 가 BigInt인 이유
 
@@ -228,8 +246,13 @@ YouTube 조회수는 수억 단위를 초과할 수 있습니다. JavaScript의 
 | `views` | `BigInt` | 해당 날짜 조회수 |
 | `subscribers` | `Int` | 해당 날짜 구독자 수 스냅샷 |
 | `estimatedRevenue` | `Float` | 예상 수익 (USD, YPP 달성 이후) |
+| `watchTimeMinutes` | `BigInt` | 해당 날짜 총 시청 시간 (분 단위). YouTube Analytics `estimatedMinutesWatched` 지표. |
 
 `@@unique([channelId, date])` 제약으로 채널당 날짜별 중복 집계를 방지합니다. Upsert 패턴으로 매일 덮어씁니다.
+
+### watchTimeMinutes 수집 방식
+
+`POST /channels/:id/sync` 호출 시 YouTube Analytics API(`youtubeAnalytics.reports.query`)로 최근 30일치 일별 `estimatedMinutesWatched` 지표를 수집해 upsert합니다. YPP(YouTube Partner Program) 자격 판단(연간 4,000시간)에 활용됩니다.
 
 ---
 
@@ -240,7 +263,7 @@ YouTube 조회수는 수억 단위를 초과할 수 있습니다. JavaScript의 
 | `PENDING` | Job 생성 직후 초기 상태 |
 | `SCRIPT_PROCESSING` | script-worker가 Gemini API 호출 중 |
 | `TTS_PROCESSING` | tts-worker가 음성 합성 중 |
-| `SUBTITLE_PROCESSING` | subtitle-worker가 Whisper 자막 생성 중 |
+| `SUBTITLE_PROCESSING` | subtitle-worker가 자막 생성 중 |
 | `RENDER_PROCESSING` | render-worker가 FFmpeg 영상 합성 중 |
 | `UPLOAD_PROCESSING` | upload-worker가 YouTube API 업로드 중 |
 | `COMPLETED` | 파이프라인 전 단계 완료, YouTube 업로드 성공 |

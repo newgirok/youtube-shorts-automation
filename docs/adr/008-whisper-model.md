@@ -1,6 +1,16 @@
 # ADR 008: Whisper 구현체 및 모델 — faster-whisper large-v3
 
-**상태:** Accepted
+**상태:** Superseded
+
+## 현황 업데이트 (2026-05-20)
+
+faster-whisper는 subtitle-worker에서 **완전히 제거**되었다.
+
+현재 subtitle-worker는 Whisper 없이 `script.json`의 `script` 필드를 직접 읽어 문장 분할 후 시간 비례로 SRT를 생성한다 (`processor.ts`의 `buildSrt()` 함수). ffprobe로 오디오 길이만 측정하며, 별도 ML 모델을 사용하지 않는다.
+
+**교체 이유:** TTS로 생성한 음성은 스크립트 텍스트와 완전히 일치하므로 음성 인식(STT) 단계가 불필요하다. 스크립트 기반 SRT 생성이 더 정확하고, Fargate 메모리 및 콜드 스타트 부담을 줄인다.
+
+이 ADR은 결정 배경과 기술 검토 내용을 보존하기 위해 그대로 유지한다.
 
 ## 배경
 

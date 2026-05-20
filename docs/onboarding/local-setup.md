@@ -7,14 +7,11 @@
 | Node.js | 20+ | `node -v` |
 | pnpm | 9+ | `pnpm -v` |
 | Docker Desktop | 최신 | `docker -v` |
-| Python | 3.11+ | `python --version` |
-| FFmpeg | 최신 | `ffmpeg -version` |
 
 **Windows 사용자 추가 설정:**
 
-- FFmpeg: [공식 사이트](https://ffmpeg.org/download.html)에서 다운로드 후 PATH 등록
-- Python 3.11+: [python.org](https://www.python.org/downloads/) 또는 `winget install Python.Python.3.11`
-- `edge-tts` 설치: `pip install edge-tts`
+- Docker Desktop은 WSL2 백엔드 모드로 실행하는 것을 권장합니다.
+- Python, FFmpeg는 로컬에 설치할 필요 없습니다. Worker 컨테이너 내부에 포함되어 있습니다.
 
 ---
 
@@ -57,26 +54,26 @@ docker compose up -d
 |--------|------|
 | `postgres` | PostgreSQL 14 |
 | `localstack` | SQS 큐 5개 + DLQ 5개, S3 버킷 자동 생성 |
-| `api` | NestJS API 서버 |
+| `migrate` | Prisma 마이그레이션 실행 후 종료 (one-shot) |
+| `api` | NestJS API 서버 (포트 3000) |
+| `web` | Next.js 대시보드 (포트 3001) |
 | `script-worker` | SQS 폴링 → Gemini 스크립트 생성 |
 | `tts-worker` | SQS 폴링 → edge-tts 음성 합성 |
-| `subtitle-worker` | SQS 폴링 → Whisper 자막 생성 |
+| `subtitle-worker` | SQS 폴링 → 스크립트 기반 SRT 자막 생성 |
 | `render-worker` | SQS 폴링 → FFmpeg 영상 렌더링 |
 | `upload-worker` | SQS 폴링 → YouTube 업로드 |
 
+> `migrate` 서비스는 `postgres` healthy 이후 자동 실행되고 종료됩니다. 수동 마이그레이션은 불필요합니다.
+
 > LocalStack과 PostgreSQL만 먼저 띄우려면: `docker compose up -d postgres localstack`
 
-### 5. DB 마이그레이션
-
-```bash
-pnpm --filter @shorts/shared prisma:migrate
-```
-
-### 6. 개발 서버 실행
+### 5. 개발 서버 실행
 
 ```bash
 pnpm dev
 ```
+
+> Docker Compose 전체 환경(`docker compose up -d`)을 사용할 경우 `pnpm dev`는 불필요합니다. 빌드 없이 컨테이너만으로 전체 파이프라인이 동작합니다.
 
 ---
 
@@ -90,7 +87,7 @@ pnpm dev
 | `pnpm lint` | 전체 린트 검사 |
 | `pnpm --filter @shorts/api dev` | API 서버만 실행 |
 | `pnpm --filter @shorts/web dev` | Next.js만 실행 |
-| `pnpm --filter @shorts/shared prisma:migrate` | Prisma 마이그레이션 |
+| `pnpm --filter @shorts/shared prisma:migrate` | Prisma 마이그레이션 (Docker 외부 실행 시) |
 | `pnpm --filter @shorts/shared prisma:studio` | Prisma Studio (DB GUI) |
 
 ---
@@ -111,10 +108,15 @@ pnpm dev
 Docker Compose 실행 후 다음 명령으로 job 생성 → 파이프라인 전 과정이 트리거되는지 확인합니다.
 
 ```bash
-# job 생성 요청
+# job 생성 요청 (수동 토픽)
 curl -X POST http://localhost:3000/jobs \
   -H "Content-Type: application/json" \
   -d '{"topic": "오늘의 한국사 퀴즈", "channelId": "<채널ID>"}'
+
+# 뉴스 자동 수집 → 일괄 job 생성
+curl -X POST http://localhost:3000/jobs/auto-news \
+  -H "Content-Type: application/json" \
+  -d '{"channelId": "<채널ID>", "category": "top", "count": 3}'
 ```
 
 응답에서 `jobId`를 확인한 뒤 상태를 폴링합니다:
@@ -142,8 +144,9 @@ aws --endpoint-url=http://localhost:4566 sqs get-queue-attributes \
 Docker를 사용하지 않고 개발할 경우 다음을 직접 준비해야 합니다:
 
 1. **PostgreSQL 직접 실행**: 로컬에 PostgreSQL 14+ 설치 후 `DATABASE_URL` 설정
-2. **LocalStack 대신 실제 AWS**: `AWS_ENDPOINT_URL` 변수를 제거하고 실제 SQS/S3 사용
-3. **각 워커 개별 실행**:
+2. **마이그레이션 수동 실행**: `pnpm --filter @shorts/shared prisma:migrate`
+3. **LocalStack 대신 실제 AWS**: `AWS_ENDPOINT_URL` 변수를 제거하고 실제 SQS/S3 사용
+4. **각 워커 개별 실행**:
 
 ```bash
 pnpm --filter @shorts/script-worker dev
@@ -152,6 +155,8 @@ pnpm --filter @shorts/tts-worker dev
 ```
 
 > 직접 실행 시 `.env.local`의 호스트명이 `localhost` 기준으로 설정되어 있는지 확인합니다. Docker 내부 호스트명(`postgres`, `localstack`)은 직접 실행 환경에서 동작하지 않습니다.
+
+> subtitle-worker는 `python3`, `ffprobe`가 PATH에 있어야 합니다 (Docker 컨테이너 외부 실행 시).
 
 ---
 

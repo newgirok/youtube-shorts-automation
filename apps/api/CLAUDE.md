@@ -11,6 +11,53 @@ NestJS + Fastify 기반 REST API 서버.
 - @shorts/shared (Prisma, S3, Pino 로거, Zod 환경변수)
 
 ## 주요 모듈
-- `auth/` — Google OAuth 채널 연결
-- `channels/` — YouTube 채널 CRUD
-- `jobs/` — Job 생성 작업 트리거 → SQS 발행
+
+### `auth/`
+Google OAuth2 채널 연결 처리.
+
+- `GET /auth/youtube` — OAuth 인증 URL로 302 리다이렉트
+- `GET /auth/youtube/callback` — 인증 코드로 토큰 교환, 채널 upsert 후 Web으로 리다이렉트
+
+OAuth 스코프:
+- `https://www.googleapis.com/auth/youtube.upload`
+- `https://www.googleapis.com/auth/youtube.readonly`
+- `https://www.googleapis.com/auth/yt-analytics.readonly`
+
+refresh_token은 AES-256-GCM으로 암호화 후 DB 저장. access_token은 DB에 저장하지 않음.
+
+### `channels/`
+YouTube 채널 CRUD 및 동기화.
+
+- `GET /channels` — isActive=true 채널 목록 (id, name, niche만 반환)
+- `GET /channels/:id` — 채널 상세 + YPP 통계(uploadCount90d, shortsViews90d)
+- `PATCH /channels/:id/schedule` — uploadSchedule cron 표현식 업데이트
+- `GET /channels/:id/analytics` — 최근 30일 일별 analytics (views, subscribers, estimatedRevenue, watchTimeMinutes)
+- `POST /channels/:id/sync` — 채널 통계 + Analytics + 영상 조회수 풀 동기화 (YouTube Data API + YouTube Analytics API)
+- `POST /channels/:id/sync-videos` — 영상 조회수·privacyStatus 동기화 + 삭제된 영상 FAILED 처리
+
+`sync` 흐름:
+1. `channels.list(part: statistics)` → subscriberCount, totalViews 갱신
+2. `youtubeAnalytics.reports.query(metrics: views,subscribersGained,estimatedMinutesWatched, dimensions: day)` → 최근 30일 일별 upsert
+3. `videos.list(part: id,statistics,status)` → viewCount, likeCount, privacyStatus 갱신; YouTube에서 삭제된 영상은 status=FAILED, failReason='유튜브에서 영상이 삭제되었습니다.'
+
+### `jobs/`
+Job 생성 및 상태 조회, 재시도.
+
+- `POST /jobs` — 채널 + 토픽으로 Job 생성 후 script-queue에 발행
+- `GET /jobs` — Job 목록 (channelId 쿼리로 필터링 가능)
+- `GET /jobs/:id` — Job 상세 조회
+- `POST /jobs/auto-news` — Google News RSS 수집 후 뉴스 제목으로 Job 일괄 생성
+- `POST /jobs/:id/retry` — FAILED 상태 Job만 PENDING으로 초기화 후 script-queue 재발행
+
+`auto-news` 요청 바디:
+```json
+{
+  "channelId": "string",
+  "category": "top | politics | business | nation",  // 기본값: "top"
+  "count": 1~5  // 기본값: 3
+}
+```
+
+뉴스 출처: Google News RSS (`news.google.com/rss`, 한국어/KR 로케일)
+
+`retry` 조건: `Job.status === 'FAILED'`만 허용. 다른 상태에서 호출 시 400 BadRequest.

@@ -120,7 +120,11 @@ resource "aws_cloudwatch_metric_alarm" "fargate_task_stopped" {
 | 상태 | 의미 |
 |------|------|
 | `PENDING` | SQS 메시지 전송 완료, Worker 미처리 |
-| `PROCESSING` | Worker가 처리 중 |
+| `SCRIPT_PROCESSING` | script-worker 처리 중 |
+| `TTS_PROCESSING` | tts-worker 처리 중 |
+| `SUBTITLE_PROCESSING` | subtitle-worker 처리 중 |
+| `RENDER_PROCESSING` | render-worker 처리 중 |
+| `UPLOAD_PROCESSING` | upload-worker 처리 중 |
 | `COMPLETED` | 모든 단계 완료 |
 | `FAILED` | 오류 발생, `failureReason` 컬럼 확인 필요 |
 

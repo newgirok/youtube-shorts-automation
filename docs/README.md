@@ -1,6 +1,6 @@
 # AI YouTube Shorts 자동화 플랫폼 — 문서 허브
 
-토픽 하나를 입력하면 스크립트 생성 → TTS → 자막 → 영상 합성 → YouTube 업로드까지 전 과정이 자동화되는 플랫폼입니다.
+토픽 또는 뉴스 RSS에서 자동 수집한 주제로 스크립트 생성 → TTS → 자막 → 영상 합성 → YouTube 업로드까지 전 과정이 자동화되는 플랫폼입니다. 한국 뉴스·시사 쇼츠 채널에 특화되어 있습니다.
 
 ---
 
@@ -47,7 +47,7 @@ pnpm dev
 | 문서 | 설명 |
 |---|---|
 | [로컬 환경 세팅](./onboarding/local-setup.md) | Node.js, Docker, DB 초기 설정 |
-| [API 키 설정](./onboarding/api-keys.md) | Gemini, YouTube OAuth2, NextAuth, 암호화 키 발급 |
+| [API 키 설정](./onboarding/api-keys.md) | Gemini, YouTube OAuth2, NextAuth, 암호화 키, Pexels 발급 |
 | [환경변수 레퍼런스](./onboarding/env-vars.md) | 전체 환경변수 목록 및 설명 |
 
 ### 운영 가이드
@@ -102,12 +102,12 @@ pnpm test
 
 | Phase | 목표 | 상태 |
 |---|---|---|
-| Phase 0 | TTS/Whisper/FFmpeg/YouTube API 핵심 리스크 검증 | **완료** |
+| Phase 0 | TTS/FFmpeg/YouTube API 핵심 리스크 검증 | **완료** |
 | Phase 1 | Monorepo 구성, 로컬 파이프라인 구현 (Docker Compose) | **완료** |
-| Phase 2 | Next.js 대시보드 (NextAuth, 채널 연결, Job 모니터링) | **완료** |
+| Phase 2 | Next.js 대시보드 (NextAuth, 채널 연결, Job 모니터링, Analytics, sync) | **완료** |
 | Phase 3 | AWS 서버리스 이관 (Lambda + SQS + Fargate + S3) | 진행 예정 |
 | Phase 4 | EventBridge 스케줄링, DLQ 모니터링, 7일 무중단 운영 | 예정 |
-| Phase 5 | Remotion 전환, YouTube Analytics 수집 | 예정 |
+| Phase 5 | Remotion 전환 | 예정 |
 | Phase 6 | 멀티채널 독립 스케줄, Fargate 동적 스케일링 | 예정 |
 | Phase 7 | GitHub Actions CI/CD, Sentry, Clova Voice 교체 | 예정 |
 

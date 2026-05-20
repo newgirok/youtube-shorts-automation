@@ -34,7 +34,24 @@
 - 영상 설명란에도 `affiliateUrl`이 포함됩니다.
 - `affiliateUrl`이 null이면 CTA 자막 삽입 및 설명란 링크가 생략됩니다.
 
-### 5. Job 재시도 규칙
+### 5. 업로드 공개 상태 (`privacyStatus`)
+
+- `Job.privacyStatus` 필드는 YouTube 업로드 시 설정된 공개 상태를 나타냅니다.
+- 가능한 값: `'public'`(공개) | `'unlisted'`(일부공개) | `'private'`(비공개)
+- 대시보드 `/dashboard/[id]`에서 `COMPLETED` 상태인 Job에 한해 공개 상태 배지를 표시합니다.
+  - `public` → 파란색 배지
+  - `unlisted` → 노란색 배지
+  - `private` → 반투명 흰색 배지
+- 진행 중이거나 실패한 Job에는 배지를 표시하지 않습니다.
+
+### 6. 삭제된 YouTube 영상 감지
+
+- upload-worker 또는 analytics-sync가 YouTube API 호출 중 해당 영상이 존재하지 않음을 감지하면 `Job.failReason = '유튜브에서 영상이 삭제되었습니다.'`로 갱신하고 `status = 'FAILED'`로 전환합니다.
+- 프론트엔드는 이 특수 `failReason` 값을 감지해 상태 배지를 "실패" 대신 "삭제"로 표시합니다.
+- "삭제" 상태에서는 재시도 버튼을 노출하지 않습니다 (재업로드해도 동일 영상이 없는 상태이므로).
+- 판별 조건: `job.status === 'FAILED' && job.failReason === '유튜브에서 영상이 삭제되었습니다.'`
+
+### 7. Job 재시도 규칙
 
 - SQS `Max Receive Count = 3`: Worker가 메시지를 3회 실패하면 DLQ로 이동합니다.
 - `Job.retryCount`는 Worker 처리 실패마다 1씩 증가합니다.
@@ -42,12 +59,27 @@
 - 대시보드 `/dashboard/[id]`에서 수동 재시도 가능합니다. 수동 재시도 시 `status = PENDING`으로 초기화됩니다.
 - DLQ 적재 시 CloudWatch 알람 → Slack/Discord 알림 (Phase 4 구현).
 
-### 6. YPP 달성 기준 추적
+### 8. YPP 달성 기준 추적 (2단계)
 
-- **YPP(YouTube Partner Program)** 달성 기준: 구독자 1,000명 + 최근 365일 시청 시간 4,000시간.
+YouTube Partner Program은 2단계로 나뉩니다.
+
+**1단계 — 기본 수익 창출** (3가지 모두 충족):
+- 구독자 수 ≥ 500명
+- 최근 90일 업로드 횟수 ≥ 3회
+- 최근 90일 쇼츠 조회수 ≥ 300만 회
+- 달성 시 멤버십·슈퍼챗·쇼핑 기능 활성화
+
+**2단계 — 광고 수익** (아래 중 1가지 충족):
+- 최근 90일 쇼츠 조회수 ≥ 1,000만 회
+- 또는 최근 12개월 시청 시간 ≥ 3,000시간 (`watchTimeMinutes / 60`으로 계산)
+- 달성 시 쇼츠 피드 광고 수익 창출
+
+**데이터 소스**:
+- `Channel.subscriberCount`, `Channel.uploadCount90d`, `Channel.shortsViews90d` — 채널 동기화(`POST /channels/:id/sync`) 시 갱신
+- `totalWatchHours` — `ChannelAnalytics.watchTimeMinutes` 합산으로 계산
 - `Channel.isYPPQualified`는 YouTube Analytics 수집 시 자동으로 업데이트됩니다.
-- 대시보드 `/channels/[id]`에서 YPP 진행률을 확인할 수 있습니다.
-- YPP 달성 후 `estimatedRevenue` 필드에 예상 수익이 기록됩니다.
+- 대시보드 `/channels/[id]`에서 1·2단계 진행률을 ProgressBar로 확인할 수 있습니다.
+- YPP 달성 후 `AnalyticsRow.estimatedRevenue` 필드에 예상 수익이 기록됩니다.
 
 ---
 
@@ -62,6 +94,7 @@ Gemini API가 생성하는 스크립트는 아래 JSON 형식을 따릅니다:
   "script": "전체 스크립트 (45~55초 분량)",
   "hashtags": ["#shorts", "#관련태그1", "#관련태그2"],
   "thumbnail_text": "썸네일 텍스트 (10자 이내)",
+  "comment_bait": "댓글 유도 문구",
   "affiliate_product": "추천 상품명 또는 null",
   "affiliate_cta": "지금 쿠팡에서 확인하세요! 링크는 설명란에 ↓"
 }
@@ -76,6 +109,7 @@ Gemini API가 생성하는 스크립트는 아래 JSON 형식을 따릅니다:
 | `script` | 45~55초 분량 (TTS 기준 약 350~450자) | 너무 짧으면 Shorts 분류 불이익 가능 |
 | `hashtags` | 최소 `#shorts` 포함, 3~5개 권장 | YouTube 태그로 사용 |
 | `thumbnail_text` | 10자 이내 강렬한 문구 | 썸네일 이미지 오버레이 텍스트 (Phase 5~) |
+| `comment_bait` | 댓글을 유도하는 질문·문구 | Job 상세 페이지 "댓글 유도" 항목에 표시, 알고리즘 참여도 향상 목적 |
 | `affiliate_product` | 추천 상품명 또는 `null` | `Channel.affiliateUrl`이 없으면 `null` |
 | `affiliate_cta` | CTA 문구 (30자 이내 권장) | 영상 마지막 8초 자막, `affiliateUrl` 없으면 미사용 |
 

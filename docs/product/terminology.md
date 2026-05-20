@@ -82,6 +82,39 @@ SQS 메시지가 `Max Receive Count(3회)` 이상 실패했을 때 이동하는 
 
 ---
 
+## privacyStatus
+
+`Job.privacyStatus` 필드에 저장되는 YouTube 영상 공개 상태입니다. upload-worker가 YouTube Data API로 영상을 업로드할 때 설정되며, `COMPLETED` 상태의 Job에서만 의미 있는 값을 가집니다.
+
+| 값 | 의미 | 대시보드 표시 |
+|---|---|---|
+| `public` | 공개 — 모든 사람이 검색·시청 가능 | 파란색 배지 |
+| `unlisted` | 일부공개 — 링크가 있는 사람만 시청 가능 | 노란색 배지 |
+| `private` | 비공개 — 채널 소유자만 시청 가능 | 반투명 흰색 배지 |
+
+---
+
+## comment_bait
+
+`script.json`의 `comment_bait` 필드에 저장되는 댓글 유도 문구입니다. Gemini API가 스크립트 생성 시 함께 출력합니다.
+
+- 목적: 댓글 참여를 유도해 YouTube 알고리즘의 참여도 지표를 높임
+- 예시: `"여러분이라면 어떻게 하실 건가요? 댓글로 알려주세요!"`
+- Job 상세 페이지(`/dashboard/[id]`) 스크립트 내용 패널의 "댓글 유도" 항목에 표시
+- `affiliateUrl`과 무관하게 모든 채널 영상에 적용 가능
+
+---
+
+## watchTimeMinutes
+
+`AnalyticsRow.watchTimeMinutes` 필드. YouTube Analytics에서 수집되는 일별 시청 시간(분 단위)입니다.
+
+- YPP 2단계 달성 여부 계산에 사용: `analytics.reduce((s, r) => s + r.watchTimeMinutes, 0) / 60` → 총 시청 시간(시)
+- `ChannelClient`에서 `totalWatchHours`로 변환 후 3,000시간 목표 대비 진행률로 표시
+- `estimatedRevenue`와 함께 일별 Analytics 테이블에서 확인 가능
+
+---
+
 ## Affiliate CTA
 
 쿠팡 파트너스 링크 유도 자막(Call to Action)입니다. `Channel.affiliateUrl`이 설정된 채널의 영상 마지막 8초에 삽입됩니다.
@@ -97,9 +130,20 @@ SQS 메시지가 `Max Receive Count(3회)` 이상 실패했을 때 이동하는 
 
 YouTube 수익화 자격 프로그램입니다. 이 플랫폼의 장기 목표 중 하나입니다.
 
-- **달성 기준**: 구독자 1,000명 + 최근 365일 시청 시간 4,000시간
+달성 기준은 2단계로 나뉩니다:
+
+**1단계 — 기본 수익 창출** (3가지 모두 충족):
+- `Channel.subscriberCount` ≥ 500
+- `Channel.uploadCount90d` ≥ 3 (최근 90일 업로드 횟수)
+- `Channel.shortsViews90d` ≥ 3,000,000 (최근 90일 쇼츠 조회수)
+
+**2단계 — 광고 수익** (1가지 충족):
+- `Channel.shortsViews90d` ≥ 10,000,000 (최근 90일 쇼츠 조회수)
+- 또는 `watchTimeMinutes` 합산 ≥ 180,000분 (3,000시간, 12개월 기준)
+
 - `Channel.isYPPQualified = true`로 자동 관리
-- YPP 달성 후 `ChannelAnalytics.estimatedRevenue`에 예상 수익 기록
+- YPP 달성 후 `AnalyticsRow.estimatedRevenue`에 예상 수익 기록
+- 관련 규칙: [비즈니스 규칙 — YPP 달성 기준](./business-rules.md#8-ypp-달성-기준-추적-2단계)
 
 ---
 
@@ -135,10 +179,7 @@ YouTube Data API 접근에 필요한 OAuth2 토큰 쌍입니다.
 
 오디오 파일을 텍스트(자막)로 변환하는 기술입니다. 이 플랫폼에서는 MP3 → SRT 자막 파일 생성에 사용합니다.
 
-- 사용 모델: faster-whisper large-v3
-- 한국어 인식률: 93%
-- 메모리: ~3GB → Lambda 불가, ECS Fargate 전용
-- 관련 ADR: [ADR 008 — Whisper 모델](../adr/008-whisper-model.md)
+- 현재 구현: faster-whisper 제거. subtitle-worker가 `script.json`의 `script` 필드를 직접 파싱해 SRT 파일을 생성합니다 (TTS 음성과 스크립트가 동일하므로 별도 STT 불필요).
 - Worker: `apps/workers/subtitle`
 - 출력: `jobs/{jobId}/subtitle.srt`
 
