@@ -3,6 +3,8 @@ import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { createLogger } from '@shorts/shared';
 import { JobsRepository } from './jobs.repository.js';
 import { JobNotFoundError, JobNotRetryableError } from './jobs.errors.js';
+import { fetchNewsTopics } from './news-fetcher.js';
+import type { AutoNewsJobDto } from './dto/auto-news.dto.js';
 
 const sqs = new SQSClient({ region: process.env.AWS_REGION ?? 'ap-northeast-2' });
 const log = createLogger({});
@@ -38,6 +40,13 @@ export class JobsService {
 
   findMany(channelId?: string) {
     return this.repo.findMany(channelId);
+  }
+
+  async createFromNews(dto: AutoNewsJobDto) {
+    const items = await fetchNewsTopics(dto.category, dto.count);
+    if (items.length === 0) throw new Error('수집된 뉴스 없음');
+    log.info({ category: dto.category, count: items.length }, '뉴스 자동 수집 완료');
+    return Promise.all(items.map((item) => this.create(dto.channelId, item.title)));
   }
 
   async retry(id: string) {

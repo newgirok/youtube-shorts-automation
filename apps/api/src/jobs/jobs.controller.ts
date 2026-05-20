@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { JobsService } from './jobs.service.js';
 import { CreateJobSchema } from './dto/create-job.dto.js';
+import { AutoNewsJobSchema } from './dto/auto-news.dto.js';
 import { JobNotFoundError, JobNotRetryableError } from './jobs.errors.js';
 
 @Controller('jobs')
@@ -32,6 +33,13 @@ export class JobsController {
   @Get(':id')
   findById(@Param('id') id: string) {
     return this.service.findById(id);
+  }
+
+  @Post('auto-news')
+  async autoNews(@Body() body: unknown) {
+    const result = AutoNewsJobSchema.safeParse(body);
+    if (!result.success) throw new BadRequestException(result.error.issues);
+    return this.service.createFromNews(result.data);
   }
 
   @Post(':id/retry')
