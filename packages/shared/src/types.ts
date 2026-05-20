@@ -4,8 +4,7 @@ export interface ScriptOutput {
   script: string;
   hashtags: string[];
   thumbnail_text: string;
-  affiliate_product: string;
-  affiliate_cta: string;
+  comment_bait: string;
 }
 
 export interface ScriptContent {

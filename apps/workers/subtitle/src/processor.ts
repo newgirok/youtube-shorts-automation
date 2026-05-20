@@ -30,6 +30,12 @@ function highlightNumbers(text: string): string {
   );
 }
 
+function highlightKeywords(text: string): string {
+  const words = ['구속', '체포', '파산', '탄핵', '사임', '폭로', '비리', '횡령', '결국', '충격', '논란', '드디어', '파업', '사기', '쫄딱', '날벼락', '폭탄'];
+  const pattern = new RegExp(`(${words.join('|')})`, 'g');
+  return text.replace(pattern, '<font color="#FF4C4C">$1</font>');
+}
+
 function splitSentences(text: string): string[] {
   return text
     .split(/(?<=[.!?。！？])\s*/)
@@ -48,7 +54,7 @@ function buildSrt(sentences: string[], totalMs: number): string {
         const start = cursor;
         const end = Math.min(cursor + duration, totalMs);
         cursor = end;
-        return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${highlightNumbers(text)}`;
+        return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${highlightKeywords(highlightNumbers(text))}`;
       })
       .join('\n\n') + '\n'
   );

@@ -24,7 +24,6 @@ interface Scene {
 interface ScriptContent {
   title?: string;
   thumbnail_text?: string;
-  affiliate_cta?: string;
   scenes?: Scene[];
 }
 
@@ -74,7 +73,6 @@ export async function processMessage(
       select: {
         topic: true,
         scriptContent: true,
-        channel: { select: { affiliateUrl: true } },
       },
     });
 
@@ -113,27 +111,7 @@ export async function processMessage(
       clipPaths.push(clipPath);
     }
 
-    // CTA 자막 추가
-    let finalSrt = srtBuf.toString('utf-8');
-    if (job?.channel?.affiliateUrl && scriptContent?.affiliate_cta) {
-      const ctaText = scriptContent.affiliate_cta;
-      const allTimes = finalSrt.match(/\d{2}:\d{2}:\d{2},\d{3}/g) ?? [];
-      const lastEndTime = allTimes[allTimes.length - 1];
-      if (lastEndTime) {
-        const [h, m, s] = lastEndTime.replace(',', '.').split(':').map(Number);
-        const totalSec = (h ?? 0) * 3600 + (m ?? 0) * 60 + (s ?? 0);
-        const ctaStart = Math.max(0, totalSec - 8);
-        const formatTime = (sec: number) => {
-          const hh = Math.floor(sec / 3600);
-          const mm = Math.floor((sec % 3600) / 60);
-          const ss = Math.floor(sec % 60);
-          const ms = Math.round((sec % 1) * 1000);
-          return `${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
-        };
-        const segCount = (finalSrt.match(/^\d+$/gm) ?? []).length + 1;
-        finalSrt += `\n${segCount}\n${formatTime(ctaStart)} --> ${lastEndTime}\n${ctaText}\n\n`;
-      }
-    }
+    const finalSrt = srtBuf.toString('utf-8');
     writeFileSync(srtPath, finalSrt, 'utf-8');
 
     log.info('FFmpeg 최종 합성 시작');

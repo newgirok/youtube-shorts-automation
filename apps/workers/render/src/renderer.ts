@@ -63,7 +63,7 @@ export function concatClipsWithAudio(
   );
 
   const escapedSrt = escapeSubtitlePath(srtPath);
-  const subtitleFilter = `subtitles='${escapedSrt}':force_style='FontName=${fontName},FontSize=24,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Bold=1,Outline=4,Shadow=2,MarginV=80'`;
+  const subtitleFilter = `subtitles='${escapedSrt}':force_style='FontName=${fontName},FontSize=46,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Bold=1,Outline=8,Shadow=3,Alignment=2,MarginV=130,MarginL=40,MarginR=40'`;
   execSync(
     `"${ffmpegPath}" -y -i "${concatPath}" -i "${audioPath}" -vf "${subtitleFilter}" -c:v libx264 -crf 23 -c:a aac -map 0:v:0 -map 1:a:0 -shortest "${outputPath}"`,
     { stdio: 'inherit', timeout: 600_000 }
