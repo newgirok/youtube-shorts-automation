@@ -22,18 +22,23 @@ export async function uploadToYouTube(
     ? scriptContent.title
     : `${scriptContent.title} #Shorts`;
 
+  const aiDisclosure = '⚠️ 이 영상은 AI가 생성한 스크립트·음성·이미지를 포함합니다.\n\n';
+  const description = aiDisclosure + scriptContent.hashtags.join(' ');
+
   const response = await youtube.videos.insert({
     part: ['snippet', 'status'],
     requestBody: {
       snippet: {
         title,
-        description: scriptContent.hashtags.join(' '),
+        description,
         tags: scriptContent.hashtags.map((t) => t.replace('#', '')),
-        categoryId: '22',
+        categoryId: '25',
         defaultLanguage: 'ko',
       },
       status: {
         privacyStatus: 'public',
+        selfDeclaredMadeForKids: false,
+        containsSyntheticMedia: true,
       },
     },
     media: {
