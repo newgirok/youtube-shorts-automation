@@ -26,6 +26,10 @@ scripts/tools/output/
 public/bg.mp4
 **/public/bg.mp4
 
+# 루트 스크린샷 (Playwright 임시 캡처)
+/*.png
+/*.jpg
+
 # Next.js
 .next/
 out/
