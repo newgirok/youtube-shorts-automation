@@ -205,6 +205,7 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
   const [topic, setTopic] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [autoNewsLoading, setAutoNewsLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedChannelId && channels.length > 0) {
@@ -266,6 +267,27 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
     setFilterMonth(null);
   }
 
+  const NEWS_CATEGORIES = [
+    { key: 'top', label: '종합' },
+    { key: 'politics', label: '정치' },
+    { key: 'business', label: '경제' },
+    { key: 'nation', label: '사회' },
+  ] as const;
+
+  async function handleAutoNews(category: string) {
+    if (!activeChannelId) return;
+    setAutoNewsLoading(true);
+    setSubmitError(null);
+    try {
+      await apiPost('/jobs/auto-news', { channelId: activeChannelId, category, count: 1 });
+      queryClient.invalidateQueries({ queryKey: ['jobs', activeChannelId] });
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : '자동 수집 오류');
+    } finally {
+      setAutoNewsLoading(false);
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!activeChannelId || !topic.trim()) return;
@@ -312,7 +334,7 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
               onChange={(e) => setTopic(e.target.value)}
               rows={3}
               required
-              placeholder={`Shorts로 만들 주제를 입력하세요.\n예: '2025 주식 투자 초보자 가이드' — 스크립트 작성, TTS 녹음, 자막 생성, 영상 편집, YouTube 업로드를 자동으로 처리합니다.`}
+              placeholder={`Shorts 주제를 입력하세요\n스크립트 · TTS · 자막 · 렌더링 · YouTube 업로드까지 자동으로 처리됩니다`}
               className="flex w-full bg-transparent px-5 pt-4 pb-2 text-base text-white placeholder:text-white/40 focus:outline-none resize-none [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/40"
             />
             <div className="flex items-center justify-end px-4 pb-3">
@@ -329,9 +351,25 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
         </form>
       </div>
 
+      {/* 뉴스 자동 수집 */}
+      <div className="w-full max-w-2xl px-4 mt-2 flex items-center gap-2 flex-wrap">
+        <span className="text-xs text-white/30">뉴스 자동 수집</span>
+        {NEWS_CATEGORIES.map(({ key, label }) => (
+          <button
+            key={key}
+            onClick={() => handleAutoNews(key)}
+            disabled={autoNewsLoading || !activeChannelId}
+            className="text-xs px-3 py-1 rounded-full border border-white/20 text-white/50 hover:text-white hover:border-white/50 transition-colors disabled:opacity-30"
+          >
+            {label}
+          </button>
+        ))}
+        {autoNewsLoading && <span className="text-xs text-white/30">수집 중...</span>}
+      </div>
+
       {/* 갤러리 — 프롬프트 아래 */}
       {jobs.length > 0 && (
-        <div className="w-full max-w-5xl mt-6 md:mt-32 bg-black/30 backdrop-blur-sm rounded-xl">
+        <div className="w-full max-w-5xl mt-6 md:mt-10 bg-black/30 backdrop-blur-sm rounded-xl">
           {/* 연/월 필터 */}
           <div className="flex items-center gap-1.5 px-3 pt-2 pb-2 border-b border-white/10 flex-wrap rounded-t-xl">
             <button

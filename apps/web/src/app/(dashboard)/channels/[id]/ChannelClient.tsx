@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, BarChart, Bar } from 'recharts';
 import { apiGet, apiPost } from '@/lib/api';
 import type { AnalyticsRow, Channel } from '@/lib/types';
 
@@ -10,9 +10,9 @@ function ProgressBar({ value, max, label }: { value: number; max: number; label:
   const pct = Math.min((value / max) * 100, 100);
   return (
     <div>
-      <div className="mb-1.5 flex items-center justify-between">
-        <span className="text-xs text-white/60">{label}</span>
-        <div className="flex items-baseline gap-1">
+      <div className="mb-1.5 flex items-start justify-between gap-2">
+        <span className="text-xs text-white/60 min-w-0 leading-tight">{label}</span>
+        <div className="flex items-baseline gap-1 shrink-0 ml-1">
           <span className="text-sm font-semibold text-white">{value.toLocaleString()}</span>
           <span className="text-xs text-white/40">/ {max.toLocaleString()}</span>
           <span className="ml-1 text-xs text-white/60">{pct.toFixed(1)}%</span>
@@ -89,39 +89,50 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
   }, [initial.id, queryClient]);
 
   const subscriberCount = channel.subscriberCount ?? 0;
-  const totalViews = channel.totalViews ?? 0;
-  const subPct = Math.min((subscriberCount / 1000) * 100, 100);
-  // watch time hours 데이터 미수집 — totalViews는 조회수(views)이며 시청시간(hours)이 아님
-  const viewPct = 0;
+  const uploadCount90d = channel.uploadCount90d ?? 0;
+  const shortsViews90d = channel.shortsViews90d ?? 0;
+  const totalWatchMinutes = analytics.reduce((s, r) => s + r.watchTimeMinutes, 0);
+  const totalWatchHours = Math.round(totalWatchMinutes / 60);
   const periodViews = analytics.reduce((s, r) => s + r.views, 0);
   const periodRevenue = analytics.reduce((s, r) => s + r.estimatedRevenue, 0);
   const periodSubGain = analytics.reduce((s, r) => s + r.subscribers, 0);
+  // YPP 1단계: 구독자 500 + 업로드 3회(90일) + 쇼츠조회수 300만(90일)
+  const stage1Done = subscriberCount >= 500 && uploadCount90d >= 3 && shortsViews90d >= 3_000_000;
+  // YPP 2단계: 쇼츠 1,000만(90일) 또는 시청시간 3,000h(12개월)
+  const stage2Done = shortsViews90d >= 10_000_000 || totalWatchHours >= 3000;
 
   return (
-    <div className="flex flex-col px-4 py-4 md:px-6 gap-3 md:h-screen md:overflow-y-auto">
+    <div className="flex flex-col px-4 py-4 md:px-6 gap-3 lg:h-screen lg:overflow-y-auto">
       {/* 상단: stat 4개 */}
       <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* 구독자 / 500 목표 */}
         <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 overflow-hidden">
           <p className="text-xs text-white/50 mb-1 truncate">구독자 수</p>
           <p className="text-2xl font-bold text-white truncate">{subscriberCount.toLocaleString()}</p>
           <div className="mt-2 h-1 w-full rounded-full bg-white/10">
-            <div className="h-1 rounded-full bg-white/60 transition-all duration-500" style={{ width: `${subPct}%` }} />
+            <div className="h-1 rounded-full bg-white/60 transition-all duration-500" style={{ width: `${Math.min((subscriberCount / 500) * 100, 100)}%` }} />
           </div>
-          <p className="text-xs text-white/40 mt-1 truncate">{subPct.toFixed(1)}% / 1,000 목표</p>
+          <p className="text-xs text-white/40 mt-1 truncate">{subscriberCount >= 500 ? '✓ 달성' : `${(500 - subscriberCount).toLocaleString()}명 남음 (목표 500)`}</p>
         </div>
+        {/* 쇼츠 조회수 90일 / 300만 목표 */}
         <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 overflow-hidden">
-          <p className="text-xs text-white/50 mb-1 truncate">총 조회수</p>
-          <p className="text-2xl font-bold text-white truncate">{totalViews.toLocaleString()}</p>
+          <p className="text-xs text-white/50 mb-1 truncate">쇼츠 조회수 (90일)</p>
+          <p className="text-2xl font-bold text-white truncate">{shortsViews90d.toLocaleString()}</p>
           <div className="mt-2 h-1 w-full rounded-full bg-white/10">
-            <div className="h-1 rounded-full bg-white/60 transition-all duration-500" style={{ width: `${viewPct}%` }} />
+            <div className="h-1 rounded-full bg-white/60 transition-all duration-500" style={{ width: `${Math.min((shortsViews90d / 3_000_000) * 100, 100)}%` }} />
           </div>
-          <p className="text-xs text-white/40 mt-1 truncate">시청시간 데이터 미수집</p>
+          <p className="text-xs text-white/40 mt-1 truncate">{shortsViews90d >= 3_000_000 ? '✓ 달성' : `${((shortsViews90d / 3_000_000) * 100).toFixed(2)}% / 300만 목표`}</p>
         </div>
+        {/* 업로드 횟수 90일 / 3회 목표 */}
         <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 overflow-hidden">
-          <p className="text-xs text-white/50 mb-1 truncate">YPP 달성률</p>
-          <p className="text-2xl font-bold text-white truncate">{Math.round((subPct + viewPct) / 2)}%</p>
-          <p className="text-xs text-white/40 mt-0.5 truncate">구독 {subPct.toFixed(0)}% · 시청 {viewPct.toFixed(0)}%</p>
+          <p className="text-xs text-white/50 mb-1 truncate">업로드 횟수 (90일)</p>
+          <p className="text-2xl font-bold text-white truncate">{uploadCount90d}</p>
+          <div className="mt-2 h-1 w-full rounded-full bg-white/10">
+            <div className="h-1 rounded-full bg-white/60 transition-all duration-500" style={{ width: `${Math.min((uploadCount90d / 3) * 100, 100)}%` }} />
+          </div>
+          <p className="text-xs text-white/40 mt-1 truncate">{uploadCount90d >= 3 ? '✓ 달성' : `${3 - uploadCount90d}회 남음 (목표 3회)`}</p>
         </div>
+        {/* 기간 예상수익 */}
         <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 overflow-hidden">
           <p className="text-xs text-white/50 mb-1 truncate">기간 예상수익</p>
           <p className="text-2xl font-bold text-white truncate">${periodRevenue.toFixed(2)}</p>
@@ -193,9 +204,9 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
       </div>
 
       {/* 메인 3컬럼 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:flex-1 md:min-h-0">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:flex-1 lg:min-h-0">
         {/* 좌: 채널 정보 */}
-        <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 flex flex-col gap-2.5 overflow-y-auto min-h-[200px] md:min-h-0">
+        <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 flex flex-col gap-2.5 overflow-y-auto min-h-[200px] lg:min-h-0">
           <p className="text-sm font-semibold text-white shrink-0">채널 정보</p>
           <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 shrink-0">
             <p className="text-xs text-white/40 mb-0.5">채널 이름</p>
@@ -230,71 +241,48 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
         </div>
 
         {/* 중: YPP 달성 */}
-        <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 flex flex-col gap-4 overflow-y-auto min-h-[200px] md:min-h-0">
+        <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 flex flex-col gap-3 overflow-y-auto min-h-[200px] lg:min-h-0">
           <p className="text-sm font-semibold text-white shrink-0">YPP 달성 현황</p>
-          <div className="flex justify-around items-center shrink-0">
-            <div className="flex flex-col items-center gap-1.5">
-              <div className="relative">
-                <PieChart width={100} height={100}>
-                  <Pie
-                    data={[{ value: subPct }, { value: Math.max(0, 100 - subPct) }]}
-                    cx={45} cy={45}
-                    innerRadius={30} outerRadius={46}
-                    startAngle={90} endAngle={-270}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    <Cell fill="rgba(255,255,255,0.85)" />
-                    <Cell fill="rgba(255,255,255,0.1)" />
-                  </Pie>
-                </PieChart>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm font-bold text-white">{subPct.toFixed(0)}%</span>
-                </div>
-              </div>
-              <p className="text-xs text-white/40">구독자</p>
+
+          {/* 1단계: 기본 수익 창출 */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 shrink-0">
+            <div className="flex items-center gap-1.5 mb-3">
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${stage1Done ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
+                {stage1Done ? '✓ 달성' : '1단계'}
+              </span>
+              <p className="text-xs text-white/60 font-medium">기본 수익 창출 (3가지 모두 충족)</p>
             </div>
-            <div className="flex flex-col items-center gap-1.5">
-              <div className="relative">
-                <PieChart width={100} height={100}>
-                  <Pie
-                    data={[{ value: viewPct }, { value: Math.max(0, 100 - viewPct) }]}
-                    cx={45} cy={45}
-                    innerRadius={30} outerRadius={46}
-                    startAngle={90} endAngle={-270}
-                    dataKey="value"
-                    strokeWidth={0}
-                  >
-                    <Cell fill="rgba(255,255,255,0.85)" />
-                    <Cell fill="rgba(255,255,255,0.1)" />
-                  </Pie>
-                </PieChart>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-sm font-bold text-white">{viewPct.toFixed(0)}%</span>
-                </div>
-              </div>
-              <p className="text-xs text-white/40">시청시간</p>
+            <div className="flex flex-col gap-2.5">
+              <ProgressBar value={subscriberCount} max={500} label="구독자" />
+              <ProgressBar value={uploadCount90d} max={3} label="업로드 횟수 (90일)" />
+              <ProgressBar value={shortsViews90d} max={3_000_000} label="쇼츠 조회수 (90일)" />
             </div>
+            <p className="text-[10px] text-white/25 mt-2.5">달성 시 멤버십·슈퍼챗·쇼핑 기능 활성화</p>
           </div>
-          <div className="flex flex-col gap-3 flex-1">
-            <div className="rounded-xl border border-white/10 bg-white/5 p-3">
-              <p className="text-xs text-white/50 mb-2">남은 목표</p>
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/40">구독자</span>
-                  <span className="text-sm font-semibold text-white">{Math.max(0, 1000 - subscriberCount).toLocaleString()}명 남음</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-white/40">시청시간</span>
-                  <span className="text-sm font-semibold text-white/40">데이터 미수집</span>
-                </div>
-              </div>
+
+          {/* 2단계: 광고 수익 */}
+          <div className="rounded-xl border border-white/10 bg-white/5 p-3 flex-1">
+            <div className="flex items-center gap-1.5 mb-3">
+              <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${stage2Done ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
+                {stage2Done ? '✓ 달성' : '2단계'}
+              </span>
+              <p className="text-xs text-white/60 font-medium">광고 수익 (아래 중 1가지)</p>
             </div>
+            <div className="flex flex-col gap-2">
+              <ProgressBar value={shortsViews90d} max={10_000_000} label="쇼츠 조회수 1,000만 (90일)" />
+              <div className="flex items-center gap-2 py-0.5">
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-[10px] text-white/30">또는</span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
+              <ProgressBar value={totalWatchHours} max={3000} label="시청시간 (12개월)" />
+            </div>
+            <p className="text-[10px] text-white/25 mt-2.5">달성 시 쇼츠 피드 광고 수익 창출</p>
           </div>
         </div>
 
         {/* 우: 일별 데이터 */}
-        <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 flex flex-col gap-3 overflow-y-auto min-h-[200px] md:min-h-0">
+        <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 flex flex-col gap-3 overflow-y-auto min-h-[200px] lg:min-h-0">
           <p className="text-sm font-semibold text-white shrink-0">일별 데이터</p>
           <AnalyticsTable analytics={analytics} />
         </div>
