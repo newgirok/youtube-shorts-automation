@@ -30,7 +30,7 @@ function useCarouselSize() {
 function GalleryCard({ job }: { job: JobType }) {
   const [hovered, setHovered] = useState(false);
   const thumb = job.youtubeVideoId
-    ? `https://img.youtube.com/vi/${job.youtubeVideoId}/mqdefault.jpg`
+    ? `https://img.youtube.com/vi/${job.youtubeVideoId}/maxresdefault.jpg`
     : null;
 
   return (
@@ -53,6 +53,12 @@ function GalleryCard({ job }: { job: JobType }) {
             alt={job.topic}
             style={{ filter: hovered ? 'brightness(1.12)' : 'brightness(1)', transition: 'filter 0.2s' }}
             className="w-full h-full object-cover"
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (!img.src.includes('hqdefault')) {
+                img.src = `https://img.youtube.com/vi/${job.youtubeVideoId!}/hqdefault.jpg`;
+              }
+            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-white/5">
