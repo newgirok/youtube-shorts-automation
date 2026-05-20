@@ -1,9 +1,10 @@
 'use client';
 
 import { useParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
 import { Eye, ThumbsUp, Clock, RefreshCw, ExternalLink } from 'lucide-react';
-import { apiGet } from '@/lib/api';
+import { apiGet, apiPost } from '@/lib/api';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import type { Job } from '@/lib/types';
 
@@ -25,6 +26,8 @@ function calcProcessingTime(startedAt: string | null, completedAt: string | null
 
 export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const queryClient = useQueryClient();
+  const syncedRef = useRef(false);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ['job', id],
@@ -36,6 +39,14 @@ export default function JobDetailPage() {
       return 2000;
     },
   });
+
+  useEffect(() => {
+    if (!job?.channelId || !job?.youtubeVideoId || syncedRef.current) return;
+    syncedRef.current = true;
+    apiPost(`/channels/${job.channelId}/sync-videos`, {})
+      .then(() => queryClient.invalidateQueries({ queryKey: ['job', id] }))
+      .catch(() => {});
+  }, [job?.channelId, job?.youtubeVideoId, id, queryClient]);
 
   if (isLoading) {
     return <div className="py-32 text-center text-sm text-white/50">불러오는 중...</div>;
