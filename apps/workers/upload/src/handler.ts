@@ -67,6 +67,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
         where: { id: jobId },
         data: {
           youtubeVideoId: videoId,
+          privacyStatus: 'public',
           status: 'COMPLETED',
           completedAt: new Date(),
         },

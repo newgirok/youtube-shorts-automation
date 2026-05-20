@@ -39,13 +39,54 @@ export class ChannelsRepository {
     });
   }
 
-  getAnalytics(id: string) {
-    return prisma.channelAnalytics.findMany({
+  async getAnalytics(id: string) {
+    const rows = await prisma.channelAnalytics.findMany({
       where: { channelId: id },
-      select: { date: true, views: true, subscribers: true, estimatedRevenue: true },
-      orderBy: { date: 'desc' },
+      select: { date: true, views: true, subscribers: true, estimatedRevenue: true, watchTimeMinutes: true },
+      orderBy: { date: 'asc' },
       take: 30,
     });
+    return rows.map((r) => ({
+      date: r.date.toISOString().split('T')[0],
+      views: Number(r.views),
+      subscribers: r.subscribers,
+      estimatedRevenue: r.estimatedRevenue,
+      watchTimeMinutes: Number(r.watchTimeMinutes),
+    }));
+  }
+
+  upsertDailyAnalytics(channelId: string, data: {
+    date: Date;
+    views: bigint;
+    subscribers: number;
+    watchTimeMinutes: bigint;
+  }) {
+    return prisma.channelAnalytics.upsert({
+      where: { channelId_date: { channelId, date: data.date } },
+      create: { channelId, ...data },
+      update: { views: data.views, subscribers: data.subscribers, watchTimeMinutes: data.watchTimeMinutes },
+      select: { id: true },
+    });
+  }
+
+  async getYPPStats(channelId: string) {
+    const since90d = new Date();
+    since90d.setDate(since90d.getDate() - 90);
+
+    const jobs = await prisma.job.findMany({
+      where: {
+        channelId,
+        status: 'COMPLETED',
+        youtubeVideoId: { not: null },
+        completedAt: { gte: since90d },
+      },
+      select: { viewCount: true },
+    });
+
+    return {
+      uploadCount90d: jobs.length,
+      shortsViews90d: jobs.reduce((s, j) => s + Number(j.viewCount), 0),
+    };
   }
 
   findCompletedJobsWithVideoId(channelId: string) {
@@ -77,12 +118,12 @@ export class ChannelsRepository {
     });
   }
 
-  updateJobViewCounts(updates: Array<{ youtubeVideoId: string; viewCount: number; likeCount: number }>) {
+  updateJobViewCounts(updates: Array<{ youtubeVideoId: string; viewCount: number; likeCount: number; privacyStatus: string }>) {
     return Promise.all(
-      updates.map(({ youtubeVideoId, viewCount, likeCount }) =>
+      updates.map(({ youtubeVideoId, viewCount, likeCount, privacyStatus }) =>
         prisma.job.updateMany({
           where: { youtubeVideoId },
-          data: { viewCount, likeCount },
+          data: { viewCount, likeCount, privacyStatus },
         }),
       ),
     );

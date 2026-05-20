@@ -16,9 +16,12 @@ export class ChannelsService {
   }
 
   async findById(id: string) {
-    const channel = await this.repo.findById(id);
+    const [channel, yppStats] = await Promise.all([
+      this.repo.findById(id),
+      this.repo.getYPPStats(id),
+    ]);
     if (!channel) throw new NotFoundException('채널을 찾을 수 없습니다.');
-    return channel;
+    return { ...channel, ...yppStats };
   }
 
   updateSchedule(id: string, cronExpression: string) {
@@ -53,7 +56,41 @@ export class ChannelsService {
       log.info({ channelId, subscriberCount: stats.subscriberCount, viewCount: stats.viewCount }, '채널 통계 갱신 완료');
     }
 
+    await this.syncAnalytics(channelId, channelRow.youtubeId, client).catch((err) => {
+      log.warn({ channelId, err }, 'Analytics 동기화 실패 (scope 없음 — 채널 재연결 필요)');
+    });
+
     return this.syncVideos(channelId);
+  }
+
+  private async syncAnalytics(channelId: string, youtubeId: string, client: OAuth2Client): Promise<void> {
+    const ytAnalytics = google.youtubeAnalytics({ version: 'v2', auth: client });
+
+    const endDate = new Date().toISOString().split('T')[0];
+    const start = new Date();
+    start.setDate(start.getDate() - 30);
+    const startDate = start.toISOString().split('T')[0];
+
+    const res = await ytAnalytics.reports.query({
+      ids: `channel==${youtubeId}`,
+      startDate,
+      endDate,
+      metrics: 'views,subscribersGained,estimatedMinutesWatched',
+      dimensions: 'day',
+      sort: 'day',
+    });
+
+    const rows = res.data.rows ?? [];
+    for (const row of rows) {
+      const [dateStr, views, subscribers, watchTimeMinutes] = row as [string, number, number, number];
+      await this.repo.upsertDailyAnalytics(channelId, {
+        date: new Date(dateStr),
+        views: BigInt(Math.round(views)),
+        subscribers: Math.round(subscribers),
+        watchTimeMinutes: BigInt(Math.round(watchTimeMinutes)),
+      });
+    }
+    log.info({ channelId, rows: rows.length }, 'Analytics 동기화 완료');
   }
 
   async syncVideos(channelId: string): Promise<{ synced: number; deleted: number }> {
@@ -82,11 +119,11 @@ export class ChannelsService {
     // YouTube API는 한 번에 최대 50개 id 조회 가능
     const videoIds = jobs.map((j) => j.youtubeVideoId as string);
     const existingIds = new Set<string>();
-    const viewCountUpdates: Array<{ youtubeVideoId: string; viewCount: number; likeCount: number }> = [];
+    const viewCountUpdates: Array<{ youtubeVideoId: string; viewCount: number; likeCount: number; privacyStatus: string }> = [];
 
     for (let i = 0; i < videoIds.length; i += 50) {
       const chunk = videoIds.slice(i, i + 50);
-      const res = await yt.videos.list({ part: ['id', 'statistics'], id: chunk });
+      const res = await yt.videos.list({ part: ['id', 'statistics', 'status'], id: chunk });
       for (const item of res.data.items ?? []) {
         if (item.id) {
           existingIds.add(item.id);
@@ -94,6 +131,7 @@ export class ChannelsService {
             youtubeVideoId: item.id,
             viewCount: parseInt(item.statistics?.viewCount ?? '0', 10),
             likeCount: parseInt(item.statistics?.likeCount ?? '0', 10),
+            privacyStatus: item.status?.privacyStatus ?? 'public',
           });
         }
       }
