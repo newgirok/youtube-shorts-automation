@@ -26,11 +26,13 @@ while (true) {
 Lambda SQS 트리거는 AWS Lambda 서비스가 SQS를 폴링해 Lambda **함수**를 호출하는 구조다. ECS Service는 이미 실행 중인 컨테이너 프로세스이며, Lambda 호출 인터페이스가 없다. 트리거를 붙이면 메시지가 올 때마다 **새 Fargate 태스크**가 시작된다.
 
 새 태스크 방식의 문제:
-- faster-whisper large-v3 모델 로딩: 태스크 시작 후 약 30~60초 소요
-- 1개 Job에 1~2분 지연 추가 발생
+- render-worker: FFmpeg 초기화 + Pexels 이미지 다운로드로 태스크 시작 시 준비 시간 소요
+- 1개 Job에 지연 추가 발생
 - 태스크 시작/종료 반복으로 Fargate 비용 증가
 
-**상시 실행(ECS Service) + 자체 폴링**을 선택하면 모델이 메모리에 상주해 메시지 수신 즉시 처리 가능.
+**상시 실행(ECS Service) + 자체 폴링**을 선택하면 Worker가 대기 상태로 메모리에 상주해 메시지 수신 즉시 처리 가능.
+
+> subtitle-worker는 2026-05-21 기준 faster-whisper를 제거했으나 동일한 Long Polling 아키텍처를 유지한다.
 
 ## Long Polling(`WaitTimeSeconds: 20`)을 선택한 이유
 

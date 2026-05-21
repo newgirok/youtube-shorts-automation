@@ -42,7 +42,7 @@ model: claude-sonnet-4-6
 | script-worker | Lambda (512MB, 60s) | 가볍고 빠름 |
 | tts-worker | Lambda (512MB, 120s) | 가볍고 빠름 |
 | upload-worker | Lambda (256MB, 300s) | 가볍고 빠름 |
-| subtitle-worker | ECS Fargate (2vCPU, 8GB) | faster-whisper large-v3 모델 상주 필요 |
+| subtitle-worker | ECS Fargate (2vCPU, 4GB) | SQS Long Polling 상시 실행 필요 (faster-whisper 제거됨, 메모리 축소 가능) |
 | render-worker | ECS Fargate (4vCPU, 16GB) | FFmpeg/Remotion CPU 집약적 |
 
 subtitle/render를 Lambda로 이전하면 모델 Cold Start로 인해 처리 불가 — **변경 금지** (ADR 009).

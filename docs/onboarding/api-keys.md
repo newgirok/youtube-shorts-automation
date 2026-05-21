@@ -49,7 +49,7 @@ GEMINI_API_KEY=AIzaSy...
 ### 동작 확인
 
 ```bash
-curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$GEMINI_API_KEY" \
+curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$GEMINI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"contents":[{"parts":[{"text":"안녕하세요"}]}]}'
 ```

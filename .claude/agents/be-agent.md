@@ -15,7 +15,7 @@ model: claude-sonnet-4-6
 - `apps/workers/script` — Gemini API → script.json
 - `apps/workers/tts` — Edge-TTS → audio.mp3
 - `apps/workers/upload` — YouTube Data API → COMPLETED
-- `apps/workers/subtitle` — Fargate: SQS 폴링 루프 + heartbeat + faster-whisper 호출 (비즈니스 로직)
+- `apps/workers/subtitle` — Fargate: SQS 폴링 루프 + heartbeat + 스크립트 기반 SRT 생성 (비즈니스 로직)
 - `apps/workers/render` — Fargate: SQS 폴링 루프 + heartbeat + FFmpeg 호출 (비즈니스 로직)
 
 ## 핵심 규칙
@@ -47,9 +47,9 @@ model: claude-sonnet-4-6
   ```
 
 ### Gemini API (script-worker 한정)
-- 모델: `gemini-2.0-flash` 고정 (변경 금지) — 무료 티어 1,500 req/day
+- 모델: `gemini-2.5-flash` 고정 (변경 금지) — 무료 티어 1,500 req/day
 - SDK: `@google/generative-ai`
-- 출력 JSON 7개 필드: `title`, `hook`, `script`, `hashtags`, `thumbnail_text`, `affiliate_product`, `affiliate_cta`
+- 출력 JSON 7개 필드: `title`, `hook`, `script`, `scenes`, `hashtags`, `thumbnail_text`, `comment_bait`
 
 ### 보안
 - `access_token` DB 저장 절대 금지 — 런타임에서 `refresh_token`으로 재발급
