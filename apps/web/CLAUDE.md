@@ -2,6 +2,11 @@
 
 Next.js 15 App Router 기반 관리 대시보드.
 
+## 적용 Rules
+- `.claude/rules/frontend.md` — 컴포넌트 전략, TanStack Query, useEffect 금지
+- `.claude/rules/security.md` — 환경변수, OAuth
+- `.claude/rules/typescript.md` — strict, ESM
+
 ## 주요 명령
 - `pnpm dev` — Next.js 개발 서버 (포트 3001)
 - `pnpm build` — Next.js 빌드

@@ -25,10 +25,18 @@
       "Bash(pnpm --version)",
       "Bash(where *)",
       "Bash(diff *)",
-      "Bash(rm *)",
-      "PowerShell(Remove-Item *)",
-      "PowerShell(Get-ChildItem * | Remove-Item *)"
+      "Bash(rm .playwright-mcp/*)",
+      "Bash(rm .shrimp-data/*)",
+      "PowerShell(Remove-Item .playwright-mcp\\* -Recurse)",
+      "PowerShell(Remove-Item .shrimp-data\\* -Recurse)"
     ],
-    "deny": []
+    "deny": [
+      "Bash(git push *--force*)",
+      "Bash(git push *-f *)",
+      "Bash(git push *-f)",
+      "Bash(rm -rf /*)",
+      "Bash(rm -rf ~*)",
+      "Bash(rm -rf ./*)"
+    ]
   }
 }

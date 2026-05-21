@@ -11,16 +11,8 @@
     },
     "playwright": {
       "command": "npx",
-      "args": ["-y", "@playwright/mcp@latest", "--output-dir", ".playwright-mcp"],
+      "args": ["-y", "@playwright/mcp@0.0.75", "--output-dir", ".playwright-mcp"],
       "type": "stdio"
-    },
-    "supabase": {
-      "command": "npx",
-      "args": ["-y", "@supabase/mcp-server-supabase@latest"],
-      "type": "stdio",
-      "env": {
-        "SUPABASE_ACCESS_TOKEN": ""
-      }
     },
     "terraform": {
       "command": "npx",
@@ -37,10 +29,10 @@
     },
     "sentry": {
       "command": "npx",
-      "args": ["-y", "@sentry/mcp-server@latest"],
+      "args": ["-y", "@sentry/mcp-server@0.34.0"],
       "type": "stdio",
       "env": {
-        "SENTRY_AUTH_TOKEN": ""
+        "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}"
       }
     }
   }

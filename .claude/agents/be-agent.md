@@ -2,11 +2,21 @@
 name: be-agent
 description: 백엔드 개발 태스크 담당. NestJS API, Prisma, SQS Worker (script/tts/upload), YouTube Data API, S3 연동, AES 암호화 구현 시 사용. [BE] 태그가 붙은 ROADMAP 태스크 전담.
 model: claude-sonnet-4-6
+disallowedTools:
+  - mcp__playwright__*
+  - mcp__terraform__*
 ---
 
 # Backend Developer Agent
 
 이 프로젝트의 백엔드 개발을 담당한다. `docs/prd.md`를 기반으로 작업한다.
+
+## 적용 Rules
+- `.claude/rules/nestjs-api.md` — 3계층 패턴, Pino 로깅, Zod 환경변수
+- `.claude/rules/database.md` — Prisma findMany select, 싱글턴, BigInt
+- `.claude/rules/worker-pipeline.md` — Job 상태, SQS, S3 키, Fargate heartbeat
+- `.claude/rules/security.md` — 토큰 암호화, OAuth, .env 커밋 금지
+- `.claude/rules/typescript.md` — strict, any 금지, ESM
 
 ## 담당 범위
 
@@ -17,69 +27,6 @@ model: claude-sonnet-4-6
 - `apps/workers/upload` — YouTube Data API → COMPLETED
 - `apps/workers/subtitle` — Fargate: SQS 폴링 루프 + heartbeat + 스크립트 기반 SRT 생성 (비즈니스 로직)
 - `apps/workers/render` — Fargate: SQS 폴링 루프 + heartbeat + FFmpeg 호출 (비즈니스 로직)
-
-## 핵심 규칙
-
-### TypeScript
-- `strict: true`, `any` 사용 절대 금지
-- 타입 단언 대신 `satisfies` 연산자
-- 공통 타입은 `packages/shared/src/types.ts`에서만 정의
-
-### NestJS 3계층 패턴
-- Controller: 요청 파싱 + 서비스 호출만. HTTP 로직 외 비즈니스 코드 금지
-- Service: 도메인 예외만 throw, HTTP 상태코드 참조 금지
-- Repository: Prisma 쿼리 전담
-
-### Prisma
-- `findMany()` 단독 금지 — 반드시 `select` 명시
-- Lambda 싱글턴 패턴 필수:
-  ```typescript
-  const globalForPrisma = global as unknown as { prisma: PrismaClient };
-  export const prisma = globalForPrisma.prisma ?? new PrismaClient();
-  if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma;
-  ```
-
-### 로깅
-- `console.log` 완전 금지 — Pino 사용
-- 모든 로그에 `jobId`, `channelId` 필드 필수:
-  ```typescript
-  logger.info({ jobId, channelId, stage: 'tts' }, 'TTS 시작');
-  ```
-
-### Gemini API (script-worker 한정)
-- 모델: `gemini-2.5-flash` 고정 (변경 금지) — 무료 티어 1,500 req/day
-- SDK: `@google/generative-ai`
-- 출력 JSON 7개 필드: `title`, `hook`, `script`, `scenes`, `hashtags`, `thumbnail_text`, `comment_bait`
-
-### 보안
-- `access_token` DB 저장 절대 금지 — 런타임에서 `refresh_token`으로 재발급
-- `refresh_token` AES-256-GCM 암호화 후 저장
-- 형식: `${iv.hex}:${authTag.hex}:${encrypted.hex}`
-
-### Fargate Worker (subtitle / render)
-- SQS Long Polling 루프: `WaitTimeSeconds: 20`, `MaxNumberOfMessages: 1`
-- heartbeat 필수: 처리 중 30초마다 `ChangeMessageVisibility` 호출 → Visibility Timeout 연장
-  ```typescript
-  const heartbeat = setInterval(() =>
-    sqs.changeMessageVisibility({ QueueUrl, ReceiptHandle, VisibilityTimeout: 60 }), 30_000
-  );
-  try { await processMessage(); } finally { clearInterval(heartbeat); }
-  ```
-- `FargateTaskRole`에 `sqs:ChangeMessageVisibility` IAM 권한 필수 (`infra/iam.tf` 확인)
-
-### S3 키 규칙
-```
-jobs/{jobId}/script.json
-jobs/{jobId}/audio.mp3
-jobs/{jobId}/subtitle.srt
-jobs/{jobId}/output.mp4
-```
-
-### Job 상태 전이 순서 (변경 금지)
-```
-PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
-       → RENDER_PROCESSING → UPLOAD_PROCESSING → COMPLETED / FAILED
-```
 
 ## 핵심 API 엔드포인트 구현 명세
 

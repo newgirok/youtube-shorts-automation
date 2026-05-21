@@ -2,6 +2,12 @@
 
 NestJS + Fastify 기반 REST API 서버.
 
+## 적용 Rules
+- `.claude/rules/nestjs-api.md` — 3계층 패턴, 로깅, 환경변수 검증
+- `.claude/rules/database.md` — Prisma 쿼리 규칙, 싱글턴 패턴
+- `.claude/rules/security.md` — 토큰 관리, OAuth 스코프
+- `.claude/rules/typescript.md` — strict, any 금지, ESM .js 확장자
+
 ## 주요 명령
 - `pnpm dev` — tsx watch 개발 서버 (포트 3000)
 - `pnpm build` — tsc 컴파일

@@ -8,10 +8,20 @@ youtube-shorts-automation/
 │   │   ├── be-agent.md               # 백엔드 담당 (NestJS·Prisma·SQS)
 │   │   ├── devops-agent.md           # 인프라 담당 (Terraform·ECS·GitHub Actions)
 │   │   └── fe-agent.md               # 프론트엔드 담당 (Next.js·shadcn/ui)
-│   └── settings.json                 # Claude Code 프로젝트 설정 (허용 명령·훅)
+│   ├── rules/                        # 도메인별 코딩 규칙 (Claude 자동 참조)
+│   │   ├── typescript.md             # strict, any 금지, ESM .js 확장자
+│   │   ├── nestjs-api.md             # 3계층 패턴, Pino 로깅, Zod 환경변수
+│   │   ├── database.md               # Prisma findMany select, 싱글턴, BigInt
+│   │   ├── worker-pipeline.md        # Job 상태, SQS 고정값, S3 키, Fargate heartbeat
+│   │   ├── security.md               # AES-256-GCM, OAuth, .env 커밋 금지
+│   │   ├── frontend.md               # 서버 컴포넌트, TanStack Query, useEffect 금지
+│   │   └── infrastructure.md         # IaC 분리 원칙, Worker 배포 기준, 체크리스트
+│   ├── REVIEW.md                     # 코드 리뷰 기준 (Critical/항상 확인/건너뛸 것)
+│   ├── playwright-sort.ps1           # PostToolUse 훅 — Playwright 출력 자동 분류
+│   └── settings.json                 # Claude Code 프로젝트 설정 (PostToolUse·permissions deny)
 ├── .env.example                      # 환경변수 템플릿 (루트 서비스용)
 ├── .env.local                        # 공통 환경변수 (gitignore)
-├── .mcp.json                         # MCP 서버 설정 (Shrimp Task Manager·Playwright·Supabase·Terraform·AWS·Sentry)
+├── .mcp.json                         # MCP 서버 설정 (Shrimp Task Manager·Playwright·Terraform·AWS·Sentry)
 ├── docker-compose.yml                # 로컬 통합 환경 (LocalStack + PostgreSQL + Workers)
 ├── package.json                      # 루트 패키지 (공통 스크립트·devDependencies)
 ├── pnpm-workspace.yaml               # pnpm 워크스페이스 패키지 경로 선언

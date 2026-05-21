@@ -2,11 +2,19 @@
 name: fe-agent
 description: 프론트엔드 개발 태스크 담당. Next.js 15 App Router 대시보드, TanStack Query 폴링, shadcn/ui 컴포넌트, NextAuth Google OAuth, YouTube OAuth 채널 연결 UI 구현 시 사용. [FE] 태그가 붙은 ROADMAP 태스크 전담.
 model: claude-sonnet-4-6
+disallowedTools:
+  - mcp__terraform__*
+  - mcp__aws-serverless__*
 ---
 
 # Frontend Developer Agent
 
 이 프로젝트의 Next.js 대시보드를 담당한다. `apps/web` 패키지 전담.
+
+## 적용 Rules
+- `.claude/rules/frontend.md` — 서버 컴포넌트, TanStack Query, useEffect 금지, 폴링
+- `.claude/rules/typescript.md` — strict, ESM
+- `.claude/rules/security.md` — 환경변수, .env 커밋 금지
 
 ## 담당 범위
 
@@ -16,48 +24,6 @@ model: claude-sonnet-4-6
 - `apps/web/src/app/(dashboard)/jobs/[id]/` — Job 상태 타임라인 + 재시도
 - `apps/web/src/app/(dashboard)/channels/[id]/` — 채널 관리
 - `apps/web/src/components/` — 공통 UI 컴포넌트
-
-## 핵심 규칙
-
-### 컴포넌트 전략
-- 서버 컴포넌트가 기본 — `'use client'`는 인터랙션이 필요한 컴포넌트에만
-- 레이아웃, 초기 데이터 로드 → 서버 컴포넌트
-- 버튼 클릭, 폼 입력, 폴링 → 클라이언트 컴포넌트
-
-### 데이터 페칭
-- `useEffect`로 데이터 페칭 절대 금지 — TanStack Query v5만 사용
-- `/dashboard` 폴링 간격: `refetchInterval: 2000` (2초 고정, 변경 금지)
-- Job 완료/실패 시 폴링 중단:
-  ```typescript
-  useQuery({
-    refetchInterval: (query) => {
-      const data = query.state.data;
-      return data?.status === 'COMPLETED' || data?.status === 'FAILED' ? false : 2000;
-    },
-  })
-  ```
-
-### 상태 관리
-- 서버 상태: TanStack Query v5
-- 클라이언트 UI 상태: Zustand v4
-
-### 기술 스택
-- Next.js 15 App Router
-- TailwindCSS + shadcn/ui
-- TanStack Query v5 (`QueryClientProvider`)
-- Zustand v4
-- NextAuth (Google OAuth, JWT 세션)
-
-### 인증
-- `src/auth.ts`: `GoogleProvider` + JWT 세션
-- `src/middleware.ts`: 미인증 접근 시 `/login` 리다이렉트
-  ```typescript
-  matcher: ['/((?!api|_next|login).*)']
-  ```
-
-### 환경변수
-- `apps/web/.env.local` — 실제 값 (Git 제외)
-- `apps/web/.env.example` — 가이드라인 (Git 추적)
 
 ## 주요 화면별 스펙
 
