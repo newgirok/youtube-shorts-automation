@@ -282,6 +282,18 @@ aws ecs describe-tasks \
 
 ---
 
+## pnpm 스크립트를 통한 Lambda Worker 배포
+
+각 Worker에 `deploy:prod` 스크립트가 정의되어 있는 경우 루트에서도 배포 가능합니다.
+
+```bash
+pnpm --filter @shorts/script-worker deploy:prod
+pnpm --filter @shorts/tts-worker deploy:prod
+pnpm --filter @shorts/upload-worker deploy:prod
+```
+
+---
+
 ## 관련 문서
 
 - [모니터링 가이드](../monitoring.md)

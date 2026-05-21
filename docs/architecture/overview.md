@@ -197,6 +197,20 @@ packages/shared/
 
 ---
 
+## 추가 기술 항목
+
+아래 항목은 위 표에서 별도로 기재되지 않은 스택입니다.
+
+| 분류 | 기술 | 비고 |
+|---|---|---|
+| **런타임** | Node.js 20, TypeScript 5.x strict | `any` 사용 금지, ESM |
+| **패키지 관리** | pnpm workspace, Turborepo | |
+| **인증** | NextAuth (Google OAuth, JWT) | |
+| **로컬 개발** | Docker Compose, LocalStack v3 | |
+| **에러 추적** | Sentry | Phase 7 |
+
+---
+
 ## 관련 ADR
 
 | ADR | 주제 |

@@ -193,8 +193,40 @@ DATABASE_URL=postgresql://...?pgbouncer=true&connection_limit=1
 
 ---
 
+## Phase 2 — 웹 대시보드 (로컬 개발)
+
+`docker-compose up`으로 로컬 API를 기동한 상태에서 대시보드를 개발·검증한다.
+
+```bash
+# 웹 개발 서버 시작 (docker-compose up이 실행 중이어야 함)
+pnpm --filter web dev
+```
+
+- `http://localhost:3001` 에서 대시보드 확인
+- Google OAuth 로그인
+- `/dashboard` — Job 카드 피드 (2초 폴링), 조회수 실시간 표시
+- `/dashboard/[id]` — 상태 타임라인 + 재시도
+- `/channels/[id]` — 채널 관리 + YPP 진행률
+
+---
+
+## Phase 3+ 추가 사전 요구사항
+
+AWS 이관(Phase 3~)부터는 아래 도구도 필요합니다.
+
+| 도구 | 버전 | 용도 |
+|------|------|------|
+| FFmpeg | 최신 | 렌더링 (`ffmpeg`, `ffprobe` PATH 등록) |
+| AWS CLI | v2 | AWS 이관 |
+| Terraform | 1.6+ | 인프라 프로비저닝 |
+
+> Phase 1~2(로컬 파이프라인)에서는 FFmpeg·AWS CLI·Terraform이 불필요합니다. Worker 컨테이너 내부에 포함되어 있습니다.
+
+---
+
 ## 관련 문서
 
 - [`env-vars.md`](./env-vars.md) — 전체 환경변수 레퍼런스
 - [`api-keys.md`](./api-keys.md) — API 키 발급 가이드
 - [`../runbook/deploy.md`](../runbook/deploy.md) — 프로덕션 배포 절차
+- [`commands.md`](./commands.md) — 개발 명령어 레퍼런스

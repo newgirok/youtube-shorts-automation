@@ -36,6 +36,7 @@ pnpm dev
 | [아키텍처 개요](./architecture/overview.md) | 시스템 전체 구조, 기술 스택, 외부 의존성 |
 | [파이프라인 흐름](./architecture/pipeline-flow.md) | 5단계 파이프라인 상세, 상태 전이, 실패 처리 |
 | [데이터 모델](./architecture/data-model.md) | Prisma 스키마, ER 다이어그램, 필드 설명 |
+| [프로젝트 구조](./architecture/project-structure.md) | 전체 디렉토리 트리 및 파일별 역할 설명 |
 | [ADR 목록](./adr/README.md) | 주요 기술 결정 기록 9개 |
 | [비즈니스 규칙](./product/business-rules.md) | 핵심 도메인 규칙, 스크립트 출력 형식 |
 | [용어 사전](./product/terminology.md) | 프로젝트 도메인 용어 정의 |
@@ -49,6 +50,7 @@ pnpm dev
 | [로컬 환경 세팅](./onboarding/local-setup.md) | Node.js, Docker, DB 초기 설정 |
 | [API 키 설정](./onboarding/api-keys.md) | Gemini, YouTube OAuth2, NextAuth, 암호화 키, Pexels 발급 |
 | [환경변수 레퍼런스](./onboarding/env-vars.md) | 전체 환경변수 목록 및 설명 |
+| [개발 명령어](./onboarding/commands.md) | pnpm / Prisma / Docker Compose 명령어 레퍼런스 |
 
 ### 운영 가이드
 
