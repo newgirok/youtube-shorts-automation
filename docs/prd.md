@@ -50,7 +50,7 @@ Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라
 | TTS | 스크립트 → MP3 오디오 변환 | Edge-TTS → Phase 7: Clova Voice |
 | 자막 | 스크립트 텍스트 → SRT 자막 파일 생성 (시사 키워드 하이라이트) | 스크립트 기반 직접 생성 (faster-whisper 제거) |
 | 영상 합성 | Pexels 이미지 + zoompan 효과 + 오디오 + 자막 합성, 1080×1920 포맷 | FFmpeg → Phase 5: Remotion |
-| 업로드 | YouTube Data API로 영상 업로드, AI 공시 문구·뉴스 카테고리 설정 | YouTube Data API v3 |
+| 업로드 | YouTube Data API로 영상 업로드, 생성된 설명문·뉴스 카테고리 설정 (`containsSyntheticMedia: true`) | YouTube Data API v3 |
 
 **스크립트 출력 형식 (`ScriptOutput`):**
 
@@ -59,6 +59,7 @@ Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라
   "title": "영상 제목 (20자 이내, 충격·클릭 유도)",
   "hook": "첫 2초 훅 문장 (의문형 또는 충격 선언)",
   "script": "전체 낭독 스크립트 (180~250자, comment_bait 마무리)",
+  "description": "YouTube 영상 설명문 (3~5문단, 400~800자). ~다고 합니다 중립 보도 문체. 마지막 문단 면책 공지 포함.",
   "scenes": [
     {
       "start": 0,
@@ -73,8 +74,6 @@ Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라
   "comment_bait": "댓글 유도 질문 (25자 이내, 공분·논란·의견 충돌 유발)"
 }
 ```
-
-> `affiliate_product`, `affiliate_cta` 필드는 제거됨.
 
 ### 4-2. 뉴스 자동 수집
 
@@ -230,7 +229,7 @@ model Job {
   status          JobStatus @default(PENDING)
   retryCount      Int       @default(0)
   failReason      String?
-  scriptContent   Json?     // ScriptOutput (7필드: title,hook,script,scenes[],hashtags,thumbnail_text,comment_bait)
+  scriptContent   Json?     // ScriptOutput (8필드: title,hook,script,description,scenes[],hashtags,thumbnail_text,comment_bait)
   audioS3Key      String?
   subtitleS3Key   String?
   videoS3Key      String?

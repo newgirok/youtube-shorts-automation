@@ -26,15 +26,7 @@
 - 암호화 키(`ENCRYPTION_KEY`)는 AWS Secrets Manager에서 주입합니다. `.env.local`에 임시 보관 가능하지만 Git 커밋 금지입니다.
 - 설정 방법: [암호화 키 설정 가이드](../runbook/encryption-key-setup.md)
 
-### 4. 쿠팡 파트너스 CTA 자막 삽입
-
-- `Channel.affiliateUrl`이 설정된 채널의 영상에만 적용됩니다.
-- 영상 **마지막 8초**에 `affiliate_cta` 문구가 자막으로 삽입됩니다.
-- CTA 문구는 Gemini API가 스크립트 생성 시 함께 출력합니다(`script.json`의 `affiliate_cta` 필드).
-- 영상 설명란에도 `affiliateUrl`이 포함됩니다.
-- `affiliateUrl`이 null이면 CTA 자막 삽입 및 설명란 링크가 생략됩니다.
-
-### 5. 업로드 공개 상태 (`privacyStatus`)
+### 4. 업로드 공개 상태 (`privacyStatus`)
 
 - `Job.privacyStatus` 필드는 YouTube 업로드 시 설정된 공개 상태를 나타냅니다.
 - 가능한 값: `'public'`(공개) | `'unlisted'`(일부공개) | `'private'`(비공개)
@@ -44,14 +36,14 @@
   - `private` → 반투명 흰색 배지
 - 진행 중이거나 실패한 Job에는 배지를 표시하지 않습니다.
 
-### 6. 삭제된 YouTube 영상 감지
+### 5. 삭제된 YouTube 영상 감지
 
 - upload-worker 또는 analytics-sync가 YouTube API 호출 중 해당 영상이 존재하지 않음을 감지하면 `Job.failReason = '유튜브에서 영상이 삭제되었습니다.'`로 갱신하고 `status = 'FAILED'`로 전환합니다.
 - 프론트엔드는 이 특수 `failReason` 값을 감지해 상태 배지를 "실패" 대신 "삭제"로 표시합니다.
 - "삭제" 상태에서는 재시도 버튼을 노출하지 않습니다 (재업로드해도 동일 영상이 없는 상태이므로).
 - 판별 조건: `job.status === 'FAILED' && job.failReason === '유튜브에서 영상이 삭제되었습니다.'`
 
-### 7. Job 재시도 규칙
+### 6. Job 재시도 규칙
 
 - SQS `Max Receive Count = 3`: Worker가 메시지를 3회 실패하면 DLQ로 이동합니다.
 - `Job.retryCount`는 Worker 처리 실패마다 1씩 증가합니다.
@@ -59,7 +51,7 @@
 - 대시보드 `/dashboard/[id]`에서 수동 재시도 가능합니다. 수동 재시도 시 `status = PENDING`으로 초기화됩니다.
 - DLQ 적재 시 CloudWatch 알람 → Slack/Discord 알림 (Phase 4 구현).
 
-### 8. YPP 달성 기준 추적 (2단계)
+### 7. YPP 달성 기준 추적 (2단계)
 
 YouTube Partner Program은 2단계로 나뉩니다.
 
@@ -89,14 +81,14 @@ Gemini API가 생성하는 스크립트는 아래 JSON 형식을 따릅니다:
 
 ```json
 {
-  "title": "유튜브 제목 (60자 이내, 이모지 포함)",
-  "hook": "첫 1~2문장 — 시청자가 이탈하지 않도록 강렬하게",
-  "script": "전체 스크립트 (45~55초 분량)",
-  "hashtags": ["#shorts", "#관련태그1", "#관련태그2"],
-  "thumbnail_text": "썸네일 텍스트 (10자 이내)",
-  "comment_bait": "댓글 유도 문구",
-  "affiliate_product": "추천 상품명 또는 null",
-  "affiliate_cta": "지금 쿠팡에서 확인하세요! 링크는 설명란에 ↓"
+  "title": "영상 제목 (20자 이내, 충격·클릭 유도)",
+  "hook": "첫 2초 훅 문장 (의문형 또는 충격 선언)",
+  "script": "전체 낭독 스크립트 (180~250자, comment_bait 마무리)",
+  "description": "YouTube 영상 설명문 (3~5문단, 400~800자). ~다고 합니다 중립 보도 문체. 마지막 문단 면책 공지.",
+  "scenes": [{ "start": 0, "end": 6, "text": "...", "keyword": "영어 키워드", "effect": "zoom-in" }],
+  "hashtags": ["#Shorts", "#시사", "#뉴스"],
+  "thumbnail_text": "썸네일 임팩트 문구 (8자 이내)",
+  "comment_bait": "댓글 유도 질문 (25자 이내)"
 }
 ```
 
@@ -104,14 +96,13 @@ Gemini API가 생성하는 스크립트는 아래 JSON 형식을 따릅니다:
 
 | 필드 | 규칙 | 비고 |
 |---|---|---|
-| `title` | 60자 이내, 이모지 포함 권장 | YouTube 제목으로 사용 |
-| `hook` | 첫 1~2문장, 질문이나 놀라운 사실로 시작 | 시청자 이탈 방지용 ([용어 사전 참고](./terminology.md#hook)) |
-| `script` | 45~55초 분량 (TTS 기준 약 350~450자) | 너무 짧으면 Shorts 분류 불이익 가능 |
-| `hashtags` | 최소 `#shorts` 포함, 3~5개 권장 | YouTube 태그로 사용 |
-| `thumbnail_text` | 10자 이내 강렬한 문구 | 썸네일 이미지 오버레이 텍스트 (Phase 5~) |
-| `comment_bait` | 댓글을 유도하는 질문·문구 | Job 상세 페이지 "댓글 유도" 항목에 표시, 알고리즘 참여도 향상 목적 |
-| `affiliate_product` | 추천 상품명 또는 `null` | `Channel.affiliateUrl`이 없으면 `null` |
-| `affiliate_cta` | CTA 문구 (30자 이내 권장) | 영상 마지막 8초 자막, `affiliateUrl` 없으면 미사용 |
+| `title` | 20자 이내, 충격·클릭 유도 | YouTube 제목으로 사용 |
+| `hook` | 첫 2초 훅 문장, 의문형 또는 충격 선언 | 시청자 이탈 방지용 ([용어 사전 참고](./terminology.md#hook)) |
+| `script` | 180~250자, 빠른 구어체 | TTS 입력, comment_bait으로 마무리 |
+| `description` | 3~5문단, 400~800자, `~다고 합니다` 중립 문체 | YouTube 영상 설명문으로 사용, 마지막 문단은 면책 공지 |
+| `hashtags` | 최소 `#Shorts` 포함 | YouTube description 말미에 삽입 |
+| `thumbnail_text` | 8자 이내 강렬한 문구 | 썸네일 이미지 오버레이 텍스트 |
+| `comment_bait` | 댓글 유도 질문, 25자 이내 | 공분·논란·의견 충돌 유발 |
 
 ---
 

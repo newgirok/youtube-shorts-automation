@@ -23,6 +23,8 @@ interface ScriptOutput {
   title: string;          // 20자 이내 영상 제목
   hook: string;           // 첫 2초 훅 문장
   script: string;         // 전체 낭독 스크립트 (180~250자)
+  description: string;    // YouTube 영상 설명문 (3~5문단, 400~800자)
+                          // ~다고 합니다 중립 보도 문체, 마지막 문단 면책 공지 포함
   scenes: Scene[];        // 4~6개 장면 (각 5~8초)
   hashtags: string[];     // 해시태그 배열
   thumbnail_text: string; // 썸네일 임팩트 문구 (8자 이내)
@@ -38,7 +40,7 @@ interface Scene {
 }
 ```
 
-`affiliate_product`, `affiliate_cta` 필드는 제거됨. 필드 추가/변경 시 tts-worker, subtitle-worker 파싱 로직 함께 수정 필요.
+필드 추가/변경 시 tts-worker, subtitle-worker 파싱 로직 함께 수정 필요.
 
 ## 콘텐츠 방향
 

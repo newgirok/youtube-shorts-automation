@@ -15,7 +15,7 @@
   - [✓] P1-1. Monorepo 초기화 `[DevOps]`
   - [✓] P1-2. `packages/shared` — 공통 기반 `[BE]`
   - [✓] P1-3. `apps/api` — POST /jobs `[BE]`
-  - [✓] P1-4. `apps/workers/script` — Gemini 2.5 Flash, ScriptOutput(7필드) `[BE][AI]`
+  - [✓] P1-4. `apps/workers/script` — Gemini 2.5 Flash, ScriptOutput(8필드) `[BE][AI]`
   - [✓] P1-5. `apps/workers/tts` `[BE]`
   - [✓] P1-6. `apps/workers/subtitle` _(Fargate)_ — 스크립트 기반 SRT 생성 `[BE][DevOps]`
   - [✓] P1-7. `apps/workers/render` _(Fargate)_ — Pexels + zoompan + FFmpeg `[BE][DevOps]`
@@ -29,9 +29,8 @@
   - [✓] P2-5. YouTube OAuth2 채널 연결 + `refresh_token` 암호화 저장 `[BE]`
   - [✓] P2-6. `POST /jobs/auto-news` — Google News RSS 수집 + Job 일괄 생성 `[BE]`
   - [✓] P2-7. `POST /channels/:id/sync` — YouTube Data API + Analytics API 풀 동기화 `[BE]`
-  - [✓] P2-8. YouTube Analytics 수집 (views, subscribersGained, watchTimeMinutes) `[BE]`
-  - [✓] P2-9. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
-  - [✓] P2-10. `Job.privacyStatus` 추적 `[BE]`
+  - [✓] P2-8. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
+  - [✓] P2-9. `Job.privacyStatus` 추적 `[BE]`
 - **Phase 3** — AWS 서버리스 이관
   - [ ] P3-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
   - [ ] P3-2. Supabase 연결 + 마이그레이션 `[BE][DevOps]`
@@ -136,10 +135,10 @@
 
 - **P1-4.** `apps/workers/script` `[BE][AI]`
   - 모델: `gemini-2.5-flash` 고정
-  - 출력 JSON 7개 필드: `title`, `hook`, `script`, `scenes[]`, `hashtags`, `thumbnail_text`, `comment_bait`
+  - 출력 JSON 8개 필드: `title`, `hook`, `script`, `description`, `scenes[]`, `hashtags`, `thumbnail_text`, `comment_bait`
   - 콘텐츠 방향: 한국 뉴스·시사 특화, 25~35초, 강한 구어체, comment_bait 마무리
   - 검증
-    - S3에 `jobs/{jobId}/script.json` 생성, 7개 필드 모두 존재
+    - S3에 `jobs/{jobId}/script.json` 생성, 8개 필드 모두 존재
     - `tts-queue` 발행 확인
 
 - **P1-5.** `apps/workers/tts` `[BE]`
@@ -167,7 +166,7 @@
 
 - **P1-8.** `apps/workers/upload` + 수동 E2E `[BE]`
   - 메타데이터: `title`, `hashtags`, `categoryId: '25'`(뉴스·정치), `privacyStatus: 'public'`, `containsSyntheticMedia: true`
-  - 설명란: AI 공시 문구(`⚠️ 이 영상은 AI가 생성한 스크립트·음성·이미지를 포함합니다.`) + 해시태그
+  - 설명란: `scriptContent.description` (Gemini 생성 본문) + 해시태그 (`containsSyntheticMedia: true`로 AI 공시 처리)
   - `prisma.job.update({ youtubeVideoId, privacyStatus: 'public', completedAt, status: 'COMPLETED' })`
   - 검증
     - 각 Worker 개별 실행 성공

@@ -2,6 +2,7 @@ export interface ScriptOutput {
   title: string;
   hook: string;
   script: string;
+  description: string;
   hashtags: string[];
   thumbnail_text: string;
   comment_bait: string;
@@ -9,8 +10,9 @@ export interface ScriptOutput {
 
 export interface ScriptContent {
   title?: string;
+  description?: string;
+  hashtags?: string[];
   thumbnail_text?: string;
-  affiliate_cta?: string;
 }
 
 export interface BaseSQSMessage {

@@ -73,19 +73,19 @@ for (let attempt = 1; attempt <= 3; attempt++) {
 }
 ```
 
-## ScriptOutput 7개 필드 (변경 시 downstream 전체 수정)
+## ScriptOutput 8개 필드 (변경 시 downstream 전체 수정)
 ```typescript
 interface ScriptOutput {
   title: string;          // 20자 이내
   hook: string;           // 첫 2초 훅
   script: string;         // 180~250자
+  description: string;    // YouTube 영상 설명문 (3~5문단, 400~800자, 면책 공지 포함)
   scenes: Scene[];        // 4~6개
   hashtags: string[];
   thumbnail_text: string; // 8자 이내
   comment_bait: string;   // 25자 이내
 }
 ```
-`affiliate_product`, `affiliate_cta` 필드는 제거됨 — 추가 금지.
 
 ## 파이프라인 수정 연동 규칙
 | 변경 대상 | 반드시 함께 수정 |

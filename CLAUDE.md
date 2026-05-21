@@ -8,7 +8,8 @@
 - AI 모델: `gemini-2.5-flash` (**변경 금지**)
 - 자막: `script.json`의 `script` 필드 → 직접 SRT 생성 (faster-whisper 없음)
 - 렌더링: Pexels + zoompan (FontSize=46, affiliate CTA 없음)
-- YouTube: `categoryId: '25'`, `containsSyntheticMedia: true`, AI 공시 문구 필수
+- YouTube: `categoryId: '25'`, `containsSyntheticMedia: true`
+- description 형식: `{Gemini 생성 본문 설명}\n\n{해시태그}` (AI 공시 텍스트 없음, API 플래그로 대체)
 - 모든 패키지 ESM — import 경로에 `.js` 확장자 필수
 
 ## Playwright MCP 파일 저장 경로

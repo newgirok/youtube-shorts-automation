@@ -15,7 +15,7 @@
 | s3 | `src/s3.ts` | `uploadToS3`, `downloadFromS3`, `jobKey` 유틸 |
 | logger | `src/logger.ts` | `createLogger({ jobId, channelId })` — Pino 기반 구조적 로거 |
 | env | `src/env.ts` | `BaseEnvSchema` (Zod) — 각 앱에서 `.extend()`로 확장 |
-| types | `src/types.ts` | `ScriptOutput`, SQS 메시지 타입, `JobStatus` enum |
+| types | `src/types.ts` | `ScriptOutput` (8필드), `ScriptContent` (title·description·hashtags·thumbnail_text), SQS 메시지 타입 |
 
 ## 변경 시 필수 확인
 

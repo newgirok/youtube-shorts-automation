@@ -13,7 +13,7 @@ script-worker에서 YouTube Shorts 스크립트(JSON)를 생성할 AI 모델을 
 **`gemini-2.5-flash` 고정** (`@google/generative-ai` SDK)
 
 - Google AI Studio 무료 티어: 1,500 req/day, 비용 $0
-- 구조화된 JSON 출력 품질 충분 — 7개 필드 생성 정확도 검증 완료
+- 구조화된 JSON 출력 품질 충분 — 8개 필드 생성 정확도 검증 완료
 - SDK: `@google/generative-ai` (공식 Google SDK)
 - 환경변수: `GEMINI_API_KEY` (Google AI Studio에서 발급)
 - 503 응답 시 최대 3회 재시도 (지연: 5초, 10초, 15초)
@@ -27,9 +27,9 @@ const text = result.response.text();
 ```
 
 **출력 JSON 필드 (변경 금지):**
-`title`, `hook`, `script`, `scenes`, `hashtags`, `thumbnail_text`, `comment_bait`
+`title`, `hook`, `script`, `description`, `scenes`, `hashtags`, `thumbnail_text`, `comment_bait`
 
-`affiliate_product`, `affiliate_cta`는 제거됨. 필드 변경 시 이후 모든 Worker(tts, subtitle 등)의 파싱 로직 함께 수정 필요.
+필드 변경 시 이후 모든 Worker(tts, subtitle 등)의 파싱 로직 함께 수정 필요.
 
 ## 모델 이력
 

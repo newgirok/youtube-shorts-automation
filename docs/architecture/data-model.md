@@ -189,16 +189,6 @@ EventBridge Scheduler는 **Unix cron** 형식을 사용합니다:
 | 월 (1~12) | `*` = 매월 | |
 | 요일 (0~6) | `*` = 매일 | |
 
-### affiliateUrl 사용 방식
-
-`affiliateUrl`이 설정된 채널의 영상은 render-worker가 FFmpeg으로 합성할 때 **영상 마지막 8초**에 CTA(Call to Action) 자막을 삽입합니다. 삽입 문구는 script-worker가 Gemini API로 생성한 `affiliate_cta` 필드를 사용합니다.
-
-```json
-{
-  "affiliate_cta": "지금 쿠팡에서 확인하세요! 링크는 설명란에 ↓"
-}
-```
-
 ---
 
 ## Job 모델 필드 설명

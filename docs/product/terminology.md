@@ -115,17 +115,6 @@ SQS 메시지가 `Max Receive Count(3회)` 이상 실패했을 때 이동하는 
 
 ---
 
-## Affiliate CTA
-
-쿠팡 파트너스 링크 유도 자막(Call to Action)입니다. `Channel.affiliateUrl`이 설정된 채널의 영상 마지막 8초에 삽입됩니다.
-
-- CTA 문구: `script.json`의 `affiliate_cta` 필드 (Gemini가 생성)
-- 링크: 영상 설명란에 `Channel.affiliateUrl` 포함
-- 예시: `"지금 쿠팡에서 확인하세요! 링크는 설명란에 ↓"`
-- 관련 규칙: [비즈니스 규칙 — 쿠팡 파트너스 CTA](./business-rules.md#4-쿠팡-파트너스-cta-자막-삽입)
-
----
-
 ## YPP (YouTube Partner Program)
 
 YouTube 수익화 자격 프로그램입니다. 이 플랫폼의 장기 목표 중 하나입니다.

@@ -72,13 +72,14 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 
 ---
 
-## 스크립트 출력 형식 (ScriptOutput — 7개 필드)
+## 스크립트 출력 형식 (ScriptOutput — 8개 필드)
 
 ```typescript
 interface ScriptOutput {
   title: string;           // 20자 이내, 충격·클릭 유도
   hook: string;            // 첫 2초 훅 문장
   script: string;          // 180~250자, comment_bait으로 마무리
+  description: string;     // YouTube 설명문, 3~5문단, ~다고 합니다 문체, 면책 공지 포함
   scenes: Scene[];         // 4~6개 장면
   hashtags: string[];
   thumbnail_text: string;  // 8자 이내
@@ -94,5 +95,5 @@ interface Scene {
 }
 ```
 
-> `affiliate_product`, `affiliate_cta` 필드는 제거됨. script-worker 수정 시 tts-worker의 파싱 로직 함께 확인.
+> 필드 추가/변경 시 tts-worker의 파싱 로직 함께 확인.
 

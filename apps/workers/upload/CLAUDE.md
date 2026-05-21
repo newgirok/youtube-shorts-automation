@@ -8,7 +8,7 @@ SQS upload-queue를 폴링해 YouTube Data API로 영상을 업로드하는 Lamb
 
 1. SQS 메시지 수신: `{ jobId, channelId, videoS3Key }`
 2. DB에서 채널의 암호화된 refreshToken 조회 → AES-256-GCM 복호화
-3. Job의 scriptContent(title, hashtags) 조회
+3. Job의 scriptContent(title, description, hashtags) 조회
 4. S3에서 영상(`jobs/{jobId}/output.mp4`) 다운로드 → `/tmp/{jobId}-output.mp4` 저장
 5. YouTube Data API v3로 영상 업로드
 6. DB 업데이트: `youtubeVideoId`, `privacyStatus: 'public'`, `status: 'COMPLETED'`, `completedAt`
@@ -18,7 +18,7 @@ SQS upload-queue를 폴링해 YouTube Data API로 영상을 업로드하는 Lamb
 
 ```
 title:       "{scriptContent.title} #Shorts"  (이미 포함된 경우 중복 추가 안 함)
-description: "⚠️ 이 영상은 AI가 생성한 스크립트·음성·이미지를 포함합니다.\n\n{hashtags.join(' ')}"
+description: "{scriptContent.description}\n\n{hashtags.join(' ')}"
 categoryId:  "25"  (뉴스·정치)
 privacyStatus:           "public"
 selfDeclaredMadeForKids: false

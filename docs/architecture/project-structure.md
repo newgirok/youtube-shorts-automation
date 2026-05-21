@@ -53,7 +53,7 @@ youtube-shorts-automation/
 │   └── workers/
 │       ├── script/                   # SQS → Gemini 2.5 Flash → script.json
 │       │   └── src/
-│       │       └── script-generator.ts  # ScriptOutput(7필드): title,hook,script,scenes[],hashtags,thumbnail_text,comment_bait
+│       │       └── script-generator.ts  # ScriptOutput(8필드): title,hook,script,description,scenes[],hashtags,thumbnail_text,comment_bait
 │       ├── tts/                      # SQS → Edge-TTS → audio.mp3
 │       ├── subtitle/                 # ECS Fargate: 스크립트 기반 SRT 생성 (faster-whisper 제거됨)
 │       │   └── src/
@@ -65,7 +65,7 @@ youtube-shorts-automation/
 │       │       └── image-generator.ts  # Pexels API 이미지 검색·다운로드
 │       └── upload/                   # SQS → YouTube Data API → COMPLETED
 │           └── src/
-│               └── uploader.ts       # AI 공시 문구, categoryId=25(뉴스), containsSyntheticMedia: true
+│               └── uploader.ts       # description+해시태그 설명문, categoryId=25(뉴스), containsSyntheticMedia: true
 ├── packages/
 │   └── shared/                       # 전 앱 공통 — Prisma, 로거, S3, 환경변수
 │       └── prisma/
