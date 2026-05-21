@@ -1,5 +1,14 @@
 {
   "mcpServers": {
+    "shrimp-task-manager": {
+      "command": "npx",
+      "args": ["-y", "@cjo4m06/mcp-shrimp-task-manager"],
+      "env": {
+        "DATA_DIR": "${workspaceFolder}/.shrimp-data",
+        "RULES_FILE_PATH": "${workspaceFolder}/shrimp-rules.md"
+      },
+      "type": "stdio"
+    },
     "playwright": {
       "command": "npx",
       "args": ["-y", "@playwright/mcp@latest", "--output-dir", ".playwright-mcp"],

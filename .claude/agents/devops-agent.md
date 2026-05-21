@@ -86,4 +86,4 @@ Visibility Timeout: script 120s / tts 240s / subtitle 600s / render 1,200s / upl
 - `docs/adr/006-iac-terraform-serverless.md` — IaC 도구 분리 근거
 - `docs/adr/007-database-strategy.md` — DB 연결 전략
 - `docs/adr/009-fargate-sqs-long-polling.md` — Fargate Long Polling 패턴
-- `docs/guides/env-vars.md` — 환경변수 레퍼런스
+- `docs/onboarding/env-vars.md` — 환경변수 레퍼런스

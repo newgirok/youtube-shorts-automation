@@ -100,7 +100,7 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 
 ## 참고 문서
 - `docs/prd.md` — 제품 요구사항
-- `docs/guides/env-vars.md` — 환경변수 레퍼런스
+- `docs/onboarding/env-vars.md` — 환경변수 레퍼런스
 - `docs/roadmap.md` — 로드맵
 - `docs/adr/005-gemini-flash.md` — Gemini 전환 결정 근거
 - `docs/adr/007-database-strategy.md` — DB 전략 (DIRECT_URL 분리 이유)

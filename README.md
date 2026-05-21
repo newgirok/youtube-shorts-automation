@@ -126,7 +126,7 @@ youtube-shorts-automation/
 │   └── settings.json                 # Claude Code 프로젝트 설정 (허용 명령·훅)
 ├── .env.example                      # 환경변수 템플릿 (루트 서비스용)
 ├── .env.local                        # 공통 환경변수 (gitignore)
-├── .mcp.json                         # MCP(Model Context Protocol) 서버 설정
+├── .mcp.json                         # MCP 서버 설정 (Shrimp Task Manager·Playwright·Supabase·Terraform·AWS·Sentry)
 ├── docker-compose.yml                # 로컬 통합 환경 (LocalStack + PostgreSQL + Workers)
 ├── package.json                      # 루트 패키지 (공통 스크립트·devDependencies)
 ├── pnpm-workspace.yaml               # pnpm 워크스페이스 패키지 경로 선언
@@ -188,8 +188,7 @@ youtube-shorts-automation/
 │   ├── onboarding/                   # 로컬 환경 세팅·API 키·환경변수 가이드
 │   └── operations/                   # 배포·모니터링·운영 가이드
 └── scripts/
-    ├── dev/seed.ts                   # DB 시드 데이터
-    └── tools/                        # Phase 0 단독 검증 스크립트
+    └── tools/                        # Phase 0 단독 검증 스크립트 (AWS 없이 실행)
         ├── test-tts.ts               # Edge-TTS 음성 합성 품질 검증
         ├── test-render.ts            # FFmpeg 렌더링 품질 검증
         └── test-upload.ts            # YouTube Data API 업로드 검증

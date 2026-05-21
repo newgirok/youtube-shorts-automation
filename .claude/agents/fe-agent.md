@@ -78,7 +78,7 @@ model: claude-sonnet-4-6
 
 ### `/channels/[id]`
 - 업로드 스케줄 cron 입력
-- 토픽 큐 CRUD + `@dnd-kit/core` 드래그앤드롭
+- 토픽 큐 CRUD (드래그앤드롭 순서 변경 구현 시 `@dnd-kit/core`, `@dnd-kit/sortable` 패키지 추가 필요)
 - Analytics 테이블: 날짜별 views·subscribers·estimatedRevenue
 - YPP 진행률: 구독자 1,000명 / 시청시간 4,000시간
 

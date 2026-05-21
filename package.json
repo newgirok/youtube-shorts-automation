@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "dotenv": "^17.4.2",
-    "googleapis": "^171.4.0",
-    "zod": "^4.4.3"
+    "googleapis": "^171.4.0"
   }
 }

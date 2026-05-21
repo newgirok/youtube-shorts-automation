@@ -18,7 +18,7 @@ Google News RSS 또는 토픽 입력 → 스크립트 생성 → TTS → 자막 
 ```
 youtube-shorts-automation/
 ├── apps/
-│   ├── api/                  # NestJS v11 (Fastify Adapter) — API Gateway + Lambda
+│   ├── api/                  # NestJS v11 (Fastify Adapter) — REST API
 │   ├── web/                  # Next.js 15 (App Router) — 대시보드
 │   └── workers/
 │       ├── script/           # Lambda: Gemini 2.5 Flash → script.json → S3
@@ -28,8 +28,8 @@ youtube-shorts-automation/
 │       └── upload/           # Lambda: YouTube Data API → COMPLETED
 ├── packages/
 │   └── shared/               # Prisma 스키마, 공통 타입, 환경변수 Zod 스키마
-├── infra/                    # AWS 리소스 (S3, SQS, IAM, EventBridge 등)
-└── scripts/                  # 단독 검증 스크립트 (test-tts.ts 등)
+├── infra/                    # AWS 리소스 (S3, SQS, IAM, ECS, ECR, EventBridge 등)
+└── scripts/                  # Phase 0 단독 검증 스크립트 (test-tts.ts 등)
 ```
 
 **S3 키 규칙 (반드시 준수):**

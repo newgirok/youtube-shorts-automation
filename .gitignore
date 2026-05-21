@@ -22,6 +22,9 @@ scripts/tools/output/
 # Playwright MCP 임시 파일
 .playwright-mcp/
 
+# Shrimp Task Manager 데이터
+.shrimp-data/
+
 # 미디어 파일 (용량 큰 바이너리)
 public/bg.mp4
 **/public/bg.mp4
