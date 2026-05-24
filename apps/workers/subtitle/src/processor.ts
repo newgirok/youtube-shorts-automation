@@ -48,7 +48,11 @@ const MAX_DISPLAY_CHARS = 20;
 const cleanLen = (s: string) => s.replace(/\s/g, '').length;
 
 function cleanSubtitleText(text: string): string {
-  return text.replace(/[.,?!]/g, '').replace(/\s{2,}/g, ' ').trim();
+  // 소수점(6.1%)은 보존: 앞뒤가 모두 숫자인 .은 제거하지 않음
+  return text
+    .replace(/(?<!\d)\.(?!\d)|[,?!]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 function wordSplit(text: string): string[] {
@@ -65,17 +69,29 @@ function wordSplit(text: string): string[] {
 }
 
 // 구어체 종결 패턴 우선 분할 → 여전히 길면 단어 경계로 fallback
+// "상황이라고" 대신 "상황이라고 함" 등 완성형만 사용 — 짧은 패턴은 "함" 단독 자막 버그 유발
 function splitIntoDisplayChunks(text: string): string[] {
   if (cleanLen(text) <= MAX_DISPLAY_CHARS) return [text];
 
   const parts = text
-    .split(/(?<=라고 함|상황이라고|분석이라고|있다고|이라고|했다고|한다고|하는데|겠다며|한다며|하면서|하며)\s+/)
+    .split(/(?<=라고 함|상황이라고 함|분석이라고 함|있다고 함|이라고 함|하는데|했다고|한다고|겠다며|한다며|하면서|하며)\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
 
-  return parts.flatMap((part) =>
+  const chunks = parts.flatMap((part) =>
     cleanLen(part) <= MAX_DISPLAY_CHARS ? [part] : wordSplit(part)
   );
+
+  // 너무 짧은 토막(4자 미만)은 앞 청크에 병합
+  const merged: string[] = [];
+  for (const chunk of chunks) {
+    if (merged.length > 0 && cleanLen(chunk) < 4) {
+      merged[merged.length - 1] += ' ' + chunk;
+    } else {
+      merged.push(chunk);
+    }
+  }
+  return merged;
 }
 
 // VTT 항목을 문장 부호로 1차 분할 → 각 문장을 표시 단위로 2차 분할 → 비례 타이밍 배분

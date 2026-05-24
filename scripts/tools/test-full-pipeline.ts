@@ -64,7 +64,10 @@ const MAX_DISPLAY_CHARS = 20;
 const cleanLen = (s: string) => s.replace(/\s/g, '').length;
 
 function cleanSubtitleText(text: string): string {
-  return text.replace(/[.,?!]/g, '').replace(/\s{2,}/g, ' ').trim();
+  return text
+    .replace(/(?<!\d)\.(?!\d)|[,?!]/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
 }
 
 function wordSplit(text: string): string[] {
@@ -84,13 +87,23 @@ function splitIntoDisplayChunks(text: string): string[] {
   if (cleanLen(text) <= MAX_DISPLAY_CHARS) return [text];
 
   const parts = text
-    .split(/(?<=라고 함|상황이라고|분석이라고|있다고|이라고|했다고|한다고|하는데|겠다며|한다며|하면서|하며)\s+/)
+    .split(/(?<=라고 함|상황이라고 함|분석이라고 함|있다고 함|이라고 함|하는데|했다고|한다고|겠다며|한다며|하면서|하며)\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
 
-  return parts.flatMap((part) =>
+  const chunks = parts.flatMap((part) =>
     cleanLen(part) <= MAX_DISPLAY_CHARS ? [part] : wordSplit(part)
   );
+
+  const merged: string[] = [];
+  for (const chunk of chunks) {
+    if (merged.length > 0 && cleanLen(chunk) < 4) {
+      merged[merged.length - 1] += ' ' + chunk;
+    } else {
+      merged.push(chunk);
+    }
+  }
+  return merged;
 }
 
 function splitEntry(entry: VttEntry): { start: number; end: number; text: string }[] {
@@ -181,7 +194,7 @@ async function main(): Promise<void> {
   // 2. TTS + VTT 생성
   console.log('\n[2/6] edge-tts 음성 + VTT 생성...');
   const textFile = join(OUTPUT_DIR, 'tts-input.txt');
-  writeFileSync(textFile, script.script, 'utf-8');
+  writeFileSync(textFile, `${script.title}. ${script.script}`, 'utf-8');
   execSync(
     `"${EDGE_TTS}" --voice ko-KR-SunHiNeural --file "${textFile}" --write-media "${AUDIO_PATH}" --write-subtitles "${VTT_PATH}"`,
     { stdio: 'inherit', timeout: 120_000 },
