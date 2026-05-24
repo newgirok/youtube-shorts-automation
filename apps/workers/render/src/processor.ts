@@ -2,8 +2,8 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { SQSClient, SendMessageCommand, ChangeMessageVisibilityCommand } from '@aws-sdk/client-sqs';
 import { prisma, downloadFromS3, uploadToS3, jobKey, createLogger } from '@shorts/shared';
-import { renderSceneClip, concatClipsWithAudio, type SceneEffect } from './renderer.js';
-import { downloadSceneImage } from './image-generator.js';
+import { renderSceneClip, renderSceneFromVideo, concatClipsWithAudio, type SceneEffect } from './renderer.js';
+import { downloadSceneImage, downloadSceneVideo } from './image-generator.js';
 import type { Env } from './env.js';
 
 interface Message {
@@ -78,7 +78,7 @@ export async function processMessage(
 
     const scriptContent = job?.scriptContent as ScriptContent | null;
     const scenes: Scene[] = scriptContent?.scenes ?? [];
-    const fontName = process.platform === 'win32' ? 'Malgun Gothic Bold' : 'NanumGothicExtraBold';
+    const fontName = process.platform === 'win32' ? 'Malgun Gothic Bold' : 'NanumSquare ExtraBold';
 
     const clipPaths: string[] = [];
 
@@ -91,16 +91,26 @@ export async function processMessage(
         const imgPath = join(tmpDir, `${jobId}-scene-${i}.jpg`);
         const clipPath = join(tmpDir, `${jobId}-clip-${i}.mp4`);
 
+        let usedVideo = false;
         try {
-          await downloadSceneImage(scene.keyword, imgPath, env.PEXELS_API_KEY);
-        } catch (err) {
-          log.warn({ err, keyword: scene.keyword }, 'Pexels 검색 실패, topic으로 재시도');
-          await downloadSceneImage(job?.topic ?? 'nature', imgPath, env.PEXELS_API_KEY);
+          const rawVideoPath = join(tmpDir, `${jobId}-raw-${i}.mp4`);
+          await downloadSceneVideo(scene.keyword, rawVideoPath, env.PEXELS_API_KEY);
+          renderSceneFromVideo(rawVideoPath, clipPath, duration, env.FFMPEG_PATH);
+          usedVideo = true;
+        } catch { /* 동영상 실패 → 이미지 fallback */ }
+
+        if (!usedVideo) {
+          try {
+            await downloadSceneImage(scene.keyword, imgPath, env.PEXELS_API_KEY);
+          } catch (err) {
+            log.warn({ err, keyword: scene.keyword }, 'Pexels 검색 실패, topic으로 재시도');
+            await downloadSceneImage(job?.topic ?? 'nature', imgPath, env.PEXELS_API_KEY);
+          }
+          renderSceneClip(imgPath, clipPath, duration, scene.effect, env.FFMPEG_PATH);
         }
 
-        renderSceneClip(imgPath, clipPath, duration, scene.effect, env.FFMPEG_PATH);
         clipPaths.push(clipPath);
-        log.info({ scene: i + 1, total: scenes.length }, '장면 클립 생성 완료');
+        log.info({ scene: i + 1, total: scenes.length, usedVideo }, '장면 클립 생성 완료');
       }
     } else {
       log.warn('scenes 없음, topic 키워드로 단일 이미지 fallback');
@@ -115,7 +125,7 @@ export async function processMessage(
     writeFileSync(srtPath, finalSrt, 'utf-8');
 
     log.info('FFmpeg 최종 합성 시작');
-    concatClipsWithAudio(clipPaths, audioPath, srtPath, outputPath, env.FFMPEG_PATH, fontName, tmpDir);
+    concatClipsWithAudio(clipPaths, audioPath, srtPath, outputPath, env.FFMPEG_PATH, fontName, tmpDir, scriptContent?.title ?? '');
 
     const videoBuf = readFileSync(outputPath);
     const videoS3Key = jobKey(jobId, 'output.mp4');

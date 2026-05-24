@@ -1,5 +1,5 @@
 FROM node:20-slim
-RUN apt-get update && apt-get install -y openssl ffmpeg fonts-nanum \
+RUN apt-get update && apt-get install -y openssl ffmpeg fonts-nanum fonts-nanum-extra \
     && fc-cache -fv \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
