@@ -44,29 +44,59 @@ function parseVttEntries(vtt: string): VttEntry[] {
   return entries;
 }
 
+const MAX_DISPLAY_CHARS = 20;
+const cleanLen = (s: string) => s.replace(/\s/g, '').length;
+
 function cleanSubtitleText(text: string): string {
   return text.replace(/[.,?!]/g, '').replace(/\s{2,}/g, ' ').trim();
 }
 
-// VTT 항목을 문장 부호(. ? !)로 1차 분할 → 각 문장에 비례 타이밍 배분
+function wordSplit(text: string): string[] {
+  const words = text.split(/\s+/).filter(Boolean);
+  const chunks: string[] = [];
+  let cur = '';
+  for (const word of words) {
+    const candidate = cur ? `${cur} ${word}` : word;
+    if (cleanLen(candidate) <= MAX_DISPLAY_CHARS || !cur) cur = candidate;
+    else { chunks.push(cur); cur = word; }
+  }
+  if (cur) chunks.push(cur);
+  return chunks;
+}
+
+// 구어체 종결 패턴 우선 분할 → 여전히 길면 단어 경계로 fallback
+function splitIntoDisplayChunks(text: string): string[] {
+  if (cleanLen(text) <= MAX_DISPLAY_CHARS) return [text];
+
+  const parts = text
+    .split(/(?<=라고 함|상황이라고|분석이라고|있다고|이라고|했다고|한다고|하는데|겠다며|한다며|하면서|하며)\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  return parts.flatMap((part) =>
+    cleanLen(part) <= MAX_DISPLAY_CHARS ? [part] : wordSplit(part)
+  );
+}
+
+// VTT 항목을 문장 부호로 1차 분할 → 각 문장을 표시 단위로 2차 분할 → 비례 타이밍 배분
 function splitEntry(entry: VttEntry): { start: number; end: number; text: string }[] {
-  // 소수점(2.8%)은 스킵: 마침표 뒤가 숫자면 분할하지 않음 → [^0-9]\. 패턴
   const sentences = entry.text
     .split(/(?<=[^0-9])\.\s+|[?!]\s+/)
     .map((s) => cleanSubtitleText(s))
     .filter(Boolean);
 
-  if (sentences.length === 1) return [{ ...entry, text: cleanSubtitleText(entry.text) }];
+  const allChunks = sentences.flatMap((s) => splitIntoDisplayChunks(s));
+  if (allChunks.length === 0) return [{ ...entry, text: cleanSubtitleText(entry.text) }];
+  if (allChunks.length === 1) return [{ ...entry, text: allChunks[0]! }];
 
-  const cleanLen = (s: string) => s.replace(/\s/g, '').length;
-  const totalChars = sentences.reduce((s, c) => s + cleanLen(c), 0);
+  const totalChars = allChunks.reduce((s, c) => s + cleanLen(c), 0);
   const duration = entry.end - entry.start;
   const result: { start: number; end: number; text: string }[] = [];
   let cursor = entry.start;
-  for (let i = 0; i < sentences.length; i++) {
-    const ratio = cleanLen(sentences[i]!) / totalChars;
-    const end = i === sentences.length - 1 ? entry.end : cursor + Math.round(ratio * duration);
-    result.push({ start: cursor, end, text: sentences[i]! });
+  for (let i = 0; i < allChunks.length; i++) {
+    const ratio = cleanLen(allChunks[i]!) / totalChars;
+    const end = i === allChunks.length - 1 ? entry.end : cursor + Math.round(ratio * duration);
+    result.push({ start: cursor, end, text: allChunks[i]! });
     cursor = end;
   }
   return result;
@@ -92,46 +122,24 @@ function formatSrtTime(ms: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms_part).padStart(3, '0')}`;
 }
 
-function splitSentences(text: string): string[] {
-  const MAX_CHARS = 20;
-  // 문장 부호로 1차 분할
-  const raw = text
-    .split(/(?<=[.!?。！？])\s*/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+function buildSrt(script: string, totalMs: number): string {
+  const chunks = script
+    .split(/(?<=[^0-9])\.\s+|[?!]\s+/)
+    .map((s) => cleanSubtitleText(s))
+    .filter(Boolean)
+    .flatMap((s) => splitIntoDisplayChunks(s));
 
-  // MAX_CHARS 초과 문장만 공백 기준으로 추가 분할
-  const result: string[] = [];
-  for (const sentence of raw) {
-    if (sentence.length <= MAX_CHARS) {
-      result.push(sentence);
-    } else {
-      let remaining = sentence;
-      while (remaining.length > MAX_CHARS) {
-        const splitAt = remaining.lastIndexOf(' ', MAX_CHARS);
-        const cut = splitAt > 0 ? splitAt : MAX_CHARS;
-        result.push(remaining.slice(0, cut).trim());
-        remaining = remaining.slice(cut).trim();
-      }
-      if (remaining.length > 0) result.push(remaining);
-    }
-  }
-  return result;
-}
-
-function buildSrt(sentences: string[], totalMs: number): string {
-  // 각 문장을 독립 자막 블록으로 — 강제 개행 없이 완성된 문장 표시
-  const totalChars = sentences.reduce((sum, s) => sum + s.length, 0);
+  const totalChars = chunks.reduce((sum, s) => sum + cleanLen(s), 0);
   let cursor = 0;
   return (
-    sentences
+    chunks
       .map((text, i) => {
-        const ratio = text.length / totalChars;
+        const ratio = cleanLen(text) / totalChars;
         const duration = Math.round(ratio * totalMs);
         const start = cursor;
         const end = Math.min(cursor + duration, totalMs);
         cursor = end;
-        return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${cleanSubtitleText(text)}`;
+        return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${text}`;
       })
       .join('\n\n') + '\n'
   );
@@ -198,9 +206,8 @@ export async function processMessage(
       const scriptS3Key = jobKey(jobId, 'script.json');
       const scriptBuf = await downloadFromS3(scriptS3Key);
       const { script } = JSON.parse(scriptBuf.toString()) as ScriptContent;
-      const sentences = splitSentences(script);
-      srtContent = buildSrt(sentences, totalMs);
-      log.info({ sentences: sentences.length }, '문자 비례 SRT 생성 완료');
+      srtContent = buildSrt(script, totalMs);
+      log.info('문자 비례 SRT 생성 완료');
     }
 
     writeFileSync(srtPath, srtContent, 'utf-8');
