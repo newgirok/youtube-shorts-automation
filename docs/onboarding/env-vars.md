@@ -1,4 +1,4 @@
-# 환경변수 가이드
+﻿# 환경변수 가이드
 
 ## 파일 구조
 
@@ -51,10 +51,10 @@ cp apps/web/.env.example apps/web/.env.local
 
 | 변수명 | 필수 | 기본값 | 설명 |
 |--------|------|--------|------|
-| `NODE_ENV` | ✅ | `development` | 실행 환경 (`development` \| `test` \| `production`) |
-| `DATABASE_URL` | ✅ | - | PostgreSQL 연결 문자열 (로컬: `localhost:5432`) |
-| `AWS_REGION` | ✅ | `ap-northeast-2` | AWS 리전 |
-| `S3_BUCKET_NAME` | ✅ | - | S3 버킷명 |
+| `NODE_ENV` |  | `development` | 실행 환경 (`development` \| `test` \| `production`) |
+| `DATABASE_URL` |  | - | PostgreSQL 연결 문자열 (로컬: `localhost:5432`) |
+| `AWS_REGION` |  | `ap-northeast-2` | AWS 리전 |
+| `S3_BUCKET_NAME` |  | - | S3 버킷명 |
 | `AWS_ACCESS_KEY_ID` | - | - | AWS 액세스 키 (LocalStack: `test`) |
 | `AWS_SECRET_ACCESS_KEY` | - | - | AWS 시크릿 키 (LocalStack: `test`) |
 | `AWS_ENDPOINT_URL` | - | - | LocalStack 엔드포인트 (로컬: `http://localhost:4566`) |
@@ -63,11 +63,11 @@ cp apps/web/.env.example apps/web/.env.local
 
 | 변수명 | 필수 | 설명 |
 |--------|------|------|
-| `SQS_SCRIPT_QUEUE_URL` | ✅ | script-worker SQS 큐 URL |
-| `YOUTUBE_CLIENT_ID` | ✅ | Google Cloud OAuth2 클라이언트 ID |
-| `YOUTUBE_CLIENT_SECRET` | ✅ | Google Cloud OAuth2 클라이언트 시크릿 |
-| `YOUTUBE_REDIRECT_URI` | ✅ | OAuth2 리다이렉트 URI |
-| `ENCRYPTION_KEY` | ✅ | AES-256-GCM 암호화 키 (64자리 hex = 32 bytes) |
+| `SQS_SCRIPT_QUEUE_URL` |  | script-worker SQS 큐 URL |
+| `YOUTUBE_CLIENT_ID` |  | Google Cloud OAuth2 클라이언트 ID |
+| `YOUTUBE_CLIENT_SECRET` |  | Google Cloud OAuth2 클라이언트 시크릿 |
+| `YOUTUBE_REDIRECT_URI` |  | OAuth2 리다이렉트 URI |
+| `ENCRYPTION_KEY` |  | AES-256-GCM 암호화 키 (64자리 hex = 32 bytes) |
 | `WEB_ORIGIN` | - | CORS 허용 오리진 |
 | `API_INTERNAL_SECRET` | - | Web → API 내부 통신 인증 키 (openssl rand -hex 32 로 생성) |
 
@@ -75,31 +75,31 @@ cp apps/web/.env.example apps/web/.env.local
 
 | 변수명 | 필수 | 설명 |
 |--------|------|------|
-| `GEMINI_API_KEY` | ✅ | Google Gemini API 인증 키 |
-| `SQS_TTS_QUEUE_URL` | ✅ | tts-worker SQS 큐 URL |
+| `GEMINI_API_KEY` |  | Google Gemini API 인증 키 |
+| `SQS_TTS_QUEUE_URL` |  | tts-worker SQS 큐 URL |
 
 ### apps/workers/tts
 
 | 변수명 | 필수 | 설명 |
 |--------|------|------|
-| `SQS_SUBTITLE_QUEUE_URL` | ✅ | subtitle-worker SQS 큐 URL |
+| `SQS_SUBTITLE_QUEUE_URL` |  | subtitle-worker SQS 큐 URL |
 | `EDGE_TTS_PATH` | - | edge-tts 실행 경로 (Docker: `edge-tts`, Windows: 절대 경로) |
 
 ### apps/workers/subtitle
 
 | 변수명 | 필수 | 설명 |
 |--------|------|------|
-| `SQS_SUBTITLE_QUEUE_URL` | ✅ | 수신 큐 URL |
-| `SQS_RENDER_QUEUE_URL` | ✅ | render-worker SQS 큐 URL |
+| `SQS_SUBTITLE_QUEUE_URL` |  | 수신 큐 URL |
+| `SQS_RENDER_QUEUE_URL` |  | render-worker SQS 큐 URL |
 | `PYTHON_PATH` | - | Python 실행 경로 (Docker: `python`, Windows: 절대 경로) |
 
 ### apps/workers/render
 
 | 변수명 | 필수 | 설명 |
 |--------|------|------|
-| `SQS_RENDER_QUEUE_URL` | ✅ | 수신 큐 URL |
-| `SQS_UPLOAD_QUEUE_URL` | ✅ | upload-worker SQS 큐 URL |
-| `PEXELS_API_KEY` | ✅ | Pexels 이미지 검색 API 키 (pexels.com/api에서 발급, 배경 이미지 생성용) |
+| `SQS_RENDER_QUEUE_URL` |  | 수신 큐 URL |
+| `SQS_UPLOAD_QUEUE_URL` |  | upload-worker SQS 큐 URL |
+| `PEXELS_API_KEY` |  | Pexels 이미지 검색 API 키 (pexels.com/api에서 발급, 배경 이미지 생성용) |
 | `FFMPEG_PATH` | - | FFmpeg 실행 경로 (Docker: `ffmpeg`, Windows: 절대 경로) |
 | `FFPROBE_PATH` | - | ffprobe 실행 경로 (Docker: `ffprobe`, Windows: 절대 경로) |
 
@@ -107,22 +107,22 @@ cp apps/web/.env.example apps/web/.env.local
 
 | 변수명 | 필수 | 설명 |
 |--------|------|------|
-| `YOUTUBE_CLIENT_ID` | ✅ | Google Cloud OAuth2 클라이언트 ID |
-| `YOUTUBE_CLIENT_SECRET` | ✅ | Google Cloud OAuth2 클라이언트 시크릿 |
-| `YOUTUBE_REFRESH_TOKEN` | ✅ | YouTube 채널 OAuth2 refresh token |
-| `ENCRYPTION_KEY` | ✅ | AES-256-GCM 암호화 키 |
+| `YOUTUBE_CLIENT_ID` |  | Google Cloud OAuth2 클라이언트 ID |
+| `YOUTUBE_CLIENT_SECRET` |  | Google Cloud OAuth2 클라이언트 시크릿 |
+| `YOUTUBE_REFRESH_TOKEN` |  | YouTube 채널 OAuth2 refresh token |
+| `ENCRYPTION_KEY` |  | AES-256-GCM 암호화 키 |
 
 ### apps/web/.env.local
 
 | 변수명 | 필수 | 설명 |
 |--------|------|------|
-| `AUTH_SECRET` | ✅ | NextAuth v5 JWT 서명 시크릿 (`openssl rand -base64 32`) |
-| `NEXTAUTH_SECRET` | ✅ | NextAuth v4 호환용 (`AUTH_SECRET`과 동일 값) |
-| `AUTH_URL` | ✅ | NextAuth v5 앱 URL (`http://localhost:3001`) |
-| `NEXTAUTH_URL` | ✅ | NextAuth v4 호환용 (`AUTH_URL`과 동일 값) |
-| `GOOGLE_CLIENT_ID` | ✅ | NextAuth Google 로그인용 OAuth2 Client ID (루트 `YOUTUBE_CLIENT_ID`와 동일 클라이언트 재사용 가능) |
-| `GOOGLE_CLIENT_SECRET` | ✅ | NextAuth Google 로그인용 OAuth2 Client Secret (루트 `YOUTUBE_CLIENT_SECRET`와 동일) |
-| `NEXT_PUBLIC_API_URL` | ✅ | NestJS API 서버 주소 (`http://localhost:3000`) — 브라우저에서 직접 호출 시 사용 |
+| `AUTH_SECRET` |  | NextAuth v5 JWT 서명 시크릿 (`openssl rand -base64 32`) |
+| `NEXTAUTH_SECRET` |  | NextAuth v4 호환용 (`AUTH_SECRET`과 동일 값) |
+| `AUTH_URL` |  | NextAuth v5 앱 URL (`http://localhost:3001`) |
+| `NEXTAUTH_URL` |  | NextAuth v4 호환용 (`AUTH_URL`과 동일 값) |
+| `GOOGLE_CLIENT_ID` |  | NextAuth Google 로그인용 OAuth2 Client ID (루트 `YOUTUBE_CLIENT_ID`와 동일 클라이언트 재사용 가능) |
+| `GOOGLE_CLIENT_SECRET` |  | NextAuth Google 로그인용 OAuth2 Client Secret (루트 `YOUTUBE_CLIENT_SECRET`와 동일) |
+| `NEXT_PUBLIC_API_URL` |  | NestJS API 서버 주소 (`http://localhost:3000`) — 브라우저에서 직접 호출 시 사용 |
 | `API_INTERNAL_URL` | - | 서버 컴포넌트 전용 API 주소 (Docker 내부 호스트명 등). 미설정 시 `NEXT_PUBLIC_API_URL` 사용 |
 | `NEXT_PUBLIC_API_SECRET` | - | Web → API 내부 통신 인증 키 (`openssl rand -hex 32`). 루트 `API_INTERNAL_SECRET`과 동일 값 설정 |
 

@@ -1,14 +1,14 @@
-# @shorts/render-worker
+﻿# @shorts/render-worker
 
 SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
 
-파이프라인: render-queue → [Pexels 이미지 다운로드 + zoompan 클립 생성 + FFmpeg 합성] → S3 저장 → upload-queue 발행
+파이프라인: render-queue → [Pexels 동영상/이미지 다운로드 + zoompan 클립 생성 + FFmpeg 합성] → S3 저장 → upload-queue 발행
 
 ## 주요 모듈
 
 - `processor.ts` — S3 파일 다운로드, scenes 기반 클립 생성, FFmpeg 최종 합성, upload-queue 발행
-- `renderer.ts` — FFmpeg zoompan 클립 렌더링 (`renderSceneClip`), 클립 concat + 자막 burn-in (`concatClipsWithAudio`)
-- `image-generator.ts` — Pexels API로 scene keyword 기반 배경 이미지 검색·다운로드 (`PEXELS_API_KEY` 필요)
+- `renderer.ts` — FFmpeg zoompan 클립 렌더링 (`renderSceneClip`, `renderSceneFromVideo`), 클립 concat + 헤더 + 자막 burn-in (`concatClipsWithAudio`)
+- `image-generator.ts` — Pexels API로 scene keyword 기반 배경 동영상/이미지 검색·다운로드 (`PEXELS_API_KEY` 필요)
 - `index.ts` — SQS Long Polling 진입점 (Fargate 상시 실행)
 - `env.ts` — 환경변수 파싱 (`PEXELS_API_KEY`, `FFMPEG_PATH` 등)
 
@@ -16,11 +16,13 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
 
 1. S3에서 audio.mp3, subtitle.srt 다운로드
 2. DB의 `scriptContent.scenes` 배열 순회
-   - 각 scene의 `keyword`(영어)로 Pexels 이미지 다운로드
-   - Pexels 실패 시 `job.topic`으로 재시도
+   - 각 scene의 `keyword`(영어)로 Pexels **동영상** 우선 시도 (`downloadSceneVideo`)
+   - 동영상 실패 시 Pexels **이미지** fallback (`downloadSceneImage`)
+   - 이미지도 Pexels 실패 시 `job.topic`으로 재시도
+   - `renderSceneFromVideo()`: 동영상 → scale/crop → 1080×1920 MP4 클립
    - `renderSceneClip()`: 이미지 → zoompan 효과 → 1080×1920 MP4 클립
 3. scenes가 없는 경우: topic 키워드로 단일 이미지 fallback (50초 zoom-in)
-4. `concatClipsWithAudio()`: 클립 concat → 오디오 + 자막 burn-in → output.mp4
+4. `concatClipsWithAudio()`: 클립 concat → **헤더 오버레이** + 오디오 + **ASS 자막** burn-in → output.mp4
 
 ## zoompan 효과
 
@@ -33,16 +35,47 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
 
 출력 해상도: 1080×1920 (Shorts 세로 포맷), fps: 30
 
-## 자막 스타일 (ASS force_style)
+## 레이아웃 (1080×1920 기준)
+
+| 영역 | y 범위 | 높이 | 비율 |
+|---|---|---|---|
+| 헤더 (검정 패널 + 제목) | 0 ~ 560 | 560px | 29.2% |
+| 바디 (영상 콘텐츠) | 560 ~ 1300 | 740px | 38.5% |
+| 푸터 (검정 패널 + 자막박스) | 1300 ~ 1920 | 620px | 32.3% |
+
+## 헤더 오버레이 (상단)
+
+- `HEADER_H = 560` — 불투명 검정 패널 (`color=black@1.0`)
+- 항상 2줄 구조 (제목이 6자 이하이거나 공백 없으면 1줄 큰 폰트):
+  - **1줄(흰색)** `FONT_SIZE_1=110`, `borderw=11:bordercolor=black`
+  - **2줄(노란색)** `FONT_SIZE_2=110`, `borderw=11:bordercolor=black`
+  - y 위치: `y1 = max(200, HEADER_H - totalTextH - 60)`, `y2 = y1 + fs1 + 20`
+- `SAFE_W=940` (좌우 각 70px 여백), `calcFontSize` 한글 비율: `kor*0.85 + other*0.55`
+- 폰트:
+  - Windows: `C\\:/Windows/Fonts/malgunbd.ttf` (Malgun Gothic Bold)
+  - Linux: `/usr/share/fonts/truetype/nanum/NanumSquareEB.ttf` (NanumSquare ExtraBold)
+- `text=` 파라미터 대신 반드시 `textfile=` 사용 — Linux에서 한국어 인코딩 깨짐 방지
+
+## 자막 방식 (SRT → ASS 변환, BorderStyle=3 불투명 박스)
+
+**`subtitles` 필터 사용 금지** — PlayResY=288 기본값으로 자막이 화면 밖으로 나감.
+
+올바른 방식:
+1. `ffmpeg -y -i subtitle.srt subtitle.ass` 로 ASS 파일 생성
+2. ASS 파일 내용 직접 수정:
+   - `PlayResX: 1080`, `PlayResY: 1920` 으로 교체
+   - `Style: Default` 라인 전체 교체 (아래 값 사용)
+3. `ass='subtitle.ass'` 필터로 burn-in
 
 ```
-FontSize=46, Bold=1, Outline=8, Shadow=3
-Alignment=2 (하단 중앙), MarginV=130, MarginL=40, MarginR=40
-PrimaryColour=&H00FFFFFF (흰색), OutlineColour=&H00000000 (검정)
-FontName: 'Malgun Gothic Bold' (Windows) / 'NanumGothicExtraBold' (Linux)
+Style: Default,{FontName},72,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,10,0,2,40,40,510,1
 ```
 
-affiliate CTA 자막은 제거됨.
+- FontName: `Malgun Gothic Bold` (Windows) / `NanumSquare ExtraBold` (Linux)
+- FontSize=72, **BorderStyle=3 (불투명 배경 박스)**, Outline=10(박스 패딩)
+- PrimaryColour=**&H00FFFFFF (흰색)**, OutlineColour=&H00000000(검정 박스)
+- Alignment=2 (하단 중앙), **MarginV=510** → 푸터 상단(y=1300) 직상단 배치
+- affiliate CTA 자막 없음
 
 ## SQS 메시지 구조
 

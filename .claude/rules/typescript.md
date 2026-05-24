@@ -1,4 +1,4 @@
-# TypeScript 코딩 규칙
+﻿# TypeScript 코딩 규칙
 
 ## 기본 설정
 - `strict: true` 필수 — tsconfig.base.json 기준
@@ -10,11 +10,11 @@
 - 모든 패키지 `"type": "module"` (ESM)
 - import 경로에 반드시 `.js` 확장자 명시:
   ```typescript
-  // ✅ 올바름
+  //  올바름
   import { prisma } from './db.js';
   import type { Job } from '@shorts/shared/types.js';
 
-  // ❌ 금지
+  //  금지
   import { prisma } from './db';
   ```
 - `tsconfig.base.json`: `module: "NodeNext"`, `moduleResolution: "NodeNext"`
@@ -26,19 +26,19 @@
 
 ## 금지 패턴
 ```typescript
-// ❌ any 금지
+//  any 금지
 const data: any = response.json();
 
-// ❌ 타입 단언 남용 금지
+//  타입 단언 남용 금지
 const user = data as User;
 
-// ✅ satisfies 사용
+//  satisfies 사용
 const config = {
   model: 'gemini-2.5-flash',
   maxTokens: 1024,
 } satisfies GeminiConfig;
 
-// ✅ 타입 가드 사용
+//  타입 가드 사용
 function isScriptOutput(data: unknown): data is ScriptOutput {
   return typeof data === 'object' && data !== null && 'title' in data;
 }

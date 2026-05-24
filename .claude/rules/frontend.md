@@ -1,4 +1,4 @@
-# 프론트엔드 규칙 (apps/web)
+﻿# 프론트엔드 규칙 (apps/web)
 
 ## 컴포넌트 전략
 - 서버 컴포넌트가 기본값 — `'use client'`는 인터랙션이 필요한 최소 범위에만
@@ -10,7 +10,7 @@
 - `/dashboard` 폴링 간격: `refetchInterval: 2000` (2초 고정, **변경 금지**)
 
 ```typescript
-// ✅ 올바름 — TanStack Query 폴링
+//  올바름 — TanStack Query 폴링
 const { data: jobs } = useQuery({
   queryKey: ['jobs', channelId, date],
   queryFn: () => fetchJobs(channelId, date),
@@ -22,7 +22,7 @@ const { data: jobs } = useQuery({
   },
 });
 
-// ❌ 금지 — useEffect 데이터 페칭
+//  금지 — useEffect 데이터 페칭
 useEffect(() => {
   fetch('/api/jobs').then(r => r.json()).then(setJobs);
 }, []);
@@ -54,8 +54,8 @@ matcher: ['/((?!api|_next|login|favicon).*)']
 
 ## 금지 패턴
 ```typescript
-// ❌ useEffect 데이터 페칭
-// ❌ 서버 상태를 useState로 관리
-// ❌ 'use client' 남발 (레이아웃, 정적 컴포넌트에 적용)
-// ❌ API URL 하드코딩 ('http://localhost:3000' 등)
+//  useEffect 데이터 페칭
+//  서버 상태를 useState로 관리
+//  'use client' 남발 (레이아웃, 정적 컴포넌트에 적용)
+//  API URL 하드코딩 ('http://localhost:3000' 등)
 ```

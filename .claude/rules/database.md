@@ -1,12 +1,12 @@
-# 데이터베이스 규칙 (Prisma v5)
+﻿# 데이터베이스 규칙 (Prisma v5)
 
 ## findMany 필수 규칙
 `findMany()` 단독 호출 금지 — 반드시 `select` 명시:
 ```typescript
-// ❌ 금지 — 모든 필드 조회
+//  금지 — 모든 필드 조회
 const jobs = await prisma.job.findMany();
 
-// ✅ 올바름 — 필요한 필드만
+//  올바름 — 필요한 필드만
 const jobs = await prisma.job.findMany({
   where: { channelId, status: 'COMPLETED' },
   select: { id: true, topic: true, viewCount: true, completedAt: true },

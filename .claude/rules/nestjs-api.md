@@ -1,4 +1,4 @@
-# NestJS API 규칙 (apps/api)
+﻿# NestJS API 규칙 (apps/api)
 
 ## 3계층 아키텍처 (엄격 준수)
 
@@ -9,20 +9,20 @@
 | Repository | Prisma 쿼리 전담 | 도메인 로직 |
 
 ```typescript
-// ✅ Controller — 파싱만
+//  Controller — 파싱만
 @Post()
 async createJob(@Body() dto: CreateJobDto) {
   return this.jobsService.createJob(dto);
 }
 
-// ✅ Service — 도메인 예외
+//  Service — 도메인 예외
 async createJob(dto: CreateJobDto) {
   const channel = await this.channelRepo.findById(dto.channelId);
   if (!channel) throw new ChannelNotFoundException(dto.channelId);
   // ...
 }
 
-// ❌ Controller에 비즈니스 로직 금지
+//  Controller에 비즈니스 로직 금지
 @Post()
 async createJob(@Body() dto: CreateJobDto) {
   const channel = await this.prisma.channel.findUnique(...); // 금지

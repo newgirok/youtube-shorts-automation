@@ -1,4 +1,4 @@
-# 로드맵 — AI 유튜브 쇼츠 자동화 플랫폼
+﻿# 로드맵 — AI 유튜브 쇼츠 자동화 플랫폼
 
 > 기반 문서: docs/prd.md, shrimp-rules.md  
 > 원칙: 각 Phase의 완료 기준을 충족해야 다음 Phase로 진행한다.
@@ -8,29 +8,29 @@
 ## 진행 현황
 
 - **Phase 0** — 핵심 리스크 검증
-  - [✓] P0-1. `scripts/test-tts.ts` — TTS 음성 품질 `[BE]` _(52.4초, PASS)_
-  - [✓] P0-2. `scripts/test-render.ts` — FFmpeg 렌더링 품질 `[BE][DevOps]` _(1080×1920, 54초, PASS)_
-  - [✓] P0-3. `scripts/test-upload.ts` — YouTube Data API 업로드 `[BE]` _(videoId: HEHyy3p7zpc, private 업로드·#Shorts 분류·refresh_token 재발급 PASS)_
+  - [] P0-1. `scripts/test-tts.ts` — TTS 음성 품질 `[BE]` _(52.4초, PASS)_
+  - [] P0-2. `scripts/test-render.ts` — FFmpeg 렌더링 품질 `[BE][DevOps]` _(1080×1920, 54초, PASS)_
+  - [] P0-3. `scripts/test-upload.ts` — YouTube Data API 업로드 `[BE]` _(videoId: HEHyy3p7zpc, private 업로드·#Shorts 분류·refresh_token 재발급 PASS)_
 - **Phase 1** — 로컬 파이프라인 구현
-  - [✓] P1-1. Monorepo 초기화 `[DevOps]`
-  - [✓] P1-2. `packages/shared` — 공통 기반 `[BE]`
-  - [✓] P1-3. `apps/api` — POST /jobs `[BE]`
-  - [✓] P1-4. `apps/workers/script` — Gemini 2.5 Flash, ScriptOutput(8필드) `[BE][AI]`
-  - [✓] P1-5. `apps/workers/tts` `[BE]`
-  - [✓] P1-6. `apps/workers/subtitle` _(Fargate)_ — 스크립트 기반 SRT 생성 `[BE][DevOps]`
-  - [✓] P1-7. `apps/workers/render` _(Fargate)_ — Pexels + zoompan + FFmpeg `[BE][DevOps]`
-  - [✓] P1-8. `apps/workers/upload` + 수동 E2E `[BE]`
-  - [✓] P1-9. Docker Compose 통합 로컬 환경 `[DevOps]`
+  - [] P1-1. Monorepo 초기화 `[DevOps]`
+  - [] P1-2. `packages/shared` — 공통 기반 `[BE]`
+  - [] P1-3. `apps/api` — POST /jobs `[BE]`
+  - [] P1-4. `apps/workers/script` — Gemini 2.5 Flash, ScriptOutput(8필드) `[BE][AI]`
+  - [] P1-5. `apps/workers/tts` `[BE]`
+  - [] P1-6. `apps/workers/subtitle` _(Fargate)_ — 스크립트 기반 SRT 생성 `[BE][DevOps]`
+  - [] P1-7. `apps/workers/render` _(Fargate)_ — Pexels + zoompan + FFmpeg `[BE][DevOps]`
+  - [] P1-8. `apps/workers/upload` + 수동 E2E `[BE]`
+  - [] P1-9. Docker Compose 통합 로컬 환경 `[DevOps]`
 - **Phase 2** — 웹 대시보드
-  - [✓] P2-1. `apps/web` 초기화 + NextAuth Google OAuth `[FE]`
-  - [✓] P2-2. `/dashboard` — Job 카드 피드 + 2초 폴링 + 조회수 실시간 표시 `[FE][BE]`
-  - [✓] P2-3. `/dashboard/[id]` — 상태 타임라인 + 재시도 `[FE][BE]`
-  - [✓] P2-4. `/channels/[id]` — 채널 관리 + YPP 진행률 대시보드 `[FE][BE]`
-  - [✓] P2-5. YouTube OAuth2 채널 연결 + `refresh_token` 암호화 저장 `[BE]`
-  - [✓] P2-6. `POST /jobs/auto-news` — Google News RSS 수집 + Job 일괄 생성 `[BE]`
-  - [✓] P2-7. `POST /channels/:id/sync` — YouTube Data API + Analytics API 풀 동기화 `[BE]`
-  - [✓] P2-8. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
-  - [✓] P2-9. `Job.privacyStatus` 추적 `[BE]`
+  - [] P2-1. `apps/web` 초기화 + NextAuth Google OAuth `[FE]`
+  - [] P2-2. `/dashboard` — Job 카드 피드 + 2초 폴링 + 조회수 실시간 표시 `[FE][BE]`
+  - [] P2-3. `/dashboard/[id]` — 상태 타임라인 + 재시도 `[FE][BE]`
+  - [] P2-4. `/channels/[id]` — 채널 관리 + YPP 진행률 대시보드 `[FE][BE]`
+  - [] P2-5. YouTube OAuth2 채널 연결 + `refresh_token` 암호화 저장 `[BE]`
+  - [] P2-6. `POST /jobs/auto-news` — Google News RSS 수집 + Job 일괄 생성 `[BE]`
+  - [] P2-7. `POST /channels/:id/sync` — YouTube Data API + Analytics API 풀 동기화 `[BE]`
+  - [] P2-8. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
+  - [] P2-9. `Job.privacyStatus` 추적 `[BE]`
 - **Phase 3** — AWS 서버리스 이관
   - [ ] P3-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
   - [ ] P3-2. Supabase 연결 + 마이그레이션 `[BE][DevOps]`
@@ -95,7 +95,7 @@
     - `refresh_token` 재발급 정상
 
 **완료 기준**
-- [✓] P0-1 ~ P0-3 모두 검증 통과
+- [] P0-1 ~ P0-3 모두 검증 통과
 
 ---
 
@@ -156,10 +156,10 @@
     - 타임스탬프 구간 합계 = 오디오 총 길이
 
 - **P1-7.** `apps/workers/render` _(Fargate)_ `[BE][DevOps]`
-  - `script.json`의 `scenes[]` 배열 기반 Pexels 이미지 다운로드
-  - zoompan 효과 (zoom-in/out, pan-left/right) 클립 생성
-  - 클립 concat + 오디오 + 자막 burn-in (FontSize=46, Bold, Outline=8)
-  - affiliate CTA 자막 없음 (제거됨)
+  - `script.json`의 `scenes[]` 배열 기반 Pexels 동영상(우선)/이미지(fallback) 다운로드
+  - zoompan 효과 (zoom-in/out, pan-left/right) 클립 생성, `-r 30` fps 정규화, `-stream_loop -1` 루프
+  - 클립 concat + 헤더 오버레이(검정 패널+제목 2줄) + 오디오 + ASS 자막 burn-in (FontSize=72, BorderStyle=3 불투명박스, MarginV=510)
+  - affiliate CTA 자막 없음
   - 검증
     - 로컬 Docker로 S3에 `output.mp4` 생성
     - 해상도 1080×1920, 오디오 싱크 정상
@@ -179,9 +179,9 @@
     - `POST /jobs` 한 번으로 PENDING → COMPLETED 자동 완료
 
 **완료 기준**
-- [✓] `docker-compose up` 한 번으로 전체 스택 기동
-- [✓] `POST /jobs` 한 번으로 PENDING → COMPLETED 자동 완료 (수동 개입 없음)
-- [✓] 모바일 유튜브 앱에서 자막·오디오 품질 합격
+- [] `docker-compose up` 한 번으로 전체 스택 기동
+- [] `POST /jobs` 한 번으로 PENDING → COMPLETED 자동 완료 (수동 개입 없음)
+- [] 모바일 유튜브 앱에서 자막·오디오 품질 합격
 
 ---
 
@@ -252,10 +252,10 @@
     - Job 상세에서 privacyStatus 표시
 
 **완료 기준**
-- [✓] 대시보드에서 채널·Job 관리 전 기능 동작
-- [✓] 재시도 기능 정상 동작
-- [✓] Analytics 데이터 수집 및 YPP 진행률 표시
-- [✓] 뉴스 자동 수집 + Job 생성 (`auto-news`)
+- [] 대시보드에서 채널·Job 관리 전 기능 동작
+- [] 재시도 기능 정상 동작
+- [] Analytics 데이터 수집 및 YPP 진행률 표시
+- [] 뉴스 자동 수집 + Job 생성 (`auto-news`)
 
 > Playwright 검증 완료: 로그인, 대시보드 채널·Job 목록·통계, Job 상세·타임라인, 재시도, 2초 폴링, 채널 sync 모두 정상 동작.
 

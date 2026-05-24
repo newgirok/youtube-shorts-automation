@@ -1,4 +1,4 @@
-# 보안 규칙
+﻿# 보안 규칙
 
 ## 토큰 관리 (절대 원칙)
 - `access_token` DB 저장 **절대 금지** — 런타임에서 `refresh_token`으로 재발급
@@ -7,7 +7,7 @@
 - `ENCRYPTION_KEY`는 AWS Secrets Manager에서 주입 (`.env.local` 직접 작성은 로컬 개발 전용)
 
 ```typescript
-// ✅ 올바른 패턴 — refresh_token으로 access_token 재발급
+//  올바른 패턴 — refresh_token으로 access_token 재발급
 const oauth2Client = new google.auth.OAuth2(...);
 oauth2Client.setCredentials({ refresh_token: decryptedToken });
 const { token } = await oauth2Client.getAccessToken(); // 런타임 발급
