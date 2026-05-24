@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+﻿import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -112,14 +112,14 @@ function verify(info: VideoInfo): void {
 
   console.log('\n=== P0-3 검증 결과 ===');
   console.log(
-    `해상도: ${info.width}×${info.height} → ${widthOk && heightOk ? '✓ PASS' : '✗ FAIL'}`,
+    `해상도: ${info.width}×${info.height} → ${widthOk && heightOk ? ' PASS' : ' FAIL'}`,
   );
-  console.log(`오디오: ${info.hasAudio ? '있음' : '없음'} → ${audioOk ? '✓ PASS' : '✗ FAIL'}`);
-  console.log(`길이: ${info.duration.toFixed(2)}초 → ${durationOk ? '✓ PASS' : '✗ FAIL'}`);
+  console.log(`오디오: ${info.hasAudio ? '있음' : '없음'} → ${audioOk ? ' PASS' : ' FAIL'}`);
+  console.log(`길이: ${info.duration.toFixed(2)}초 → ${durationOk ? ' PASS' : ' FAIL'}`);
   console.log(`코덱: ${info.codec}`);
 
   const allPass = widthOk && heightOk && audioOk && durationOk;
-  console.log(`\n전체 결과: ${allPass ? '✓ ALL PASS' : '✗ SOME FAILED'}`);
+  console.log(`\n전체 결과: ${allPass ? ' ALL PASS' : ' SOME FAILED'}`);
 }
 
 renderVideo();

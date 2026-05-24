@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+﻿import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 
@@ -66,7 +66,7 @@ function verify(duration: number): void {
   console.log('=== P0-1 검증 결과 ===');
   console.log(`오디오 길이: ${duration.toFixed(2)}초`);
   console.log(`목표 범위: ${MIN}~${MAX}초`);
-  console.log(`결과: ${passed ? '✓ PASS' : '✗ FAIL'}`);
+  console.log(`결과: ${passed ? ' PASS' : ' FAIL'}`);
 
   if (!passed) {
     console.warn(`[경고] 오디오 길이가 목표 범위(${MIN}~${MAX}초)를 벗어났습니다.`);

@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import { createReadStream, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { google } from 'googleapis';
@@ -108,9 +108,9 @@ async function main() {
 
   console.log('');
   console.log('=== P0-4 검증 결과 ===');
-  console.log(`업로드: ${videoId ? '✓ PASS' : '✗ FAIL'}`);
-  console.log(`#Shorts 분류: ${classification?.isShorts ? '✓ PASS' : '△ 미확인 (업로드 후 YouTube 처리 대기 중일 수 있음)'}`);
-  console.log(`refresh_token 재발급: ✓ PASS`);
+  console.log(`업로드: ${videoId ? ' PASS' : ' FAIL'}`);
+  console.log(`#Shorts 분류: ${classification?.isShorts ? ' PASS' : '△ 미확인 (업로드 후 YouTube 처리 대기 중일 수 있음)'}`);
+  console.log(`refresh_token 재발급:  PASS`);
   console.log(`소비 quota: 약 ${UPLOAD_QUOTA} units`);
   console.log('');
   console.log(`영상 URL: ${videoUrl}`);

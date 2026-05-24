@@ -190,6 +190,9 @@ importers:
       '@shorts/shared':
         specifier: workspace:*
         version: link:../../../packages/shared
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
     devDependencies:
       '@types/node':
         specifier: ^22.0.0
@@ -209,6 +212,9 @@ importers:
       '@shorts/shared':
         specifier: workspace:*
         version: link:../../../packages/shared
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
     devDependencies:
       '@types/aws-lambda':
         specifier: ^8.10.0
