@@ -1,6 +1,6 @@
 import type { SQSHandler, SQSEvent } from 'aws-lambda';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import {
   prisma,
   downloadFromS3,
@@ -9,7 +9,6 @@ import {
   createLogger,
 } from '@shorts/shared';
 import { EdgeTTSAdapter } from './EdgeTTSAdapter.js';
-import type { TTSAdapter } from './TTSAdapter.js';
 import { parseEnv } from './env.js';
 
 interface SQSMessage {
@@ -42,7 +41,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
       const scriptBuf = await downloadFromS3(scriptS3Key);
       const { script } = JSON.parse(scriptBuf.toString()) as ScriptContent;
 
-      const tts: TTSAdapter = new EdgeTTSAdapter(env.EDGE_TTS_PATH);
+      const tts = new EdgeTTSAdapter(env.EDGE_TTS_PATH);
       const audioPath = `/tmp/${jobId}-audio.mp3`;
       await tts.synthesize(script, audioPath);
       log.info({ audioPath }, 'TTS 음성 생성 완료');
@@ -50,6 +49,16 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
       const audioBuf = readFileSync(audioPath);
       const audioS3Key = jobKey(jobId, 'audio.mp3');
       await uploadToS3(audioS3Key, audioBuf);
+
+      // VTT (word-level timing) — edge-tts --write-subtitles 생성 파일
+      const vttPath = tts.vttPath(audioPath);
+      let subtitleVttS3Key: string | undefined;
+      if (existsSync(vttPath)) {
+        const vttBuf = readFileSync(vttPath);
+        subtitleVttS3Key = jobKey(jobId, 'subtitle.vtt');
+        await uploadToS3(subtitleVttS3Key, vttBuf);
+        log.info({ subtitleVttS3Key }, 'VTT 자막 업로드 완료');
+      }
 
       await prisma.job.update({
         where: { id: jobId },
@@ -59,7 +68,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
       await sqs.send(
         new SendMessageCommand({
           QueueUrl: env.SQS_SUBTITLE_QUEUE_URL,
-          MessageBody: JSON.stringify({ jobId, channelId, audioS3Key }),
+          MessageBody: JSON.stringify({ jobId, channelId, audioS3Key, subtitleVttS3Key }),
         })
       );
 
