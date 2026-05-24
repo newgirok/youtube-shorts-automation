@@ -214,7 +214,7 @@ async function main(): Promise<void> {
 
   // 5. 최종 합성
   console.log('\n[5/6] FFmpeg 최종 합성 (헤더 + 자막 burn-in)...');
-  const fontName = 'SB 어그로 B';
+  const fontName = 'SB Aggro Bold';
   concatClipsWithAudio(clipPaths, AUDIO_PATH, SRT_PATH, OUTPUT_PATH, FFMPEG, fontName, OUTPUT_DIR, script.title, FONTS_DIR);
 
   console.log('\n[6/6] 렌더링 완료!');
