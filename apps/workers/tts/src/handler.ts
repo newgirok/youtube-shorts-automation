@@ -18,7 +18,6 @@ interface SQSMessage {
 }
 
 interface ScriptContent {
-  title: string;
   script: string;
 }
 
@@ -40,11 +39,11 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
       });
 
       const scriptBuf = await downloadFromS3(scriptS3Key);
-      const { title, script } = JSON.parse(scriptBuf.toString()) as ScriptContent;
+      const { script } = JSON.parse(scriptBuf.toString()) as ScriptContent;
 
       const tts = new EdgeTTSAdapter(env.EDGE_TTS_PATH);
       const audioPath = `/tmp/${jobId}-audio.mp3`;
-      await tts.synthesize(`${title}. ${script}`, audioPath);
+      await tts.synthesize(script, audioPath);
       log.info({ audioPath }, 'TTS 음성 생성 완료');
 
       const audioBuf = readFileSync(audioPath);

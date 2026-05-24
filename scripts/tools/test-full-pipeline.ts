@@ -181,7 +181,7 @@ async function main(): Promise<void> {
   // 2. TTS + VTT 생성
   console.log('\n[2/6] edge-tts 음성 + VTT 생성...');
   const textFile = join(OUTPUT_DIR, 'tts-input.txt');
-  writeFileSync(textFile, `${script.title}. ${script.script}`, 'utf-8');
+  writeFileSync(textFile, script.script, 'utf-8');
   execSync(
     `"${EDGE_TTS}" --voice ko-KR-SunHiNeural --file "${textFile}" --write-media "${AUDIO_PATH}" --write-subtitles "${VTT_PATH}"`,
     { stdio: 'inherit', timeout: 120_000 },
