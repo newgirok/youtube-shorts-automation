@@ -118,12 +118,12 @@ export class ChannelsRepository {
     });
   }
 
-  updateJobViewCounts(updates: Array<{ youtubeVideoId: string; viewCount: number; likeCount: number; privacyStatus: string }>) {
+  updateJobViewCounts(updates: Array<{ youtubeVideoId: string; viewCount: number; likeCount: number; privacyStatus: string; thumbnailUrl: string | null }>) {
     return Promise.all(
-      updates.map(({ youtubeVideoId, viewCount, likeCount, privacyStatus }) =>
+      updates.map(({ youtubeVideoId, viewCount, likeCount, privacyStatus, thumbnailUrl }) =>
         prisma.job.updateMany({
           where: { youtubeVideoId },
-          data: { viewCount, likeCount, privacyStatus },
+          data: { viewCount, likeCount, privacyStatus, ...(thumbnailUrl ? { thumbnailUrl } : {}) },
         }),
       ),
     );
