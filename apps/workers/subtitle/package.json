@@ -12,7 +12,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.0.0",
-    "@shorts/shared": "workspace:*"
+    "@shorts/shared": "workspace:*",
+    "zod": "^4.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
