@@ -24,6 +24,10 @@ scripts/output/
 scripts/output_removed/
 scripts/tools/output/
 
+# 폰트 임시 파일 (TTF 파일은 유지, zip/extracted만 제외)
+scripts/fonts/extracted/
+scripts/fonts/*.zip
+
 # Playwright MCP 임시 파일
 .playwright-mcp/
 
