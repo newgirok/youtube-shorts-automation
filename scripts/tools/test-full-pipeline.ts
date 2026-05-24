@@ -60,13 +60,17 @@ function parseVttEntries(vtt: string): VttEntry[] {
   return entries;
 }
 
+function cleanSubtitleText(text: string): string {
+  return text.replace(/[.,?!]/g, '').replace(/\s{2,}/g, ' ').trim();
+}
+
 function splitEntry(entry: VttEntry): { start: number; end: number; text: string }[] {
   const sentences = entry.text
     .split(/(?<=[^0-9])\.\s+|[?!]\s+/)
-    .map((s) => s.trim())
+    .map((s) => cleanSubtitleText(s))
     .filter(Boolean);
 
-  if (sentences.length === 1) return [entry];
+  if (sentences.length === 1) return [{ ...entry, text: cleanSubtitleText(entry.text) }];
 
   const cleanLen = (s: string) => s.replace(/\s/g, '').length;
   const totalChars = sentences.reduce((s, c) => s + cleanLen(c), 0);

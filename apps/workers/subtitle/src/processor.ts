@@ -44,16 +44,19 @@ function parseVttEntries(vtt: string): VttEntry[] {
   return entries;
 }
 
+function cleanSubtitleText(text: string): string {
+  return text.replace(/[.,?!]/g, '').replace(/\s{2,}/g, ' ').trim();
+}
+
 // VTT 항목을 문장 부호(. ? !)로 1차 분할 → 각 문장에 비례 타이밍 배분
 function splitEntry(entry: VttEntry): { start: number; end: number; text: string }[] {
   // 소수점(2.8%)은 스킵: 마침표 뒤가 숫자면 분할하지 않음 → [^0-9]\. 패턴
   const sentences = entry.text
     .split(/(?<=[^0-9])\.\s+|[?!]\s+/)
-    .map((s) => s.trim())
+    .map((s) => cleanSubtitleText(s))
     .filter(Boolean);
 
-  // 마지막 문장에 부호가 남아있으면 그대로 유지 (단일 문장일 때)
-  if (sentences.length === 1) return [entry];
+  if (sentences.length === 1) return [{ ...entry, text: cleanSubtitleText(entry.text) }];
 
   const cleanLen = (s: string) => s.replace(/\s/g, '').length;
   const totalChars = sentences.reduce((s, c) => s + cleanLen(c), 0);
@@ -128,7 +131,7 @@ function buildSrt(sentences: string[], totalMs: number): string {
         const start = cursor;
         const end = Math.min(cursor + duration, totalMs);
         cursor = end;
-        return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${text}`;
+        return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${cleanSubtitleText(text)}`;
       })
       .join('\n\n') + '\n'
   );
