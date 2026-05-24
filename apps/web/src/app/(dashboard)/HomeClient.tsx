@@ -29,7 +29,7 @@ function useCarouselSize() {
 
 function GalleryCard({ job }: { job: JobType }) {
   const [hovered, setHovered] = useState(false);
-  const thumb = job.youtubeVideoId
+  const thumb = job.status !== 'FAILED' && job.youtubeVideoId
     ? `https://img.youtube.com/vi/${job.youtubeVideoId}/maxresdefault.jpg`
     : null;
 

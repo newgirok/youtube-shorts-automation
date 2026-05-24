@@ -48,7 +48,7 @@ export function VideoCard({ video }: { video: JobType }) {
   return (
     <Card className="overflow-hidden cursor-pointer hover:ring-1 hover:ring-border transition-all">
       <div className="relative aspect-[9/16] max-h-36 bg-muted">
-        {video.youtubeVideoId ? (
+        {!isDeleted && video.youtubeVideoId ? (
           <img
             src={`https://img.youtube.com/vi/${video.youtubeVideoId}/maxresdefault.jpg`}
             alt={title}
@@ -76,10 +76,10 @@ export function VideoCard({ video }: { video: JobType }) {
         </div>
       </div>
 
-      <CardContent className="p-2">
-        <p className="font-medium text-foreground text-xs line-clamp-1 leading-snug mb-1" title={title}>{title}</p>
-        <div className="flex items-center justify-between">
-          <p className="text-xs text-muted-foreground" title={formatDate(video.createdAt)}>
+      <CardContent className="p-2 min-w-0">
+        <p className="text-xs text-foreground line-clamp-1 leading-snug mb-1" title={title}>{title}</p>
+        <div className="flex items-center justify-between min-w-0">
+          <p className="text-xs text-muted-foreground truncate" title={formatDate(video.createdAt)}>
             {video.viewCount > 0 ? (
               <span className="flex items-center gap-1">
                 <Eye className="w-3 h-3" />

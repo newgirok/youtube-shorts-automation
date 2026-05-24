@@ -112,7 +112,7 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
           <div className="mt-2 h-1 w-full rounded-full bg-white/10">
             <div className="h-1 rounded-full bg-white/60 transition-all duration-500" style={{ width: `${Math.min((subscriberCount / 500) * 100, 100)}%` }} />
           </div>
-          <p className="text-xs text-white/40 mt-1 truncate">{subscriberCount >= 500 ? '✓ 달성' : `${(500 - subscriberCount).toLocaleString()}명 남음 (목표 500)`}</p>
+          <p className="text-xs text-white/40 mt-1 truncate">{subscriberCount >= 500 ? ' 달성' : `${(500 - subscriberCount).toLocaleString()}명 남음 (목표 500)`}</p>
         </div>
         {/* 쇼츠 조회수 90일 / 300만 목표 */}
         <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 overflow-hidden">
@@ -121,7 +121,7 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
           <div className="mt-2 h-1 w-full rounded-full bg-white/10">
             <div className="h-1 rounded-full bg-white/60 transition-all duration-500" style={{ width: `${Math.min((shortsViews90d / 3_000_000) * 100, 100)}%` }} />
           </div>
-          <p className="text-xs text-white/40 mt-1 truncate">{shortsViews90d >= 3_000_000 ? '✓ 달성' : `${((shortsViews90d / 3_000_000) * 100).toFixed(2)}% / 300만 목표`}</p>
+          <p className="text-xs text-white/40 mt-1 truncate">{shortsViews90d >= 3_000_000 ? ' 달성' : `${((shortsViews90d / 3_000_000) * 100).toFixed(2)}% / 300만 목표`}</p>
         </div>
         {/* 업로드 횟수 90일 / 3회 목표 */}
         <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 overflow-hidden">
@@ -130,7 +130,7 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
           <div className="mt-2 h-1 w-full rounded-full bg-white/10">
             <div className="h-1 rounded-full bg-white/60 transition-all duration-500" style={{ width: `${Math.min((uploadCount90d / 3) * 100, 100)}%` }} />
           </div>
-          <p className="text-xs text-white/40 mt-1 truncate">{uploadCount90d >= 3 ? '✓ 달성' : `${3 - uploadCount90d}회 남음 (목표 3회)`}</p>
+          <p className="text-xs text-white/40 mt-1 truncate">{uploadCount90d >= 3 ? ' 달성' : `${3 - uploadCount90d}회 남음 (목표 3회)`}</p>
         </div>
         {/* 기간 예상수익 */}
         <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 overflow-hidden">
@@ -248,7 +248,7 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
           <div className="rounded-xl border border-white/10 bg-white/5 p-3 shrink-0">
             <div className="flex items-center gap-1.5 mb-3">
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${stage1Done ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
-                {stage1Done ? '✓ 달성' : '1단계'}
+                {stage1Done ? ' 달성' : '1단계'}
               </span>
               <p className="text-xs text-white/60 font-medium">기본 수익 창출 (3가지 모두 충족)</p>
             </div>
@@ -264,7 +264,7 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
           <div className="rounded-xl border border-white/10 bg-white/5 p-3 flex-1">
             <div className="flex items-center gap-1.5 mb-3">
               <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${stage2Done ? 'bg-green-500/20 text-green-400' : 'bg-white/10 text-white/40'}`}>
-                {stage2Done ? '✓ 달성' : '2단계'}
+                {stage2Done ? ' 달성' : '2단계'}
               </span>
               <p className="text-xs text-white/60 font-medium">광고 수익 (아래 중 1가지)</p>
             </div>
