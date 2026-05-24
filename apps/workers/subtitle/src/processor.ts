@@ -44,50 +44,35 @@ function parseVttEntries(vtt: string): VttEntry[] {
   return entries;
 }
 
-// VTT 항목이 maxChars 초과 시 내부를 비례 분할하여 반환
-function splitEntry(entry: VttEntry, maxChars: number): { start: number; end: number; text: string }[] {
+// VTT 항목을 문장 부호(. ? !)로 1차 분할 → 각 문장에 비례 타이밍 배분
+function splitEntry(entry: VttEntry): { start: number; end: number; text: string }[] {
+  // 소수점(2.8%)은 스킵: 마침표 뒤가 숫자면 분할하지 않음 → [^0-9]\. 패턴
+  const sentences = entry.text
+    .split(/(?<=[^0-9])\.\s+|[?!]\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  // 마지막 문장에 부호가 남아있으면 그대로 유지 (단일 문장일 때)
+  if (sentences.length === 1) return [entry];
+
   const cleanLen = (s: string) => s.replace(/\s/g, '').length;
-  if (cleanLen(entry.text) <= maxChars) return [entry];
-
-  // 공백 기준으로 단어 분리, maxChars 이하 청크로 묶기
-  const words = entry.text.split(/\s+/).filter(Boolean);
-  const subChunks: string[] = [];
-  let cur = '';
-  for (const word of words) {
-    const candidate = cur ? `${cur} ${word}` : word;
-    if (cleanLen(candidate) <= maxChars || !cur) {
-      cur = candidate;
-    } else {
-      subChunks.push(cur);
-      cur = word;
-    }
-  }
-  if (cur) subChunks.push(cur);
-
-  // 마지막 청크가 너무 짧으면(8자 미만) 이전 청크와 병합 → 가독성 향상
-  if (subChunks.length >= 2 && cleanLen(subChunks[subChunks.length - 1]!) < 8) {
-    const tail = subChunks.pop()!;
-    subChunks[subChunks.length - 1] += ` ${tail}`;
-  }
-
-  // 서브청크에 비례 타이밍 분배
-  const totalChars = subChunks.reduce((s, c) => s + cleanLen(c), 0);
+  const totalChars = sentences.reduce((s, c) => s + cleanLen(c), 0);
   const duration = entry.end - entry.start;
   const result: { start: number; end: number; text: string }[] = [];
   let cursor = entry.start;
-  for (let i = 0; i < subChunks.length; i++) {
-    const ratio = cleanLen(subChunks[i]!) / totalChars;
-    const end = i === subChunks.length - 1 ? entry.end : cursor + Math.round(ratio * duration);
-    result.push({ start: cursor, end, text: subChunks[i]! });
+  for (let i = 0; i < sentences.length; i++) {
+    const ratio = cleanLen(sentences[i]!) / totalChars;
+    const end = i === sentences.length - 1 ? entry.end : cursor + Math.round(ratio * duration);
+    result.push({ start: cursor, end, text: sentences[i]! });
     cursor = end;
   }
   return result;
 }
 
-function buildSrtFromVtt(entries: VttEntry[], maxChars: number): string {
+function buildSrtFromVtt(entries: VttEntry[]): string {
   const chunks: { start: number; end: number; text: string }[] = [];
   for (const entry of entries) {
-    chunks.push(...splitEntry(entry, maxChars));
+    chunks.push(...splitEntry(entry));
   }
   return (
     chunks
@@ -195,7 +180,7 @@ export async function processMessage(
       log.info({ subtitleVttS3Key }, 'VTT 기반 SRT 생성');
       const vttBuf = await downloadFromS3(subtitleVttS3Key);
       const entries = parseVttEntries(vttBuf.toString('utf-8'));
-      srtContent = buildSrtFromVtt(entries, 20);
+      srtContent = buildSrtFromVtt(entries);
       log.info({ entries: entries.length }, 'VTT → SRT 변환 완료');
     } else {
       // fallback: 오디오 길이 측정 후 문자 수 비례 타이밍

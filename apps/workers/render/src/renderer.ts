@@ -192,8 +192,8 @@ export function concatClipsWithAudio(
     .replace(/PlayResY:\s*\d+/, 'PlayResY: 1920')
     .replace(
       /^Style: Default,.+$/m,
-      // BorderStyle=3: 불투명 검은 박스, FontSize=72, MarginV=510
-      `Style: Default,${fontName},72,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,10,0,2,40,40,510,1`,
+      // BorderStyle=3: 불투명 검은 박스, FontSize=85, MarginV=510
+      `Style: Default,${fontName},85,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,10,0,2,40,40,510,1`,
     );
 
   // SRT→ASS 센티초 반올림으로 인한 오버랩 보정

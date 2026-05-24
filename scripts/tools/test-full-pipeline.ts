@@ -60,33 +60,23 @@ function parseVttEntries(vtt: string): VttEntry[] {
   return entries;
 }
 
-function splitEntry(entry: VttEntry, maxChars: number): { start: number; end: number; text: string }[] {
+function splitEntry(entry: VttEntry): { start: number; end: number; text: string }[] {
+  const sentences = entry.text
+    .split(/(?<=[^0-9])\.\s+|[?!]\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (sentences.length === 1) return [entry];
+
   const cleanLen = (s: string) => s.replace(/\s/g, '').length;
-  if (cleanLen(entry.text) <= maxChars) return [entry];
-  const words = entry.text.split(/\s+/).filter(Boolean);
-  const subChunks: string[] = [];
-  let cur = '';
-  for (const word of words) {
-    const candidate = cur ? `${cur} ${word}` : word;
-    if (cleanLen(candidate) <= maxChars || !cur) { cur = candidate; }
-    else { subChunks.push(cur); cur = word; }
-  }
-  if (cur) subChunks.push(cur);
-
-  // 마지막 청크가 너무 짧으면(8자 미만) 이전 청크와 병합 → 가독성 향상
-  if (subChunks.length >= 2 && cleanLen(subChunks[subChunks.length - 1]!) < 8) {
-    const tail = subChunks.pop()!;
-    subChunks[subChunks.length - 1] += ` ${tail}`;
-  }
-
-  const totalChars = subChunks.reduce((s, c) => s + cleanLen(c), 0);
+  const totalChars = sentences.reduce((s, c) => s + cleanLen(c), 0);
   const duration = entry.end - entry.start;
   const result: { start: number; end: number; text: string }[] = [];
   let cursor = entry.start;
-  for (let i = 0; i < subChunks.length; i++) {
-    const ratio = cleanLen(subChunks[i]!) / totalChars;
-    const end = i === subChunks.length - 1 ? entry.end : cursor + Math.round(ratio * duration);
-    result.push({ start: cursor, end, text: subChunks[i]! });
+  for (let i = 0; i < sentences.length; i++) {
+    const ratio = cleanLen(sentences[i]!) / totalChars;
+    const end = i === sentences.length - 1 ? entry.end : cursor + Math.round(ratio * duration);
+    result.push({ start: cursor, end, text: sentences[i]! });
     cursor = end;
   }
   return result;
@@ -102,7 +92,7 @@ function formatSrtTime(ms: number): string {
 
 function buildSrtFromVtt(entries: VttEntry[]): string {
   const chunks: { start: number; end: number; text: string }[] = [];
-  for (const entry of entries) chunks.push(...splitEntry(entry, 20));
+  for (const entry of entries) chunks.push(...splitEntry(entry));
   return chunks.map((c, i) =>
     `${i + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n${c.text}`
   ).join('\n\n') + '\n';
