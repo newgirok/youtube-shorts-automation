@@ -8,9 +8,9 @@
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { downloadSceneImage, downloadSceneVideo } from '../../apps/workers/render/src/image-generator.js';
-import { renderSceneClip, renderSceneFromVideo, concatClipsWithAudio } from '../../apps/workers/render/src/renderer.js';
-import { generateScript } from '../../apps/workers/script/src/script-generator.js';
+import { downloadSceneImage, downloadSceneVideo } from '../apps/workers/render/src/image-generator.js';
+import { renderSceneClip, renderSceneFromVideo, concatClipsWithAudio } from '../apps/workers/render/src/renderer.js';
+import { generateScript } from '../apps/workers/script/src/script-generator.js';
 
 // ─── 경로 / 상수 ──────────────────────────────────────────────────────────────
 const FFMPEG =
