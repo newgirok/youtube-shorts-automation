@@ -74,7 +74,14 @@ interface Job {
   startedAt: string | null;
   completedAt: string | null;
   youtubeVideoId: string | null;
+  thumbnailUrl: string | null;  // sync-videos 후 YouTube API에서 채워짐
   privacyStatus: string; // 'public' | 'unlisted' | 'private'
+}
+
+interface Channel {
+  // ...기존 필드...
+  isYPPQualified?: boolean;  // YPP 자격 여부
+  createdAt?: string;        // 채널 등록일 (ISO 8601)
 }
 
 interface AnalyticsRow {
@@ -106,6 +113,40 @@ interface AnalyticsRow {
 
 ### 채널 sync
 - 홈·채널 페이지 마운트 시 `POST /channels/:id/sync` 호출 → Jobs 목록/채널 정보 refetch
+- 홈 페이지: 잡이 완료되는 순간(`hasProcessing: true → false` 전환) `POST /channels/:id/sync-videos` 자동 호출 → thumbnailUrl DB 갱신 → 갤러리 썸네일 즉시 표시
+- `/dashboard/[id]` 페이지: `youtubeVideoId` 최초 감지 시 `sync-videos` 자동 호출 (1회, `syncedRef` 패턴)
+- 채널 상세 페이지의 **채널 성과 추이** 차트는 `ChannelAnalytics` 테이블 데이터를 사용한다.
+  - 데이터는 sync 시 YouTube Analytics API로 채운다.
+  - GCP 프로젝트에서 YouTube Analytics API가 비활성화되어 있으면 차트가 skeleton placeholder로 표시된다. (→ `apps/api/CLAUDE.md` GCP 사전 조건 참고)
+
+### 채널 상세 페이지 (`ChannelClient.tsx`)
+
+**차트 규칙:**
+- 오늘 기준 28일 범위 고정 (`d.setDate(d.getDate() - (27 - i))`)
+- X축 포맷: M/D 형식 (`${parseInt(mm!)}/${parseInt(dd!)}`) — `toLocaleDateString` 사용 금지 (hydration 오류)
+- `interval={0}` 으로 모든 28개 tick 표시
+- 차트 클릭 시 흰색 outline 제거: `[&_svg]:outline-none [&_.recharts-wrapper]:outline-none`
+
+**스케줄러 패널 (overflow 처리):**
+- 외부 컨테이너: `overflow-hidden` (내부 컨텐츠가 패널 밖으로 나가지 않도록)
+- SchedulerPanel 내부: `flex flex-col gap-4 flex-1 overflow-y-auto min-h-0` (그리드 내 스크롤)
+- "저장됨" 상태 표시: 항상 `<p>` 렌더링, `opacity-0/opacity-100` CSS transition → 레이아웃 이동 없음
+- `saveTimerRef` 패턴으로 중복 타이머 방지
+
+**채널 정보 패널 하단 카드:**
+- YPP 자격 카드: `channel.isYPPQualified` 기반, 달성/미달성 dot 표시
+- 업로드 설정 카드: 스케줄 레이블 + 카테고리 (`schedulerEnabled` 시에만 카테고리 노출)
+- 채널 등록일 카드: `channel.createdAt!.slice(0, 10).split('-')` 으로 파싱 (`toLocaleDateString` 금지)
+
+**NEWS_CATEGORIES (ChannelClient 내 카테고리 목록):**
+```typescript
+const NEWS_CATEGORIES = [
+  { key: 'top', label: '종합' },
+  { key: 'politics', label: '정치' },
+  { key: 'business', label: '경제' },
+  { key: 'nation', label: '사회' },
+];
+```
 
 ### YPP 달성 기준 (2단계)
 - 1단계 (기본 수익 창출): 구독자 ≥ 500 AND 90일 업로드 ≥ 3회 AND 쇼츠 조회수(90일) ≥ 300만

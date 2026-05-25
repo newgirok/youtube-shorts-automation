@@ -23,6 +23,7 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
    - `renderSceneClip()`: 이미지 → zoompan 효과 → 1080×1920 MP4 클립
 3. scenes가 없는 경우: topic 키워드로 단일 이미지 fallback (50초 zoom-in)
 4. `concatClipsWithAudio()`: 클립 concat → **헤더 오버레이** + 오디오 + **ASS 자막** burn-in → output.mp4
+   - FFmpeg vfFilter 끝에 `tpad=stop_mode=clone:stop_duration=60` 추가 — 씬 클립 합계가 오디오보다 짧을 때 마지막 프레임을 반복해 비디오 스트림 공백(음성만 나오는 freeze) 방지
 
 ## zoompan 효과
 
@@ -51,9 +52,12 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
   - **2줄(노란색)** `FONT_SIZE_2=110`, `borderw=11:bordercolor=black`
   - y 위치: `y1 = max(200, HEADER_H - totalTextH - 60)`, `y2 = y1 + fs1 + 20`
 - `SAFE_W=940` (좌우 각 70px 여백), `calcFontSize` 한글 비율: `kor*0.85 + other*0.55`
-- 폰트:
-  - Windows: `C\\:/Windows/Fonts/malgunbd.ttf` (Malgun Gothic Bold)
-  - Linux: `/usr/share/fonts/truetype/nanum/NanumSquareEB.ttf` (NanumSquare ExtraBold)
+- 폰트 (`drawtext` 헤더용):
+  - `FONTS_DIR` 환경변수 설정 시(Docker): `${FONTS_DIR}/SBAggro-Bold.ttf` 사용
+  - Windows fallback: `C\\:/Windows/Fonts/malgunbd.ttf` (Malgun Gothic Bold)
+  - Linux fallback: `/usr/share/fonts/truetype/nanum/NanumSquareEB.ttf` (NanumSquare ExtraBold)
+- Dockerfile: `COPY scripts/fonts/SBAggro-Bold.ttf ./fonts/SBAggro-Bold.ttf` + `ENV FONTS_DIR=/app/fonts`
+- `fontName`: `FONTS_DIR` 있으면 `'SB Aggro Bold'`, 없으면 OS 기본 fallback
 - `text=` 파라미터 대신 반드시 `textfile=` 사용 — Linux에서 한국어 인코딩 깨짐 방지
 
 ## 자막 방식 (SRT → ASS 변환, BorderStyle=3 불투명 박스)

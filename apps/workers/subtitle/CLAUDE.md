@@ -18,8 +18,24 @@ SQS subtitle-queue를 폴링해 VTT(또는 스크립트)를 기반으로 SRT 자
 
 1. S3에서 `jobs/{jobId}/subtitle.vtt` 다운로드
 2. `parseVttEntries()`: VTT 파싱 (HTML 태그 제거 포함)
-3. `buildSrtFromVtt()`: 각 VTT 엔트리 내에서 문장 분할 → 글자 수 비례 타이밍 계산
-4. `splitIntoDisplayChunks()`: 20자 초과 시 구어체 종결 패턴 우선 분할
+3. `skipTitleEntries()`: TTS 입력은 `"${title}.\n\n${script}"` 구조 — 제목 음성에 해당하는 앞부분 VTT 엔트리를 건너뜀 (자막은 스크립트 본문부터 표시)
+4. `buildSrtFromVtt()`: 각 VTT 엔트리 내에서 문장 분할 → 글자 수 비례 타이밍 계산
+5. `splitIntoDisplayChunks()`: 20자 초과 시 구어체 종결 패턴 우선 분할
+
+#### skipTitleEntries 동작 원리
+stripped 누적 문자 수가 제목 길이에 도달하는 엔트리까지 건너뜀:
+```typescript
+function skipTitleEntries(entries: VttEntry[], title: string): VttEntry[] {
+  const strip = (s: string) => s.replace(/[\s'''""".,?!]/g, '').toLowerCase();
+  const titleLen = strip(title).length;
+  let accumulated = 0;
+  for (let i = 0; i < entries.length; i++) {
+    accumulated += strip(entries[i]!.text).length;
+    if (accumulated >= titleLen) return entries.slice(i + 1);
+  }
+  return entries;
+}
+```
 
 ### 2차: 문자 비례 fallback
 

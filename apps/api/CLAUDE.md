@@ -46,6 +46,12 @@ YouTube 채널 CRUD 및 동기화.
 2. `youtubeAnalytics.reports.query(metrics: views,subscribersGained,estimatedMinutesWatched, dimensions: day)` → 최근 30일 일별 upsert
 3. `videos.list(part: id,statistics,status)` → viewCount, likeCount, privacyStatus 갱신; YouTube에서 삭제된 영상은 status=FAILED, failReason='유튜브에서 영상이 삭제되었습니다.'
 
+> **GCP 사전 조건** — Analytics 동기화(2단계)가 동작하려면 GCP 프로젝트에서
+> **YouTube Analytics API**가 활성화되어 있어야 한다.
+> 비활성 상태면 403 `accessNotConfigured` 에러가 발생하고 `ChannelAnalytics` 테이블에 데이터가 쌓이지 않는다.
+> 활성화 URL: `https://console.developers.google.com/apis/api/youtubeanalytics.googleapis.com/overview?project={GCP_PROJECT_ID}`
+> 에러는 `.catch(warn)` 으로 무시하므로 나머지 sync(채널 통계·영상 조회수)는 정상 동작한다.
+
 ### `jobs/`
 Job 생성 및 상태 조회, 재시도.
 
