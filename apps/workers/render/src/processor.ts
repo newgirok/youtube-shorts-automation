@@ -78,7 +78,9 @@ export async function processMessage(
 
     const scriptContent = job?.scriptContent as ScriptContent | null;
     const scenes: Scene[] = scriptContent?.scenes ?? [];
-    const fontName = process.platform === 'win32' ? 'Malgun Gothic Bold' : 'NanumSquare ExtraBold';
+    const fontName = env.FONTS_DIR
+      ? 'SB Aggro Bold'
+      : (process.platform === 'win32' ? 'Malgun Gothic Bold' : 'NanumSquare ExtraBold');
 
     const clipPaths: string[] = [];
 
@@ -125,7 +127,7 @@ export async function processMessage(
     writeFileSync(srtPath, finalSrt, 'utf-8');
 
     log.info('FFmpeg 최종 합성 시작');
-    concatClipsWithAudio(clipPaths, audioPath, srtPath, outputPath, env.FFMPEG_PATH, fontName, tmpDir, scriptContent?.title ?? '');
+    concatClipsWithAudio(clipPaths, audioPath, srtPath, outputPath, env.FFMPEG_PATH, fontName, tmpDir, scriptContent?.title ?? '', env.FONTS_DIR);
 
     const videoBuf = readFileSync(outputPath);
     const videoS3Key = jobKey(jobId, 'output.mp4');

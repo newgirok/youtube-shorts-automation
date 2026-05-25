@@ -206,7 +206,8 @@ export function concatClipsWithAudio(
   const fontsDirArg = fontsDir ? `:fontsdir='${escapeSubtitlePath(fontsDir)}'` : '';
   const subtitleFilter = `ass='${escapedAss}'${fontsDirArg}`;
 
-  const vfFilter = `${headerFilter},${footerFilter},${subtitleFilter}`;
+  // tpad: 클립 합계가 오디오보다 짧을 때 마지막 프레임을 반복해 비디오 스트림 공백 방지
+  const vfFilter = `${headerFilter},${footerFilter},${subtitleFilter},tpad=stop_mode=clone:stop_duration=60`;
 
   const ffprobePath = ffmpegPath.replace(/ffmpeg(\.exe)?$/, 'ffprobe$1');
   const audioDuration = parseFloat(

@@ -7,6 +7,7 @@ export const EnvSchema = BaseEnvSchema.extend({
   FFMPEG_PATH: z.string().default('ffmpeg'),
   FFPROBE_PATH: z.string().default('ffprobe'),
   PEXELS_API_KEY: z.string(),
+  FONTS_DIR: z.string().optional(),
 });
 
 export type Env = z.infer<typeof EnvSchema>;
