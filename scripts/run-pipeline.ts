@@ -1,9 +1,9 @@
 /**
- * 로컬 파이프라인 통합 테스트
+ * 로컬 파이프라인 통합 진단
  * Gemini 스크립트 생성 → TTS(+VTT) → SRT 변환 → Pexels 이미지 다운로드 → FFmpeg 렌더링 → 로컬 MP4 저장
  *
- * 실행: npx tsx scripts/tools/test-full-pipeline.ts [주제]
- * 예시: npx tsx scripts/tools/test-full-pipeline.ts "삼성전자 노조 파업"
+ * 실행: npx tsx scripts/run-pipeline.ts [주제]
+ * 예시: npx tsx scripts/run-pipeline.ts "삼성전자 노조 파업"
  */
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
@@ -24,7 +24,7 @@ const FONTS_DIR  = resolve(process.cwd(), 'scripts', 'fonts');
 const AUDIO_PATH = join(OUTPUT_DIR, 'pipeline-audio.mp3');
 const VTT_PATH   = join(OUTPUT_DIR, 'pipeline-audio.vtt');
 const SRT_PATH   = join(OUTPUT_DIR, 'pipeline-subtitle.srt');
-const OUTPUT_PATH = join(OUTPUT_DIR, 'test-full-output.mp4');
+const OUTPUT_PATH = join(OUTPUT_DIR, 'pipeline-output.mp4');
 
 // .env.local 에서 키 읽기
 function readEnvKey(key: string): string {
