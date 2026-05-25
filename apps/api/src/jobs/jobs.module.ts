@@ -6,5 +6,6 @@ import { JobsRepository } from './jobs.repository.js';
 @Module({
   controllers: [JobsController],
   providers: [JobsService, JobsRepository],
+  exports: [JobsService, JobsRepository],
 })
 export class JobsModule {}

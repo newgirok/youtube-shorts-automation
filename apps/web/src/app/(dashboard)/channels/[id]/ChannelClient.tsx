@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, BarChart, Bar } from 'recharts';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPatch, apiPost } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import type { AnalyticsRow, Channel } from '@/lib/types';
 
 function ProgressBar({ value, max, label }: { value: number; max: number; label: string }) {
@@ -64,8 +65,176 @@ function AnalyticsTable({ analytics }: { analytics: AnalyticsRow[] }) {
   );
 }
 
+const CRON_PRESETS = [
+  { label: '매시간', value: '0 * * * *' },
+  { label: '매일 오전 9시', value: '0 9 * * *' },
+  { label: '매일 오후 6시', value: '0 18 * * *' },
+  { label: '매주 월 오전 9시', value: '0 9 * * 1' },
+] as const;
+
+const NEWS_CATEGORIES = [
+  { key: 'top', label: '종합 TOP' },
+  { key: 'politics', label: '정치' },
+  { key: 'business', label: '경제' },
+  { key: 'nation', label: '사회' },
+] as const;
+
+function SchedulerPanel({ channelId, channel }: { channelId: string; channel: Channel }) {
+  const queryClient = useQueryClient();
+
+  const [enabled, setEnabled] = useState(channel.schedulerEnabled ?? false);
+  const [cronValue, setCronValue] = useState(channel.uploadSchedule ?? '0 9 * * *');
+  const [category, setCategory] = useState<'top' | 'politics' | 'business' | 'nation'>(
+    (channel.schedulerCategory as 'top' | 'politics' | 'business' | 'nation') ?? 'top'
+  );
+  const [showCustom, setShowCustom] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiPatch(`/channels/${channelId}/schedule`, {
+        cronExpression: cronValue,
+        schedulerEnabled: enabled,
+        schedulerCategory: category,
+      }),
+    onSuccess: () => {
+      setSaveStatus('saved');
+      queryClient.invalidateQueries({ queryKey: ['channel', channelId] });
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    },
+    onError: () => {
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    },
+  });
+
+  function handleSave() {
+    setSaveStatus('saving');
+    mutation.mutate();
+  }
+
+  function getNextRunLabel(): string {
+    if (!enabled) return '비활성화됨';
+    const preset = CRON_PRESETS.find((p) => p.value === cronValue);
+    if (preset) return preset.label + ' 실행';
+    return `${cronValue} (cron)`;
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      {/* 활성화 토글 카드 */}
+      <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-white">자동 업로드 스케줄러</p>
+            <p className="text-xs text-white/40 mt-0.5">
+              설정한 주기마다 뉴스를 수집해 자동으로 쇼츠를 생성·업로드합니다
+            </p>
+          </div>
+          <button
+            onClick={() => setEnabled((v) => !v)}
+            className={cn(
+              'relative w-11 h-6 rounded-full transition-colors shrink-0',
+              enabled ? 'bg-white/80' : 'bg-white/20'
+            )}
+            aria-pressed={enabled}
+            aria-label="스케줄러 활성화"
+          >
+            <span
+              className={cn(
+                'absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-gray-900 transition-transform',
+                enabled ? 'translate-x-5' : 'translate-x-0'
+              )}
+            />
+          </button>
+        </div>
+      </div>
+
+      {/* 업로드 주기 */}
+      <div className={cn(
+        'rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 transition-opacity',
+        !enabled && 'opacity-40 pointer-events-none'
+      )}>
+        <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">업로드 주기</p>
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {CRON_PRESETS.map((preset) => (
+            <button
+              key={preset.value}
+              onClick={() => { setCronValue(preset.value); setShowCustom(false); }}
+              className={cn(
+                'px-3 py-2 rounded-xl text-xs font-medium transition-colors text-left border',
+                cronValue === preset.value && !showCustom
+                  ? 'border-white/40 bg-white/20 text-white'
+                  : 'border-white/10 bg-white/5 text-white/60 hover:text-white hover:border-white/20'
+              )}
+            >
+              {preset.label}
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => setShowCustom((v) => !v)}
+          className="text-xs text-white/40 hover:text-white/70 transition-colors underline underline-offset-2"
+        >
+          {showCustom ? '▲ 직접 입력 닫기' : '▼ Cron 직접 입력'}
+        </button>
+        {showCustom && (
+          <input
+            type="text"
+            value={cronValue}
+            onChange={(e) => setCronValue(e.target.value)}
+            placeholder="예: 0 9 * * *"
+            className="mt-2 w-full rounded-xl bg-white/5 border border-white/10 px-3 py-2 text-xs text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
+          />
+        )}
+        <p className="mt-2 text-[11px] text-white/30">다음 실행: {getNextRunLabel()}</p>
+      </div>
+
+      {/* 뉴스 카테고리 */}
+      <div className={cn(
+        'rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 transition-opacity',
+        !enabled && 'opacity-40 pointer-events-none'
+      )}>
+        <p className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-3">뉴스 카테고리</p>
+        <div className="flex flex-wrap gap-2">
+          {NEWS_CATEGORIES.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => setCategory(key)}
+              className={cn(
+                'px-4 py-1.5 rounded-full text-xs font-medium transition-colors border',
+                category === key
+                  ? 'border-white/50 bg-white/20 text-white'
+                  : 'border-white/10 text-white/50 hover:text-white hover:border-white/30'
+              )}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* 저장 버튼 */}
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-white/30">
+          {saveStatus === 'saved' && '✓ 저장되었습니다'}
+          {saveStatus === 'error' && '저장에 실패했습니다'}
+        </p>
+        <button
+          onClick={handleSave}
+          disabled={saveStatus === 'saving'}
+          className="px-6 py-2 rounded-full bg-white text-gray-900 text-sm font-semibold hover:bg-white/90 transition-colors disabled:opacity-50"
+        >
+          {saveStatus === 'saving' ? '저장 중...' : '저장'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function ChannelClient({ channel: initial }: { channel: Channel }) {
   const queryClient = useQueryClient();
+  const [activeTab, setActiveTab] = useState<'stats' | 'scheduler'>('stats');
 
   const { data: channel = initial } = useQuery<Channel>({
     queryKey: ['channel', initial.id],
@@ -103,6 +272,26 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
 
   return (
     <div className="flex flex-col px-4 py-4 md:px-6 gap-3 lg:h-screen lg:overflow-y-auto">
+      {/* 탭 헤더 */}
+      <div className="shrink-0 flex gap-1 mb-1">
+        {(['stats', 'scheduler'] as const).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={cn(
+              'px-4 py-1.5 rounded-full text-xs font-medium transition-colors',
+              activeTab === tab
+                ? 'bg-white/20 text-white'
+                : 'text-white/50 hover:text-white/80'
+            )}
+          >
+            {tab === 'stats' ? '통계' : '스케줄러'}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === 'stats' && (
+        <>
       {/* 상단: stat 4개 */}
       <div className="shrink-0 grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* 구독자 / 500 목표 */}
@@ -287,6 +476,12 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
           <AnalyticsTable analytics={analytics} />
         </div>
       </div>
+        </>
+      )}
+
+      {activeTab === 'scheduler' && (
+        <SchedulerPanel channelId={initial.id} channel={channel} />
+      )}
     </div>
   );
 }

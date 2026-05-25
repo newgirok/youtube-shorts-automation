@@ -49,7 +49,84 @@ export default function JobDetailPage() {
   }, [job?.channelId, job?.youtubeVideoId, id, queryClient]);
 
   if (isLoading) {
-    return <div className="py-32 text-center text-sm text-white/50">불러오는 중...</div>;
+    return (
+      <div className="flex flex-col px-4 py-4 md:px-6 gap-3 lg:h-screen lg:overflow-y-auto">
+        {/* 헤더 스켈레톤 */}
+        <div className="shrink-0 flex items-center gap-3 justify-between">
+          <div className="h-5 w-48 rounded animate-pulse bg-white/10" />
+          <div className="h-4 w-24 rounded animate-pulse bg-white/10" />
+        </div>
+
+        {/* stat 4개 스켈레톤 */}
+        <div className="shrink-0 grid grid-cols-2 md:grid-cols-4 gap-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-white/10 bg-white/10 backdrop-blur-sm p-2.5 overflow-hidden">
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <div className="w-3 h-3 rounded animate-pulse bg-white/10 shrink-0" />
+                <div className="h-2.5 w-12 rounded animate-pulse bg-white/10" />
+              </div>
+              <div className="h-5 w-16 rounded animate-pulse bg-white/10 mb-1.5" />
+              <div className="h-0.5 w-full rounded-full bg-white/10" />
+              <div className="h-2.5 w-8 rounded animate-pulse bg-white/10 mt-0.5" />
+            </div>
+          ))}
+        </div>
+
+        {/* 메인 3컬럼 스켈레톤 */}
+        <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 flex-1 lg:min-h-0">
+          {/* 좌 패널 */}
+          <div className="lg:col-span-3 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 flex flex-col gap-3 min-h-[200px] lg:min-h-0">
+            <div className="h-3 w-16 rounded animate-pulse bg-white/10 shrink-0" />
+            <div className="w-full rounded-xl bg-white/10 animate-pulse aspect-video shrink-0" />
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 shrink-0 flex items-center justify-between gap-2">
+              <div className="h-3 w-8 rounded animate-pulse bg-white/10" />
+              <div className="h-4 w-14 rounded animate-pulse bg-white/10" />
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 shrink-0">
+              <div className="h-3 w-8 rounded animate-pulse bg-white/10 mb-1.5" />
+              <div className="h-3 w-full rounded animate-pulse bg-white/10" />
+            </div>
+            <div className="flex flex-col gap-1.5 shrink-0">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 flex items-center justify-between gap-2">
+                  <div className="h-3 w-8 rounded animate-pulse bg-white/10" />
+                  <div className="h-3 w-24 rounded animate-pulse bg-white/10" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 중 패널 */}
+          <div className="lg:col-span-4 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 overflow-y-auto min-h-[200px] lg:min-h-0">
+            <div className="h-4 w-20 rounded animate-pulse bg-white/10 mb-4" />
+            <div className="flex flex-col gap-4">
+              {[0, 1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-4 h-4 rounded-full animate-pulse bg-white/10 shrink-0" />
+                  <div className="flex flex-col gap-1 flex-1">
+                    <div className="h-3 w-24 rounded animate-pulse bg-white/10" />
+                    <div className="h-2.5 w-16 rounded animate-pulse bg-white/10" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 우 패널 */}
+          <div className="lg:col-span-5 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 overflow-y-auto min-h-[200px] lg:min-h-0">
+            <div className="h-4 w-24 rounded animate-pulse bg-white/10 mb-4" />
+            <div className="space-y-4">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i}>
+                  <div className="h-3 w-16 rounded animate-pulse bg-white/10 mb-1.5" />
+                  <div className="h-4 w-full rounded animate-pulse bg-white/10" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!job) {

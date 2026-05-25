@@ -19,6 +19,8 @@ export class ChannelsRepository {
         name: true,
         niche: true,
         uploadSchedule: true,
+        schedulerEnabled: true,
+        schedulerCategory: true,
         isActive: true,
         subscriberCount: true,
         totalViews: true,
@@ -31,11 +33,33 @@ export class ChannelsRepository {
     return { ...row, totalViews: Number(row.totalViews) };
   }
 
-  updateSchedule(id: string, uploadSchedule: string) {
+  updateSchedule(
+    id: string,
+    data: {
+      uploadSchedule?: string | null;
+      schedulerEnabled?: boolean;
+      schedulerCategory?: string;
+    },
+  ) {
     return prisma.channel.update({
       where: { id },
-      data: { uploadSchedule },
-      select: { id: true, uploadSchedule: true },
+      data,
+      select: { id: true, uploadSchedule: true, schedulerEnabled: true, schedulerCategory: true },
+    });
+  }
+
+  getEnabledSchedules() {
+    return prisma.channel.findMany({
+      where: {
+        schedulerEnabled: true,
+        uploadSchedule: { not: null },
+        isActive: true,
+      },
+      select: {
+        id: true,
+        uploadSchedule: true,
+        schedulerCategory: true,
+      },
     });
   }
 

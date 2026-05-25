@@ -24,7 +24,9 @@ model Channel {
   name             String
   niche            String
   refreshToken     String
-  uploadSchedule   String    @default("0 9 * * *")
+  uploadSchedule     String?
+  schedulerEnabled   Boolean  @default(false)
+  schedulerCategory  String   @default("top")
   affiliateUrl     String?
   isActive         Boolean   @default(true)
   subscriberCount  Int       @default(0)

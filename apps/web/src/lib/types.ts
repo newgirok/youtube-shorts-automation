@@ -17,6 +17,9 @@ export interface Channel {
   totalViews?: number;
   uploadCount90d?: number;
   shortsViews90d?: number;
+  uploadSchedule?: string | null;
+  schedulerEnabled?: boolean;
+  schedulerCategory?: string;
 }
 
 export interface Job {

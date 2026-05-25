@@ -6,5 +6,6 @@ import { ChannelsRepository } from './channels.repository.js';
 @Module({
   controllers: [ChannelsController],
   providers: [ChannelsService, ChannelsRepository],
+  exports: [ChannelsRepository],
 })
 export class ChannelsModule {}

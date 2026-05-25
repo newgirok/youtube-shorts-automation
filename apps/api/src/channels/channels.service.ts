@@ -4,6 +4,7 @@ import { google } from 'googleapis';
 import { createLogger } from '@shorts/shared';
 import { ChannelsRepository } from './channels.repository.js';
 import { decrypt } from '../auth/crypto.js';
+import type { UpdateScheduleDto } from './dto/update-schedule.dto.js';
 
 const log = createLogger({});
 
@@ -24,8 +25,18 @@ export class ChannelsService {
     return { ...channel, ...yppStats };
   }
 
-  updateSchedule(id: string, cronExpression: string) {
-    return this.repo.updateSchedule(id, cronExpression);
+  updateSchedule(id: string, dto: UpdateScheduleDto) {
+    const data: Parameters<typeof this.repo.updateSchedule>[1] = {};
+    if (dto.cronExpression !== undefined) {
+      data.uploadSchedule = dto.cronExpression;
+    }
+    if (dto.schedulerEnabled !== undefined) {
+      data.schedulerEnabled = dto.schedulerEnabled;
+    }
+    if (dto.schedulerCategory !== undefined) {
+      data.schedulerCategory = dto.schedulerCategory;
+    }
+    return this.repo.updateSchedule(id, data);
   }
 
   getAnalytics(id: string) {

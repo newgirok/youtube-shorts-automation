@@ -31,7 +31,7 @@ export class ChannelsController {
     if (!result.success) {
       throw new BadRequestException(result.error.issues);
     }
-    return this.service.updateSchedule(id, result.data.cronExpression);
+    return this.service.updateSchedule(id, result.data);
   }
 
   @Get(':id/analytics')

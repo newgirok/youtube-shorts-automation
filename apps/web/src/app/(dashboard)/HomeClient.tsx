@@ -50,7 +50,7 @@ function GalleryCard({ job }: { job: JobType }) {
         {thumb ? (
           <img
             src={thumb}
-            alt={job.topic}
+            alt=""
             style={{ filter: hovered ? 'brightness(1.12)' : 'brightness(1)', transition: 'filter 0.2s' }}
             className="w-full h-full object-cover"
             onError={(e) => {

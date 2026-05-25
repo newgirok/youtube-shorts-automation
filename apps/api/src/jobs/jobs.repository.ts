@@ -42,6 +42,18 @@ export class JobsRepository {
     return rows.map((r) => ({ ...r, viewCount: Number(r.viewCount) }));
   }
 
+  async hasActiveJob(channelId: string): Promise<boolean> {
+    const count = await prisma.job.count({
+      where: {
+        channelId,
+        status: {
+          notIn: ['COMPLETED', 'FAILED'],
+        },
+      },
+    });
+    return count > 0;
+  }
+
   async markFailed(id: string, failReason: string) {
     return prisma.job.update({
       where: { id },
