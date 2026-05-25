@@ -68,11 +68,11 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
 3. `ass='subtitle.ass'` 필터로 burn-in
 
 ```
-Style: Default,{FontName},72,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,10,0,2,40,40,510,1
+Style: Default,{FontName},76,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,10,0,2,40,40,510,1
 ```
 
-- FontName: `Malgun Gothic Bold` (Windows) / `NanumSquare ExtraBold` (Linux)
-- FontSize=72, **BorderStyle=3 (불투명 배경 박스)**, Outline=10(박스 패딩)
+- FontName: `SB Aggro Bold` (Windows/Linux 공통, `fonts/SBAggro-Bold.ttf`)
+- FontSize=76, **BorderStyle=3 (불투명 배경 박스)**, Outline=10(박스 패딩)
 - PrimaryColour=**&H00FFFFFF (흰색)**, OutlineColour=&H00000000(검정 박스)
 - Alignment=2 (하단 중앙), **MarginV=510** → 푸터 상단(y=1300) 직상단 배치
 - affiliate CTA 자막 없음
