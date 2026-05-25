@@ -20,6 +20,16 @@ export interface Channel {
   uploadSchedule?: string | null;
   schedulerEnabled?: boolean;
   schedulerCategory?: string;
+  isYPPQualified?: boolean;
+  createdAt?: string;
+}
+
+export interface AnalyticsRow {
+  date: string;
+  views: number;
+  subscribers: number;
+  estimatedRevenue: number;
+  watchTimeMinutes: number;
 }
 
 export interface Job {
@@ -43,13 +53,7 @@ export interface Job {
   startedAt: string | null;
   completedAt: string | null;
   youtubeVideoId: string | null;
+  thumbnailUrl: string | null;
   privacyStatus: string;
 }
 
-export interface AnalyticsRow {
-  date: string;
-  views: number;
-  subscribers: number;
-  estimatedRevenue: number;
-  watchTimeMinutes: number;
-}
