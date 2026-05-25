@@ -367,7 +367,6 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
 
       {/* 뉴스 자동 수집 */}
       <div className="w-full max-w-2xl px-4 mt-2 flex items-center gap-2 flex-wrap">
-        <span className="text-xs text-white/30">자동생성</span>
         {NEWS_CATEGORIES.map(({ key, label }) => (
           <button
             key={key}
