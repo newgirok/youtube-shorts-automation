@@ -16,7 +16,7 @@ export class JobsRepository {
       select: {
         id: true, channelId: true, topic: true, status: true, retryCount: true,
         failReason: true, scriptContent: true, audioS3Key: true, subtitleS3Key: true,
-        videoS3Key: true, youtubeVideoId: true, privacyStatus: true, viewCount: true, likeCount: true,
+        videoS3Key: true, youtubeVideoId: true, thumbnailUrl: true, privacyStatus: true, viewCount: true, likeCount: true,
         createdAt: true, startedAt: true, completedAt: true,
       },
     });
@@ -37,7 +37,7 @@ export class JobsRepository {
       where: channelId ? { channelId } : undefined,
       orderBy: { createdAt: 'desc' },
       take: 50,
-      select: { id: true, channelId: true, topic: true, status: true, retryCount: true, createdAt: true, youtubeVideoId: true, privacyStatus: true, viewCount: true, scriptContent: true, failReason: true },
+      select: { id: true, channelId: true, topic: true, status: true, retryCount: true, createdAt: true, youtubeVideoId: true, thumbnailUrl: true, privacyStatus: true, viewCount: true, scriptContent: true, failReason: true },
     });
     return rows.map((r) => ({ ...r, viewCount: Number(r.viewCount) }));
   }

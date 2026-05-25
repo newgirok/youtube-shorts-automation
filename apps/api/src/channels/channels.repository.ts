@@ -63,36 +63,6 @@ export class ChannelsRepository {
     });
   }
 
-  async getAnalytics(id: string) {
-    const rows = await prisma.channelAnalytics.findMany({
-      where: { channelId: id },
-      select: { date: true, views: true, subscribers: true, estimatedRevenue: true, watchTimeMinutes: true },
-      orderBy: { date: 'asc' },
-      take: 30,
-    });
-    return rows.map((r) => ({
-      date: r.date.toISOString().split('T')[0],
-      views: Number(r.views),
-      subscribers: r.subscribers,
-      estimatedRevenue: r.estimatedRevenue,
-      watchTimeMinutes: Number(r.watchTimeMinutes),
-    }));
-  }
-
-  upsertDailyAnalytics(channelId: string, data: {
-    date: Date;
-    views: bigint;
-    subscribers: number;
-    watchTimeMinutes: bigint;
-  }) {
-    return prisma.channelAnalytics.upsert({
-      where: { channelId_date: { channelId, date: data.date } },
-      create: { channelId, ...data },
-      update: { views: data.views, subscribers: data.subscribers, watchTimeMinutes: data.watchTimeMinutes },
-      select: { id: true },
-    });
-  }
-
   async getYPPStats(channelId: string) {
     const since90d = new Date();
     since90d.setDate(since90d.getDate() - 90);
@@ -139,6 +109,36 @@ export class ChannelsRepository {
         status: 'FAILED' satisfies JobStatus,
         failReason: '유튜브에서 영상이 삭제되었습니다.',
       },
+    });
+  }
+
+  async getAnalytics(id: string) {
+    const rows = await prisma.channelAnalytics.findMany({
+      where: { channelId: id },
+      select: { date: true, views: true, subscribers: true, estimatedRevenue: true, watchTimeMinutes: true },
+      orderBy: { date: 'asc' },
+      take: 30,
+    });
+    return rows.map((r) => ({
+      date: r.date.toISOString().split('T')[0],
+      views: Number(r.views),
+      subscribers: r.subscribers,
+      estimatedRevenue: r.estimatedRevenue,
+      watchTimeMinutes: Number(r.watchTimeMinutes),
+    }));
+  }
+
+  upsertDailyAnalytics(channelId: string, data: {
+    date: Date;
+    views: bigint;
+    subscribers: number;
+    watchTimeMinutes: bigint;
+  }) {
+    return prisma.channelAnalytics.upsert({
+      where: { channelId_date: { channelId, date: data.date } },
+      create: { channelId, ...data },
+      update: { views: data.views, subscribers: data.subscribers, watchTimeMinutes: data.watchTimeMinutes },
+      select: { id: true },
     });
   }
 

@@ -25,6 +25,10 @@ export class ChannelsService {
     return { ...channel, ...yppStats };
   }
 
+  getAnalytics(id: string) {
+    return this.repo.getAnalytics(id);
+  }
+
   updateSchedule(id: string, dto: UpdateScheduleDto) {
     const data: Parameters<typeof this.repo.updateSchedule>[1] = {};
     if (dto.cronExpression !== undefined) {
@@ -37,10 +41,6 @@ export class ChannelsService {
       data.schedulerCategory = dto.schedulerCategory;
     }
     return this.repo.updateSchedule(id, data);
-  }
-
-  getAnalytics(id: string) {
-    return this.repo.getAnalytics(id);
   }
 
   async syncChannel(channelId: string): Promise<{ synced: number; deleted: number }> {

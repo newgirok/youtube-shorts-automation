@@ -35,7 +35,10 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter()
   );
-  app.enableCors({ origin: process.env.WEB_ORIGIN ?? 'http://localhost:3001' });
+  app.enableCors({
+    origin: process.env.WEB_ORIGIN ?? 'http://localhost:3001',
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  });
   await app.listen(3000, '0.0.0.0');
 }
 
