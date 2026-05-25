@@ -43,7 +43,8 @@ interface VttEntry { start: number; end: number; text: string }
 function parseVttTime(s: string): number {
   const parts = s.trim().split(':');
   const [h, m, sec] = parts.length === 3 ? parts : ['0', parts[0], parts[1]];
-  return Math.round((parseFloat(h) * 3600 + parseFloat(m) * 60 + parseFloat(sec)) * 1000);
+  // SRT는 쉼표(,) VTT는 점(.) — 둘 다 처리해 ms 정밀도 보존
+  return Math.round((parseFloat(h) * 3600 + parseFloat(m) * 60 + parseFloat((sec ?? '0').replace(',', '.'))) * 1000);
 }
 
 function parseVttEntries(vtt: string): VttEntry[] {
@@ -52,7 +53,12 @@ function parseVttEntries(vtt: string): VttEntry[] {
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].includes('-->')) {
       const [startStr, endStr] = lines[i].split('-->');
-      const text = lines[i + 1]?.trim() ?? '';
+      const raw = lines[i + 1]?.trim() ?? '';
+      const text = raw
+        .replace(/<[^>]*>/g, '')
+        .replace(/\bbreak\s[^>]*\/>/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
       if (text) entries.push({ start: parseVttTime(startStr), end: parseVttTime(endStr), text });
       i++;
     }
@@ -65,6 +71,7 @@ const cleanLen = (s: string) => s.replace(/\s/g, '').length;
 
 function cleanSubtitleText(text: string): string {
   return text
+    .replace(/['''"""]/g, '')
     .replace(/(?<!\d)\.(?!\d)|[,?!]/g, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
@@ -74,12 +81,13 @@ function wordSplit(text: string): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const chunks: string[] = [];
   let cur = '';
-  for (const word of words) {
-    const candidate = cur ? `${cur} ${word}` : word;
+  // 뒤에서 앞으로 채워 한국어 술어 꼬리("있다고 함", "배제해 버리면서" 등)가 함께 묶이게
+  for (let i = words.length - 1; i >= 0; i--) {
+    const candidate = cur ? `${words[i]} ${cur}` : words[i]!;
     if (cleanLen(candidate) <= MAX_DISPLAY_CHARS || !cur) cur = candidate;
-    else { chunks.push(cur); cur = word; }
+    else { chunks.unshift(cur); cur = words[i]!; }
   }
-  if (cur) chunks.push(cur);
+  if (cur) chunks.unshift(cur);
   return chunks;
 }
 
@@ -87,7 +95,7 @@ function splitIntoDisplayChunks(text: string): string[] {
   if (cleanLen(text) <= MAX_DISPLAY_CHARS) return [text];
 
   const parts = text
-    .split(/(?<=라고 함|상황이라고 함|분석이라고 함|있다고 함|이라고 함|하는데|했다고|한다고|겠다며|한다며|하면서|하며)\s+/)
+    .split(/(?<=라고 함|상황이라고 함|분석이라고 함|있다고 함|이라고 함|\s하는데|\s하면서|\s하며|\s했다고|\s한다고|\s겠다며|\s한다며|\s있으며|\s있고)\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
 
@@ -95,39 +103,25 @@ function splitIntoDisplayChunks(text: string): string[] {
     cleanLen(part) <= MAX_DISPLAY_CHARS ? [part] : wordSplit(part)
   );
 
+  // 7자 이하 꼬리 토막 → 앞 청크에 병합 ("상황이라고 함"·"분석이라고 함" 등)
   const merged: string[] = [];
   for (const chunk of chunks) {
-    if (merged.length > 0 && cleanLen(chunk) < 4) {
+    if (merged.length > 0 && cleanLen(chunk) <= 7) {
       merged[merged.length - 1] += ' ' + chunk;
     } else {
       merged.push(chunk);
     }
   }
+  // 3자 이하 선두 토막 → 다음 청크 앞에 병합 ("실제로"·"결국" 등 짧은 부사어)
+  if (merged.length >= 2 && cleanLen(merged[0]!) <= 3) {
+    merged[1] = merged[0]! + ' ' + merged[1]!;
+    merged.shift();
+  }
   return merged;
 }
 
-function splitEntry(entry: VttEntry): { start: number; end: number; text: string }[] {
-  const sentences = entry.text
-    .split(/(?<=[^0-9])\.\s+|[?!]\s+/)
-    .map((s) => cleanSubtitleText(s))
-    .filter(Boolean);
-
-  const allChunks = sentences.flatMap((s) => splitIntoDisplayChunks(s));
-  if (allChunks.length === 0) return [{ ...entry, text: cleanSubtitleText(entry.text) }];
-  if (allChunks.length === 1) return [{ ...entry, text: allChunks[0]! }];
-
-  const totalChars = allChunks.reduce((s, c) => s + cleanLen(c), 0);
-  const duration = entry.end - entry.start;
-  const result: { start: number; end: number; text: string }[] = [];
-  let cursor = entry.start;
-  for (let i = 0; i < allChunks.length; i++) {
-    const ratio = cleanLen(allChunks[i]!) / totalChars;
-    const end = i === allChunks.length - 1 ? entry.end : cursor + Math.round(ratio * duration);
-    result.push({ start: cursor, end, text: allChunks[i]! });
-    cursor = end;
-  }
-  return result;
-}
+const CHARS_PER_SEC = 6;
+const TERMINATOR_GAP_MS = 800;
 
 function formatSrtTime(ms: number): string {
   const h = Math.floor(ms / 3_600_000);
@@ -139,10 +133,67 @@ function formatSrtTime(ms: number): string {
 
 function buildSrtFromVtt(entries: VttEntry[]): string {
   const chunks: { start: number; end: number; text: string }[] = [];
-  for (const entry of entries) chunks.push(...splitEntry(entry));
-  return chunks.map((c, i) =>
-    `${i + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n${c.text}`
-  ).join('\n\n') + '\n';
+  let pendingGap = 0;
+
+  for (let ei = 0; ei < entries.length; ei++) {
+    const entry = entries[ei]!;
+    const isLastEntry = ei === entries.length - 1;
+
+    const rawSentences = entry.text
+      .split(/(?<=[^0-9])\.\s+|[?!]\s+|—+\s*|(?<=라고 함|상황이라고 함|분석이라고 함|있다고 함|이라고 함|\s하는데|\s하면서|\s하며|\s했다고|\s한다고|\s겠다며|\s한다며|\s있으며|\s있고)[,.]?\s+/)
+      .map((s) => cleanSubtitleText(s))
+      .filter(Boolean);
+    if (rawSentences.length === 0) { pendingGap = 0; continue; }
+
+    const totalEntryChars = rawSentences.reduce((s, c) => s + cleanLen(c), 0);
+    let sentCursor = entry.start + pendingGap;
+    pendingGap = 0;
+
+    for (let si = 0; si < rawSentences.length; si++) {
+      const isLastSentence = si === rawSentences.length - 1;
+      const isTerminator = /함$/.test(rawSentences[si]!);
+      const ratio = cleanLen(rawSentences[si]!) / totalEntryChars;
+      const proportionalEnd = sentCursor + Math.round(ratio * (entry.end - entry.start));
+      const speechRateEnd = sentCursor + Math.round((cleanLen(rawSentences[si]!) / CHARS_PER_SEC) * 1000);
+      const sentRawEnd = isLastSentence
+        ? entry.end
+        : Math.min(proportionalEnd, speechRateEnd);
+
+      const sentDisplayEnd = sentRawEnd;
+
+      if (isLastSentence && isTerminator && !isLastEntry) {
+        pendingGap = TERMINATOR_GAP_MS;
+      }
+      const nextGap = (!isLastSentence && isTerminator) ? TERMINATOR_GAP_MS : 0;
+
+      const displayChunks = splitIntoDisplayChunks(rawSentences[si]!);
+      if (displayChunks.length === 0) { sentCursor = sentRawEnd; continue; }
+
+      if (displayChunks.length === 1) {
+        chunks.push({ start: sentCursor, end: sentDisplayEnd, text: displayChunks[0]! });
+      } else {
+        const totalChunkChars = displayChunks.reduce((s, c) => s + cleanLen(c), 0);
+        const sentDuration = sentDisplayEnd - sentCursor;
+        let chunkCursor = sentCursor;
+        for (let ci = 0; ci < displayChunks.length; ci++) {
+          const chunkRatio = cleanLen(displayChunks[ci]!) / totalChunkChars;
+          const chunkEnd = ci === displayChunks.length - 1
+            ? sentDisplayEnd
+            : chunkCursor + Math.round(chunkRatio * sentDuration);
+          chunks.push({ start: chunkCursor, end: chunkEnd, text: displayChunks[ci]! });
+          chunkCursor = chunkEnd;
+        }
+      }
+
+      sentCursor = sentRawEnd + nextGap;
+    }
+  }
+
+  return (
+    chunks
+      .map((c, i) => `${i + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n${c.text}`)
+      .join('\n\n') + '\n'
+  );
 }
 
 // ─── 메인 ─────────────────────────────────────────────────────────────────────
@@ -194,7 +245,8 @@ async function main(): Promise<void> {
   // 2. TTS + VTT 생성
   console.log('\n[2/6] edge-tts 음성 + VTT 생성...');
   const textFile = join(OUTPUT_DIR, 'tts-input.txt');
-  writeFileSync(textFile, `${script.title}. ${script.script}`, 'utf-8');
+  const ttsInput = `${script.title}.\n\n${script.script.replace(/([.!?])\s+(?=[가-힣A-Z])/g, '$1\n\n')}`;
+  writeFileSync(textFile, ttsInput, 'utf-8');
   execSync(
     `"${EDGE_TTS}" --voice ko-KR-SunHiNeural --file "${textFile}" --write-media "${AUDIO_PATH}" --write-subtitles "${VTT_PATH}"`,
     { stdio: 'inherit', timeout: 120_000 },
