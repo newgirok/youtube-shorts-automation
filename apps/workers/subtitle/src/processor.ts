@@ -113,21 +113,18 @@ const TERMINATOR_GAP_MS = 800;
 
 function buildSrtFromVtt(entries: VttEntry[]): string {
   const chunks: { start: number; end: number; text: string }[] = [];
-  let pendingGap = 0; // 직전 VTT 엔트리 마지막 문장이 종결어면 다음 엔트리 시작에 gap 적용
 
   for (let ei = 0; ei < entries.length; ei++) {
     const entry = entries[ei]!;
-    const isLastEntry = ei === entries.length - 1;
 
     const rawSentences = entry.text
       .split(/(?<=[^0-9])\.\s+|[?!]\s+|—+\s*|(?<=라고 함|상황이라고 함|분석이라고 함|있다고 함|이라고 함|\s하는데|\s하면서|\s하며|\s했다고|\s한다고|\s겠다며|\s한다며|\s있으며|\s있고)[,.]?\s+/)
       .map((s) => cleanSubtitleText(s))
       .filter(Boolean);
-    if (rawSentences.length === 0) { pendingGap = 0; continue; }
+    if (rawSentences.length === 0) continue;
 
     const totalEntryChars = rawSentences.reduce((s, c) => s + cleanLen(c), 0);
-    let sentCursor = entry.start + pendingGap;
-    pendingGap = 0;
+    let sentCursor = entry.start;
 
     for (let si = 0; si < rawSentences.length; si++) {
       const isLastSentence = si === rawSentences.length - 1;
@@ -141,10 +138,6 @@ function buildSrtFromVtt(entries: VttEntry[]): string {
 
       const sentDisplayEnd = sentRawEnd;
 
-      if (isLastSentence && isTerminator && !isLastEntry) {
-        // 엔트리 경계를 넘는 gap: 다음 엔트리 sentCursor에서 적용
-        pendingGap = TERMINATOR_GAP_MS;
-      }
       const nextGap = (!isLastSentence && isTerminator) ? TERMINATOR_GAP_MS : 0;
 
       const displayChunks = splitIntoDisplayChunks(rawSentences[si]!);
