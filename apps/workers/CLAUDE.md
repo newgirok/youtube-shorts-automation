@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | `script/` | topic, channelId | script.json | Lambda 512MB | 60s |
 | `tts/` | script.json | audio.mp3 | Lambda 512MB | 120s |
-| `subtitle/` | script.json + audio.mp3 | subtitle.srt | Fargate 2vCPU/4GB | 300s |
+| `subtitle/` | audio.mp3 + subtitle.vtt (선택) | subtitle.srt | Fargate 2vCPU/4GB | 300s |
 | `render/` | audio.mp3 + subtitle.srt | output.mp4 | Fargate 4vCPU/16GB | 600s |
 | `upload/` | output.mp4 | YouTube 업로드 | Lambda 256MB | 300s |
 
