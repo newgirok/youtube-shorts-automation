@@ -137,7 +137,7 @@ export default function JobDetailPage() {
   const processingTime = calcProcessingTime(job.startedAt, job.completedAt);
   const isYoutubeDeleted = job.status === 'FAILED' && job.failReason === '유튜브에서 영상이 삭제되었습니다.';
   const thumbnailUrl = job.youtubeVideoId
-    ? `https://img.youtube.com/vi/${job.youtubeVideoId}/maxresdefault.jpg`
+    ? (job.thumbnailUrl ?? `https://img.youtube.com/vi/${job.youtubeVideoId}/hqdefault.jpg`)
     : null;
   const sc = job.scriptContent;
 
@@ -211,12 +211,6 @@ export default function JobDetailPage() {
                 src={thumbnailUrl}
                 alt={title}
                 className="w-full rounded-xl object-cover aspect-video"
-                onError={(e) => {
-                  const img = e.currentTarget;
-                  if (!img.src.includes('hqdefault')) {
-                    img.src = `https://img.youtube.com/vi/${job.youtubeVideoId!}/hqdefault.jpg`;
-                  }
-                }}
               />
             ) : (
               <div className="w-full rounded-xl bg-white/5 aspect-video flex items-center justify-center">

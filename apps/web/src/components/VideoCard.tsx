@@ -50,15 +50,9 @@ export function VideoCard({ video }: { video: JobType }) {
       <div className="relative aspect-[9/16] max-h-36 bg-muted">
         {!isDeleted && video.youtubeVideoId ? (
           <img
-            src={`https://img.youtube.com/vi/${video.youtubeVideoId}/maxresdefault.jpg`}
+            src={video.thumbnailUrl ?? `https://img.youtube.com/vi/${video.youtubeVideoId}/hqdefault.jpg`}
             alt={title}
             className="w-full h-full object-cover"
-            onError={(e) => {
-              const img = e.currentTarget;
-              if (!img.src.includes('hqdefault')) {
-                img.src = `https://img.youtube.com/vi/${video.youtubeVideoId}/hqdefault.jpg`;
-              }
-            }}
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
