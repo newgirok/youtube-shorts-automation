@@ -13,6 +13,7 @@ interface Message {
 }
 
 interface ScriptContent {
+  title: string;
   script: string;
 }
 
@@ -47,6 +48,18 @@ function parseVttEntries(vtt: string): VttEntry[] {
       }
       i++;
     }
+  }
+  return entries;
+}
+
+// TTS 입력은 "${title}.\n\n${script}" 구조 — title에 해당하는 앞부분 VTT 엔트리를 건너뜀
+function skipTitleEntries(entries: VttEntry[], title: string): VttEntry[] {
+  const strip = (s: string) => s.replace(/[\s'''""".,?!]/g, '').toLowerCase();
+  const titleLen = strip(title).length;
+  let accumulated = 0;
+  for (let i = 0; i < entries.length; i++) {
+    accumulated += strip(entries[i]!.text).length;
+    if (accumulated >= titleLen) return entries.slice(i + 1);
   }
   return entries;
 }
@@ -111,7 +124,7 @@ const CHARS_PER_SEC = 6;
 
 const TERMINATOR_GAP_MS = 800;
 
-function buildSrtFromVtt(entries: VttEntry[]): string {
+function buildSrtFromVtt(entries: VttEntry[], totalMs: number): string {
   const chunks: { start: number; end: number; text: string }[] = [];
 
   for (let ei = 0; ei < entries.length; ei++) {
@@ -132,13 +145,24 @@ function buildSrtFromVtt(entries: VttEntry[]): string {
       const ratio = cleanLen(rawSentences[si]!) / totalEntryChars;
       const proportionalEnd = sentCursor + Math.round(ratio * (entry.end - entry.start));
       const speechRateEnd = sentCursor + Math.round((cleanLen(rawSentences[si]!) / CHARS_PER_SEC) * 1000);
+      // 비마지막 문장은 entry.end를 초과하지 않도록 cap — 초과하면 이후 sentCursor가 역전되어 SRT 순서 깨짐
       const sentRawEnd = isLastSentence
         ? entry.end
-        : Math.min(proportionalEnd, speechRateEnd);
+        : Math.min(proportionalEnd, speechRateEnd, entry.end);
 
       const sentDisplayEnd = sentRawEnd;
 
-      const nextGap = (!isLastSentence && isTerminator) ? TERMINATOR_GAP_MS : 0;
+      // gap도 entry.end를 초과하지 않도록 cap
+      const remainingAfterSent = Math.max(0, entry.end - sentRawEnd);
+      const nextGap = (!isLastSentence && isTerminator)
+        ? Math.min(TERMINATOR_GAP_MS, remainingAfterSent)
+        : 0;
+
+      // start >= end인 zero-duration 청크는 건너뜀
+      if (sentCursor >= sentDisplayEnd) {
+        sentCursor = sentRawEnd + nextGap;
+        continue;
+      }
 
       const displayChunks = splitIntoDisplayChunks(rawSentences[si]!);
       if (displayChunks.length === 0) { sentCursor = sentRawEnd; continue; }
@@ -161,6 +185,11 @@ function buildSrtFromVtt(entries: VttEntry[]): string {
 
       sentCursor = sentRawEnd + nextGap;
     }
+  }
+
+  // VTT 마지막 엔트리 이후 후행 무음 구간에도 마지막 자막이 유지되도록 연장
+  if (chunks.length > 0 && totalMs > chunks[chunks.length - 1]!.end) {
+    chunks[chunks.length - 1]!.end = totalMs;
   }
 
   return (
@@ -193,7 +222,8 @@ function buildSrt(script: string, totalMs: number): string {
         const ratio = cleanLen(text) / totalChars;
         const duration = Math.round(ratio * totalMs);
         const start = cursor;
-        const end = Math.min(cursor + duration, totalMs);
+        // 마지막 청크는 정확히 totalMs까지 — 반올림 오차로 인한 후행 공백 방지
+        const end = i === chunks.length - 1 ? totalMs : Math.min(cursor + duration, totalMs);
         cursor = end;
         return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${text}`;
       })
@@ -242,26 +272,31 @@ export async function processMessage(
 
     let srtContent: string;
 
+    // 오디오 전체 길이 — VTT/fallback 양쪽에서 모두 사용
+    const audioDurationStr = execSync(
+      `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${audioPath}"`,
+      { stdio: 'pipe' }
+    )
+      .toString()
+      .trim();
+    const totalMs = Math.round(parseFloat(audioDurationStr) * 1000);
+
+    // script.json은 양쪽 경로에서 모두 필요 (title 추출 + fallback script)
+    const scriptBuf = await downloadFromS3(jobKey(jobId, 'script.json'));
+    const { title, script } = JSON.parse(scriptBuf.toString()) as ScriptContent;
+
     if (subtitleVttS3Key) {
       // VTT 기반: edge-tts word-level timing → 정확한 싱크
       log.info({ subtitleVttS3Key }, 'VTT 기반 SRT 생성');
       const vttBuf = await downloadFromS3(subtitleVttS3Key);
-      const entries = parseVttEntries(vttBuf.toString('utf-8'));
-      srtContent = buildSrtFromVtt(entries);
-      log.info({ entries: entries.length }, 'VTT → SRT 변환 완료');
+      const allEntries = parseVttEntries(vttBuf.toString('utf-8'));
+      // TTS 입력 첫 단락이 제목 → 해당 VTT 엔트리 건너뜀 (음성으로만 재생)
+      const entries = skipTitleEntries(allEntries, title);
+      srtContent = buildSrtFromVtt(entries, totalMs);
+      log.info({ total: allEntries.length, skipped: allEntries.length - entries.length }, 'VTT → SRT 변환 완료 (제목 제외)');
     } else {
-      // fallback: 오디오 길이 측정 후 문자 수 비례 타이밍
+      // fallback: 문자 수 비례 타이밍
       log.info('VTT 없음, 문자 수 비례 타이밍 사용');
-      const durationStr = execSync(
-        `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${audioPath}"`,
-        { stdio: 'pipe' }
-      )
-        .toString()
-        .trim();
-      const totalMs = Math.round(parseFloat(durationStr) * 1000);
-      const scriptS3Key = jobKey(jobId, 'script.json');
-      const scriptBuf = await downloadFromS3(scriptS3Key);
-      const { script } = JSON.parse(scriptBuf.toString()) as ScriptContent;
       srtContent = buildSrt(script, totalMs);
       log.info('문자 비례 SRT 생성 완료');
     }
