@@ -159,7 +159,7 @@ YOUTUBE_REFRESH_TOKEN=1//04...
 
 > `YOUTUBE_CLIENT_ID`와 `YOUTUBE_CLIENT_SECRET`은 변경하지 않습니다.
 
-> 웹 대시보드에서 채널을 연결할 경우(`GET /auth/youtube` → OAuth 플로우) refresh_token은 DB에 암호화 저장됩니다. 이 경우 `.env.local`의 `YOUTUBE_REFRESH_TOKEN`은 테스트 스크립트(`scripts/tools/test-upload.ts`) 전용으로만 사용됩니다.
+> 웹 대시보드에서 채널을 연결할 경우(`GET /auth/youtube` → OAuth 플로우) refresh_token은 DB에 암호화 저장됩니다. 이 경우 `.env.local`의 `YOUTUBE_REFRESH_TOKEN`은 로컬 진단 스크립트(`scripts/run-pipeline.ts`) 전용으로만 사용됩니다.
 
 ### 일일 할당량
 

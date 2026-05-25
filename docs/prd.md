@@ -316,9 +316,9 @@ enum JobStatus {
 
 | 리스크 | 검증 항목 | 검증 방법 |
 |---|---|---|
-| YouTube 업로드 안정성 | Shorts 분류 여부, quota 소비량, refresh_token 재발급 흐름 | `scripts/test-upload.ts` |
-| FFmpeg 렌더링 품질 | 모바일 자막 잘림, 한글 폰트, 오디오 싱크, 유튜브 재압축 화질 | `scripts/test-render.ts` |
-| TTS 음성 품질 | 속도/억양/AI 느낌 최소화, 25~35초 분량 | `scripts/test-tts.ts` |
+| YouTube 업로드 안정성 | Shorts 분류 여부, quota 소비량, refresh_token 재발급 흐름 | `apps/workers/upload` |
+| FFmpeg 렌더링 품질 | 모바일 자막 잘림, 한글 폰트, 오디오 싱크, 유튜브 재압축 화질 | `apps/workers/render` |
+| TTS 음성 품질 | 속도/억양/AI 느낌 최소화, 25~35초 분량 | `apps/workers/tts` |
 
 ---
 

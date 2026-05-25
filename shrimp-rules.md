@@ -33,7 +33,7 @@ youtube-shorts-automation/
 ├── packages/
 │   └── shared/               # Prisma 스키마, 공통 타입, 환경변수 Zod 스키마
 ├── infra/                    # AWS 리소스 (S3, SQS, IAM, ECS, ECR, EventBridge 등)
-└── scripts/                  # Phase 0 단독 검증 스크립트 (test-tts.ts 등)
+└── scripts/                  # 로컬 진단 도구 (run-pipeline.ts) + 폰트 자산
 ```
 
 **S3 키 규칙 (반드시 준수):**

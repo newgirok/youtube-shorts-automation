@@ -7,10 +7,7 @@
 
 ## 진행 현황
 
-- **Phase 0** — 핵심 리스크 검증
-  - [] P0-1. `scripts/test-tts.ts` — TTS 음성 품질 `[BE]` _(52.4초, PASS)_
-  - [] P0-2. `scripts/test-render.ts` — FFmpeg 렌더링 품질 `[BE][DevOps]` _(1080×1920, 54초, PASS)_
-  - [] P0-3. `scripts/test-upload.ts` — YouTube Data API 업로드 `[BE]` _(videoId: HEHyy3p7zpc, private 업로드·#Shorts 분류·refresh_token 재발급 PASS)_
+- **Phase 0** — 핵심 리스크 검증 ✅ 완료 → 운영 워커(`apps/workers/*`)로 흡수
 - **Phase 1** — 로컬 파이프라인 구현
   - [] P1-1. Monorepo 초기화 `[DevOps]`
   - [] P1-2. `packages/shared` — 공통 기반 `[BE]`
@@ -59,43 +56,13 @@
 
 ---
 
-## Phase 0 — 핵심 리스크 검증
+## Phase 0 — 핵심 리스크 검증 (완료)
 
-> 인프라 구성 전, 단독 스크립트로 콘텐츠 품질과 외부 API 연동 가능성을 검증한다.
-
-- **P0-1.** `scripts/test-tts.ts` — TTS 음성 품질 `[BE]`
-  - 구현
-    - `edge-tts` 설치, 음성: `ko-KR-SunHiNeural`
-    - 입력: 한국어 샘플 스크립트
-    - 출력: `scripts/output/test-audio.mp3`
-    - `ffprobe` 로 길이 자동 측정·출력
-  - 검증
-    - MP3 길이 25~35초 (뉴스·시사 콘텐츠 기준)
-    - AI 억양 최소화, 자연스러운 한국어 발음
-
-- **P0-2.** `scripts/test-render.ts` — FFmpeg 렌더링 품질 `[BE][DevOps]`
-  - 구현
-    - FFmpeg: 1080×1920 zoompan + `subtitles` 필터 (`FontSize=46`, `MarginV=130`)
-    - 출력: `scripts/output/test-output.mp4`
-    - `ffprobe` 로 해상도·길이·오디오 스트림 정보 출력
-  - 검증
-    - 해상도 1080×1920
-    - 한글 자막 정상 렌더링, 안전 영역 이탈 없음
-    - 오디오 싱크 정상
-
-- **P0-3.** `scripts/test-upload.ts` — YouTube Data API 업로드 `[BE]`
-  - 구현
-    - `googleapis` `OAuth2Client` 초기화
-    - `.env.local` 에서 `YOUTUBE_REFRESH_TOKEN`, `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET` Zod 검증 로드
-    - `scripts/output/test-output.mp4` → `privacyStatus: 'private'` 업로드
-    - `videoId` 추출, `#Shorts` 분류 여부 확인
-  - 검증
-    - private 영상 업로드 성공
-    - `#Shorts` 분류 확인
-    - `refresh_token` 재발급 정상
-
-**완료 기준**
-- [] P0-1 ~ P0-3 모두 검증 통과
+> TTS·렌더링·업로드를 단독 스크립트로 검증 후 전부 운영 워커(`apps/workers/*`)로 이전 완료.
+> - P0-1 TTS (52.4초, PASS) → `apps/workers/tts/src/EdgeTTSAdapter.ts`
+> - P0-2 FFmpeg 렌더링 (1080×1920, 54초, PASS) → `apps/workers/render/src/renderer.ts`
+> - P0-3 YouTube 업로드 (videoId: HEHyy3p7zpc, PASS) → `apps/workers/upload/src/uploader.ts`
+> 전체 파이프라인 로컬 진단: `npx tsx scripts/run-pipeline.ts [주제]`
 
 ---
 

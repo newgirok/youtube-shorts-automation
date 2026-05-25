@@ -83,8 +83,6 @@ youtube-shorts-automation/
 │   ├── onboarding/                   # 로컬 환경 세팅·API 키·환경변수 가이드
 │   └── operations/                   # 배포·모니터링·운영 가이드
 └── scripts/
-    └── tools/                        # Phase 0 단독 검증 스크립트 (AWS 없이 실행)
-        ├── test-tts.ts               # Edge-TTS 음성 합성 품질 검증
-        ├── test-render.ts            # FFmpeg 렌더링 품질 검증
-        └── test-upload.ts            # YouTube Data API 업로드 검증
+    ├── run-pipeline.ts               # 로컬 통합 진단 (SQS 없이 운영 워커 4종 직접 호출)
+    └── fonts/                        # 렌더링 폰트 (SBAggro-Bold.ttf — renderer.ts에서 참조)
 ```
