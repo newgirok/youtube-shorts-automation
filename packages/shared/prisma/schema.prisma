@@ -51,6 +51,7 @@ model Job {
   subtitleS3Key    String?
   videoS3Key       String?
   youtubeVideoId   String?
+  thumbnailUrl     String?
   privacyStatus    String    @default("public")
   viewCount        BigInt    @default(0)
   likeCount        BigInt    @default(0)
