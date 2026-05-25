@@ -25,7 +25,8 @@ interface VttEntry {
 function parseVttTime(s: string): number {
   const parts = s.trim().split(':');
   const [h, m, sec] = parts.length === 3 ? parts : ['0', parts[0], parts[1]];
-  return Math.round((parseFloat(h) * 3600 + parseFloat(m) * 60 + parseFloat(sec)) * 1000);
+  // SRT는 쉼표(,) VTT는 점(.) — 둘 다 처리해 ms 정밀도 보존
+  return Math.round((parseFloat(h) * 3600 + parseFloat(m) * 60 + parseFloat((sec ?? '0').replace(',', '.'))) * 1000);
 }
 
 function parseVttEntries(vtt: string): VttEntry[] {
@@ -34,7 +35,13 @@ function parseVttEntries(vtt: string): VttEntry[] {
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].includes('-->')) {
       const [startStr, endStr] = lines[i].split('-->');
-      const text = lines[i + 1]?.trim() ?? '';
+      const raw = lines[i + 1]?.trim() ?? '';
+      // edge-tts가 <break> 태그를 VTT 텍스트에 남길 수 있으므로 제거
+      const text = raw
+        .replace(/<[^>]*>/g, '')
+        .replace(/\bbreak\s[^>]*\/>/g, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
       if (text) {
         entries.push({ start: parseVttTime(startStr), end: parseVttTime(endStr), text });
       }
@@ -48,8 +55,8 @@ const MAX_DISPLAY_CHARS = 20;
 const cleanLen = (s: string) => s.replace(/\s/g, '').length;
 
 function cleanSubtitleText(text: string): string {
-  // 소수점(6.1%)은 보존: 앞뒤가 모두 숫자인 .은 제거하지 않음
   return text
+    .replace(/['''"""]/g, '')
     .replace(/(?<!\d)\.(?!\d)|[,?!]/g, '')
     .replace(/\s{2,}/g, ' ')
     .trim();
@@ -59,22 +66,22 @@ function wordSplit(text: string): string[] {
   const words = text.split(/\s+/).filter(Boolean);
   const chunks: string[] = [];
   let cur = '';
-  for (const word of words) {
-    const candidate = cur ? `${cur} ${word}` : word;
+  // 뒤에서 앞으로 채워 한국어 술어 꼬리("있다고 함", "배제해 버리면서" 등)가 함께 묶이게
+  for (let i = words.length - 1; i >= 0; i--) {
+    const candidate = cur ? `${words[i]} ${cur}` : words[i]!;
     if (cleanLen(candidate) <= MAX_DISPLAY_CHARS || !cur) cur = candidate;
-    else { chunks.push(cur); cur = word; }
+    else { chunks.unshift(cur); cur = words[i]!; }
   }
-  if (cur) chunks.push(cur);
+  if (cur) chunks.unshift(cur);
   return chunks;
 }
 
 // 구어체 종결 패턴 우선 분할 → 여전히 길면 단어 경계로 fallback
-// "상황이라고" 대신 "상황이라고 함" 등 완성형만 사용 — 짧은 패턴은 "함" 단독 자막 버그 유발
 function splitIntoDisplayChunks(text: string): string[] {
   if (cleanLen(text) <= MAX_DISPLAY_CHARS) return [text];
 
   const parts = text
-    .split(/(?<=라고 함|상황이라고 함|분석이라고 함|있다고 함|이라고 함|하는데|했다고|한다고|겠다며|한다며|하면서|하며)\s+/)
+    .split(/(?<=라고 함|상황이라고 함|분석이라고 함|있다고 함|이라고 함|\s하는데|\s하면서|\s하며|\s했다고|\s한다고|\s겠다며|\s한다며|\s있으며|\s있고)\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
 
@@ -82,47 +89,87 @@ function splitIntoDisplayChunks(text: string): string[] {
     cleanLen(part) <= MAX_DISPLAY_CHARS ? [part] : wordSplit(part)
   );
 
-  // 너무 짧은 토막(4자 미만)은 앞 청크에 병합
+  // 7자 이하 꼬리 토막 → 앞 청크에 병합 ("상황이라고 함"·"분석이라고 함" 등)
   const merged: string[] = [];
   for (const chunk of chunks) {
-    if (merged.length > 0 && cleanLen(chunk) < 4) {
+    if (merged.length > 0 && cleanLen(chunk) <= 7) {
       merged[merged.length - 1] += ' ' + chunk;
     } else {
       merged.push(chunk);
     }
   }
+  // 3자 이하 선두 토막 → 다음 청크 앞에 병합 ("실제로"·"결국" 등 짧은 부사어)
+  if (merged.length >= 2 && cleanLen(merged[0]!) <= 3) {
+    merged[1] = merged[0]! + ' ' + merged[1]!;
+    merged.shift();
+  }
   return merged;
 }
 
-// VTT 항목을 문장 부호로 1차 분할 → 각 문장을 표시 단위로 2차 분할 → 비례 타이밍 배분
-function splitEntry(entry: VttEntry): { start: number; end: number; text: string }[] {
-  const sentences = entry.text
-    .split(/(?<=[^0-9])\.\s+|[?!]\s+/)
-    .map((s) => cleanSubtitleText(s))
-    .filter(Boolean);
+// 한국어 TTS 발화 속도 상한 (글자/초) — 비례 타이밍이 이보다 느리면 cap
+const CHARS_PER_SEC = 6;
 
-  const allChunks = sentences.flatMap((s) => splitIntoDisplayChunks(s));
-  if (allChunks.length === 0) return [{ ...entry, text: cleanSubtitleText(entry.text) }];
-  if (allChunks.length === 1) return [{ ...entry, text: allChunks[0]! }];
-
-  const totalChars = allChunks.reduce((s, c) => s + cleanLen(c), 0);
-  const duration = entry.end - entry.start;
-  const result: { start: number; end: number; text: string }[] = [];
-  let cursor = entry.start;
-  for (let i = 0; i < allChunks.length; i++) {
-    const ratio = cleanLen(allChunks[i]!) / totalChars;
-    const end = i === allChunks.length - 1 ? entry.end : cursor + Math.round(ratio * duration);
-    result.push({ start: cursor, end, text: allChunks[i]! });
-    cursor = end;
-  }
-  return result;
-}
+const TERMINATOR_GAP_MS = 800;
 
 function buildSrtFromVtt(entries: VttEntry[]): string {
   const chunks: { start: number; end: number; text: string }[] = [];
-  for (const entry of entries) {
-    chunks.push(...splitEntry(entry));
+  let pendingGap = 0; // 직전 VTT 엔트리 마지막 문장이 종결어면 다음 엔트리 시작에 gap 적용
+
+  for (let ei = 0; ei < entries.length; ei++) {
+    const entry = entries[ei]!;
+    const isLastEntry = ei === entries.length - 1;
+
+    const rawSentences = entry.text
+      .split(/(?<=[^0-9])\.\s+|[?!]\s+|—+\s*|(?<=라고 함|상황이라고 함|분석이라고 함|있다고 함|이라고 함|\s하는데|\s하면서|\s하며|\s했다고|\s한다고|\s겠다며|\s한다며|\s있으며|\s있고)[,.]?\s+/)
+      .map((s) => cleanSubtitleText(s))
+      .filter(Boolean);
+    if (rawSentences.length === 0) { pendingGap = 0; continue; }
+
+    const totalEntryChars = rawSentences.reduce((s, c) => s + cleanLen(c), 0);
+    let sentCursor = entry.start + pendingGap;
+    pendingGap = 0;
+
+    for (let si = 0; si < rawSentences.length; si++) {
+      const isLastSentence = si === rawSentences.length - 1;
+      const isTerminator = /함$/.test(rawSentences[si]!);
+      const ratio = cleanLen(rawSentences[si]!) / totalEntryChars;
+      const proportionalEnd = sentCursor + Math.round(ratio * (entry.end - entry.start));
+      const speechRateEnd = sentCursor + Math.round((cleanLen(rawSentences[si]!) / CHARS_PER_SEC) * 1000);
+      const sentRawEnd = isLastSentence
+        ? entry.end
+        : Math.min(proportionalEnd, speechRateEnd);
+
+      const sentDisplayEnd = sentRawEnd;
+
+      if (isLastSentence && isTerminator && !isLastEntry) {
+        // 엔트리 경계를 넘는 gap: 다음 엔트리 sentCursor에서 적용
+        pendingGap = TERMINATOR_GAP_MS;
+      }
+      const nextGap = (!isLastSentence && isTerminator) ? TERMINATOR_GAP_MS : 0;
+
+      const displayChunks = splitIntoDisplayChunks(rawSentences[si]!);
+      if (displayChunks.length === 0) { sentCursor = sentRawEnd; continue; }
+
+      if (displayChunks.length === 1) {
+        chunks.push({ start: sentCursor, end: sentDisplayEnd, text: displayChunks[0]! });
+      } else {
+        const totalChunkChars = displayChunks.reduce((s, c) => s + cleanLen(c), 0);
+        const sentDuration = sentDisplayEnd - sentCursor;
+        let chunkCursor = sentCursor;
+        for (let ci = 0; ci < displayChunks.length; ci++) {
+          const chunkRatio = cleanLen(displayChunks[ci]!) / totalChunkChars;
+          const chunkEnd = ci === displayChunks.length - 1
+            ? sentDisplayEnd
+            : chunkCursor + Math.round(chunkRatio * sentDuration);
+          chunks.push({ start: chunkCursor, end: chunkEnd, text: displayChunks[ci]! });
+          chunkCursor = chunkEnd;
+        }
+      }
+
+      sentCursor = sentRawEnd + nextGap;
+    }
   }
+
   return (
     chunks
       .map((c, i) => `${i + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n${c.text}`)
@@ -140,7 +187,7 @@ function formatSrtTime(ms: number): string {
 
 function buildSrt(script: string, totalMs: number): string {
   const chunks = script
-    .split(/(?<=[^0-9])\.\s+|[?!]\s+/)
+    .split(/(?<=[^0-9])\.\s+|[?!]\s+|—+\s*/)
     .map((s) => cleanSubtitleText(s))
     .filter(Boolean)
     .flatMap((s) => splitIntoDisplayChunks(s));
