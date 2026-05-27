@@ -38,6 +38,10 @@ OAuth 스코프:
 
 refresh_token은 AES-256-GCM으로 암호화 후 DB 저장. access_token은 DB에 저장하지 않음.
 
+**채널 upsert 규칙**: `auth.service.ts`의 `prisma.channel.upsert` `update` 블록에 반드시 `isActive: true` 포함.
+채널을 `DELETE /channels/:id`로 해제(`isActive=false`)한 뒤 재연결하면 `update` 블록이 실행되므로,
+`isActive: true`가 없으면 해제 상태가 그대로 유지된다.
+
 ### `channels/`
 YouTube 채널 CRUD 및 동기화.
 

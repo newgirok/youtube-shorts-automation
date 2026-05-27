@@ -117,6 +117,10 @@ interface AnalyticsRow {
 - `HomeClient.tsx`: 서버에서 받은 `channels` 목록에 `selectedChannelId`가 없으면 자동 초기화 (`clearSelectedChannelId`)
 - `ChannelClient.tsx`: 마운트 시 `setSelectedChannelId(initial.id)` 호출 — OAuth 후 `/channels/:id`로 직접 랜딩해도 GNB 즉시 표시
 
+### 스크립트 입력 비활성화
+- 홈 화면 토픽 입력 textarea: `disabled={!activeChannelId}` — 채널 미연결 시 입력 불가
+- `cursor-not-allowed` 등 커서 스타일 변경 금지 (Tailwind `disabled:cursor-not-allowed` 미적용)
+
 ### 홈 갤러리 표시 조건
 - `activeChannelId` 없으면 갤러리 전체 숨김
 - 연/월 필터는 항상 표시, 현재 연도는 jobs 없어도 기본 포함
@@ -136,7 +140,8 @@ interface AnalyticsRow {
 - 오늘 기준 28일 범위 고정 (`d.setDate(d.getDate() - (27 - i))`)
 - X축 포맷: M/D 형식 (`${parseInt(mm!)}/${parseInt(dd!)}`) — `toLocaleDateString` 사용 금지 (hydration 오류)
 - `interval={0}` 으로 모든 28개 tick 표시
-- 차트 클릭 시 흰색 outline 제거: `[&_svg]:outline-none [&_.recharts-wrapper]:outline-none`
+- 마지막 날짜 짤림 방지: `margin={{ right: 20 }}` (두 차트 모두 적용)
+- 차트 클릭 시 흰색 outline 제거: `[&_*]:outline-none` (두 차트 모두 적용 — svg·wrapper 포함 모든 자식 대상)
 
 **스케줄러 패널 (overflow 처리):**
 - 외부 컨테이너: `overflow-hidden` (내부 컨텐츠가 패널 밖으로 나가지 않도록)
