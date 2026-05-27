@@ -22,10 +22,10 @@ export class AuthController {
   ) {
     const webOrigin = process.env.WEB_ORIGIN ?? 'http://localhost:3001';
     if (error) {
-      res.code(302).redirect(`${webOrigin}/?auth_error=${encodeURIComponent(error)}`);
+      res.code(302).redirect(`${webOrigin}/close?auth_error=${encodeURIComponent(error)}`);
       return;
     }
     const channel = await this.authService.handleCallback(code);
-    res.code(302).redirect(`${webOrigin}/channels/${channel.id}`);
+    res.code(302).redirect(`${webOrigin}/close?channelId=${channel.id}`);
   }
 }
