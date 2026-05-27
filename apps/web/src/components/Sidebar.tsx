@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, Youtube, Settings, LogOut } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { useChannelStore } from '@/lib/store';
+import { apiDelete } from '@/lib/api';
 
 const YOUTUBE_CONNECT_URL = `${process.env.NEXT_PUBLIC_API_URL ?? ''}/auth/youtube`;
 
@@ -19,8 +20,20 @@ function openYoutubeConnect() {
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { selectedChannelId } = useChannelStore();
+  const router = useRouter();
+  const { selectedChannelId, clearSelectedChannelId } = useChannelStore();
   const isConnected = Boolean(selectedChannelId);
+
+  async function handleYoutubeClick() {
+    if (!isConnected) {
+      openYoutubeConnect();
+      return;
+    }
+    if (!window.confirm('채널 연결을 해제하시겠습니까?')) return;
+    await apiDelete(`/channels/${selectedChannelId}`).catch(() => {});
+    clearSelectedChannelId();
+    router.push('/');
+  }
 
   return (
     <aside className="hidden md:flex w-14 shrink-0 flex-col bg-black/50 backdrop-blur-md border-r border-white/10">
@@ -56,8 +69,8 @@ export function Sidebar() {
 
       <div className="border-t border-white/10 p-2 flex flex-col gap-1">
         <button
-          onClick={openYoutubeConnect}
-          title={isConnected ? 'YouTube 채널 연결됨' : 'YouTube 채널 연결'}
+          onClick={handleYoutubeClick}
+          title={isConnected ? 'YouTube 채널 연결됨 (클릭하여 해제)' : 'YouTube 채널 연결'}
           className={cn(
             'flex items-center justify-center rounded-md p-2.5 transition-all',
             isConnected
