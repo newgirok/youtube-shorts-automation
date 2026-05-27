@@ -31,8 +31,10 @@ export class JobsController {
   }
 
   @Get(':id')
-  findById(@Param('id') id: string) {
-    return this.service.findById(id);
+  async findById(@Param('id') id: string) {
+    const job = await this.service.findById(id);
+    if (!job) throw new NotFoundException(`Job ${id} 를 찾을 수 없습니다`);
+    return job;
   }
 
   @Post('auto-news')

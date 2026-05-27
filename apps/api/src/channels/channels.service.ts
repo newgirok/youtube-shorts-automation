@@ -25,11 +25,16 @@ export class ChannelsService {
     return { ...channel, ...yppStats };
   }
 
-  getAnalytics(id: string) {
+  async getAnalytics(id: string) {
+    const channel = await this.repo.findById(id);
+    if (!channel) throw new NotFoundException('채널을 찾을 수 없습니다.');
     return this.repo.getAnalytics(id);
   }
 
-  updateSchedule(id: string, dto: UpdateScheduleDto) {
+  async updateSchedule(id: string, dto: UpdateScheduleDto) {
+    const channel = await this.repo.findById(id);
+    if (!channel) throw new NotFoundException('채널을 찾을 수 없습니다.');
+
     const data: Parameters<typeof this.repo.updateSchedule>[1] = {};
     if (dto.cronExpression !== undefined) {
       data.uploadSchedule = dto.cronExpression;
@@ -102,6 +107,12 @@ export class ChannelsService {
       });
     }
     log.info({ channelId, rows: rows.length }, 'Analytics 동기화 완료');
+  }
+
+  async deactivate(id: string) {
+    const channel = await this.repo.findById(id);
+    if (!channel) throw new NotFoundException('채널을 찾을 수 없습니다.');
+    return this.repo.deactivate(id);
   }
 
   async syncVideos(channelId: string): Promise<{ synced: number; deleted: number }> {
