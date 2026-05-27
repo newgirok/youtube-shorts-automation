@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { prisma, downloadFromS3, createLogger } from '@shorts/shared';
 import { decrypt } from './crypto.js';
 import { uploadToYouTube } from './uploader.js';
+import { validateVideo } from './validator.js';
 import { parseEnv } from './env.js';
 
 interface SQSMessage {
@@ -54,6 +55,14 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
       const videoBuf = await downloadFromS3(videoS3Key);
       writeFileSync(videoPath, videoBuf);
       log.info({ videoS3Key }, 'S3에서 영상 다운로드 완료');
+
+      // 업로드 전 영상 품질 검증
+      const ffprobePath = process.env.FFPROBE_PATH ?? 'ffprobe';
+      const validation = validateVideo(videoPath, ffprobePath);
+      if (!validation.valid) {
+        throw new Error(`영상 품질 검증 실패: ${validation.reason}`);
+      }
+      log.info('영상 품질 검증 통과');
 
       // YouTube 업로드
       const videoId = await uploadToYouTube(

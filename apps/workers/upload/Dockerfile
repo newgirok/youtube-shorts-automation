@@ -1,5 +1,5 @@
 FROM node:20-slim
-RUN apt-get update && apt-get install -y openssl && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y openssl ffmpeg && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 COPY packages/shared/dist ./packages/shared/dist/
 COPY packages/shared/package.json ./packages/shared/
