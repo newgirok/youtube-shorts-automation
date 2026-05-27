@@ -64,6 +64,7 @@ export class AuthService {
       update: {
         refreshToken: encryptedRefreshToken,
         name: ytChannel.snippet?.title ?? '',
+        isActive: true,
       },
       select: { id: true },
     });
