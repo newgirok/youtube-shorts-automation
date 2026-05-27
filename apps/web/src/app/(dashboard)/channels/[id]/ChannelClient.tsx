@@ -438,7 +438,7 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
           })()}
           {channel.createdAt && (
             <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 shrink-0">
-              <p className="text-xs text-white/40 mb-0.5">채널 등록일</p>
+              <p className="text-xs text-white/40 mb-0.5">채널 개설일</p>
               <p className="text-xs font-medium text-white">
                 {(() => {
                   const [y, m, d] = channel.createdAt!.slice(0, 10).split('-');
