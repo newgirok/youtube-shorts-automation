@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Inject,
   Param,
@@ -32,6 +33,11 @@ export class ChannelsController {
       throw new BadRequestException(result.error.issues);
     }
     return this.service.updateSchedule(id, result.data);
+  }
+
+  @Delete(':id')
+  deactivate(@Param('id') id: string) {
+    return this.service.deactivate(id);
   }
 
   @Get(':id/analytics')

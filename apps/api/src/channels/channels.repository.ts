@@ -168,4 +168,12 @@ export class ChannelsRepository {
       select: { id: true, totalViews: true },
     });
   }
+
+  deactivate(id: string) {
+    return prisma.channel.update({
+      where: { id },
+      data: { isActive: false },
+      select: { id: true },
+    });
+  }
 }
