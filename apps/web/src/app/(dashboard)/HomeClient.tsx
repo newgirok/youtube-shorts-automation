@@ -355,7 +355,7 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
               required
               disabled={!activeChannelId}
               placeholder={`Shorts 주제를 입력하세요\n스크립트 · TTS · 자막 · 렌더링 · YouTube 업로드까지 자동으로 처리됩니다`}
-              className="flex w-full bg-transparent px-5 pt-4 pb-2 text-base text-white placeholder:text-white/40 focus:outline-none resize-none disabled:cursor-not-allowed [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/40"
+              className="flex w-full bg-transparent px-5 pt-4 pb-2 text-base text-white placeholder:text-white/40 focus:outline-none resize-none [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/40"
             />
             <div className="flex items-center justify-end px-4 pb-3">
               {submitError && <p className="text-sm text-red-400 mr-auto">{submitError}</p>}
