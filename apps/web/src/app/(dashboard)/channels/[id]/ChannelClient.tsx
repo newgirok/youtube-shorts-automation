@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts';
 import { apiGet, apiPatch, apiPost } from '@/lib/api';
+import { useChannelStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import type { AnalyticsRow, Channel } from '@/lib/types';
 
@@ -257,6 +258,7 @@ function SchedulerPanel({ channelId, channel }: { channelId: string; channel: Ch
 
 export function ChannelClient({ channel: initial }: { channel: Channel }) {
   const queryClient = useQueryClient();
+  const { setSelectedChannelId } = useChannelStore();
 
   const { data: channel = initial } = useQuery<Channel>({
     queryKey: ['channel', initial.id],
@@ -265,6 +267,10 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
     staleTime: 0,
     refetchInterval: 30000,
   });
+
+  useEffect(() => {
+    setSelectedChannelId(initial.id);
+  }, [initial.id, setSelectedChannelId]);
 
   useEffect(() => {
     apiPost(`/channels/${initial.id}/sync`, {})

@@ -140,7 +140,9 @@ function JobCarousel({ jobs }: { jobs: JobType[] }) {
     >
       {/* ARIA 라이브 리전 — 스크린 리더용 */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
-        {start + 1}–{Math.min(start + CAROUSEL_SIZE, jobs.length)} / {jobs.length}
+        {jobs.length > 0
+          ? `${start + 1}–${Math.min(start + CAROUSEL_SIZE, jobs.length)} / ${jobs.length}`
+          : '영상 없음'}
       </div>
 
       <button
@@ -200,7 +202,7 @@ function JobCarousel({ jobs }: { jobs: JobType[] }) {
 export function HomeClient({ channels }: { channels: Channel[] }) {
   const router = useRouter();
   const queryClient = useQueryClient();
-  const { selectedChannelId, setSelectedChannelId } = useChannelStore();
+  const { selectedChannelId, setSelectedChannelId, clearSelectedChannelId } = useChannelStore();
 
   const [topic, setTopic] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -208,10 +210,12 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
   const [autoNewsLoading, setAutoNewsLoading] = useState(false);
 
   useEffect(() => {
-    if (!selectedChannelId && channels.length > 0) {
+    if (channels.length === 0) {
+      clearSelectedChannelId();
+    } else if (!selectedChannelId || !channels.some((ch) => ch.id === selectedChannelId)) {
       setSelectedChannelId(channels[0].id);
     }
-  }, [channels, selectedChannelId, setSelectedChannelId]);
+  }, [channels, selectedChannelId, setSelectedChannelId, clearSelectedChannelId]);
 
   const activeChannelId = selectedChannelId ?? channels[0]?.id ?? '';
 
@@ -256,6 +260,7 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
 
   const years = useMemo(() => {
     const set = new Set(jobs.map((v) => new Date(v.createdAt).getFullYear()));
+    set.add(new Date().getFullYear());
     return Array.from(set).sort((a, b) => b - a);
   }, [jobs]);
 
@@ -380,11 +385,10 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
         {autoNewsLoading && <span className="text-xs text-white/30">수집 중...</span>}
       </div>
 
-      {/* 갤러리 — 프롬프트 아래 */}
-      {jobs.length > 0 && (
-        <div className="w-full max-w-5xl mt-6 md:mt-10 bg-black/30 backdrop-blur-sm rounded-xl">
-          {/* 연/월 필터 */}
-          <div className="flex items-center gap-1.5 px-3 pt-2 pb-2 border-b border-white/10 flex-wrap rounded-t-xl">
+      {/* 갤러리 — 채널 연결 시에만 표시 */}
+      {activeChannelId && <div className="w-full max-w-5xl mt-6 md:mt-10 bg-black/30 backdrop-blur-sm rounded-xl">
+        {/* 연/월 필터 */}
+        <div className="flex items-center gap-1.5 px-3 pt-2 pb-2 border-b border-white/10 flex-wrap rounded-t-xl">
             <button
               onClick={() => handleYearSelect(null)}
               className={cn(
@@ -423,12 +427,11 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
                 ))}
               </>
             )}
-          </div>
-          <div className="py-2 overflow-visible">
-            <JobCarousel jobs={filteredJobs} />
-          </div>
         </div>
-      )}
+        <div className="py-2 overflow-visible">
+          <JobCarousel jobs={filteredJobs} />
+        </div>
+      </div>}
 
       <div className="flex-1" />
     </div>

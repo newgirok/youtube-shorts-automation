@@ -4,6 +4,7 @@ import { persist } from 'zustand/middleware';
 interface ChannelStore {
   selectedChannelId: string | null;
   setSelectedChannelId: (id: string) => void;
+  clearSelectedChannelId: () => void;
 }
 
 export const useChannelStore = create<ChannelStore>()(
@@ -11,6 +12,7 @@ export const useChannelStore = create<ChannelStore>()(
     (set) => ({
       selectedChannelId: null,
       setSelectedChannelId: (id) => set({ selectedChannelId: id }),
+      clearSelectedChannelId: () => set({ selectedChannelId: null }),
     }),
     { name: 'channel-store' },
   ),
