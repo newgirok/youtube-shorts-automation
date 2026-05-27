@@ -47,8 +47,8 @@ src/
 │   └── ui/                       — shadcn/ui 기본 컴포넌트
 ├── lib/
 │   ├── types.ts                  — Job, Channel, AnalyticsRow, JobStatus 타입
-│   ├── api.ts                    — apiGet / apiPost / apiPatch 헬퍼
-│   ├── store.ts                  — Zustand: selectedChannelId
+│   ├── api.ts                    — apiGet / apiPost / apiPatch / apiDelete 헬퍼
+│   ├── store.ts                  — Zustand: selectedChannelId, setSelectedChannelId, clearSelectedChannelId
 │   └── utils.ts                  — cn() 유틸
 ├── auth.ts                       — NextAuth v5 (GoogleProvider + JWT)
 └── middleware.ts                 — 미인증 접근 → /login 리다이렉트
@@ -110,6 +110,17 @@ interface AnalyticsRow {
 ### 처리시간 표시
 - `calcProcessingTime(startedAt, completedAt)` → 시/분/초 조합 포맷
   - 예: `"2분 34초"`, `"1시간 5분 12초"`
+
+### 채널 연결 해제
+- `Sidebar.tsx` YouTube 버튼: 연결 상태에서 클릭 → confirm → `DELETE /channels/:id` → `clearSelectedChannelId()` → `/` 이동
+- 순서 중요: API 호출 완료 후 store 초기화 → 홈 이동 (순서 바뀌면 홈 서버 fetch 시점에 DB가 아직 active라 재설정됨)
+- `HomeClient.tsx`: 서버에서 받은 `channels` 목록에 `selectedChannelId`가 없으면 자동 초기화 (`clearSelectedChannelId`)
+- `ChannelClient.tsx`: 마운트 시 `setSelectedChannelId(initial.id)` 호출 — OAuth 후 `/channels/:id`로 직접 랜딩해도 GNB 즉시 표시
+
+### 홈 갤러리 표시 조건
+- `activeChannelId` 없으면 갤러리 전체 숨김
+- 연/월 필터는 항상 표시, 현재 연도는 jobs 없어도 기본 포함
+- `close/page.tsx`: `useSearchParams`로 `channelId` / `auth_error` 파싱 → 올바른 대상 URL로 이동 후 팝업 닫기 (`Suspense` 필수)
 
 ### 채널 sync
 - 홈·채널 페이지 마운트 시 `POST /channels/:id/sync` 호출 → Jobs 목록/채널 정보 refetch

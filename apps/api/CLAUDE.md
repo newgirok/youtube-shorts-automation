@@ -13,6 +13,13 @@ NestJS + Fastify 기반 REST API 서버.
 - `pnpm build` — tsc 컴파일
 - `pnpm start` — node dist/main.js 프로덕션 실행
 
+## Docker 빌드 주의사항
+API Dockerfile은 로컬 `dist/`를 COPY하는 구조이므로 소스 수정 후 반드시:
+1. `pnpm --filter @shorts/api build` — TypeScript 컴파일
+2. `docker compose build api` — 이미지 빌드
+
+Web은 `COPY . .` 후 Docker 내부에서 빌드하므로 `docker compose build web`만으로 충분.
+
 ## 의존성
 - @shorts/shared (Prisma, S3, Pino 로거, Zod 환경변수)
 
@@ -22,7 +29,7 @@ NestJS + Fastify 기반 REST API 서버.
 Google OAuth2 채널 연결 처리.
 
 - `GET /auth/youtube` — OAuth 인증 URL로 302 리다이렉트
-- `GET /auth/youtube/callback` — 인증 코드로 토큰 교환, 채널 upsert 후 Web으로 리다이렉트
+- `GET /auth/youtube/callback` — 인증 코드로 토큰 교환, 채널 upsert 후 `/close?channelId={id}` 로 리다이렉트 (에러 시 `/close?auth_error={msg}`)
 
 OAuth 스코프:
 - `https://www.googleapis.com/auth/youtube.upload`
@@ -36,6 +43,7 @@ YouTube 채널 CRUD 및 동기화.
 
 - `GET /channels` — isActive=true 채널 목록 (id, name, niche만 반환)
 - `GET /channels/:id` — 채널 상세 + YPP 통계(uploadCount90d, shortsViews90d)
+- `DELETE /channels/:id` — 채널 연결 해제 (isActive=false, 데이터 보존)
 - `PATCH /channels/:id/schedule` — uploadSchedule cron 표현식 업데이트
 - `GET /channels/:id/analytics` — 최근 30일 일별 analytics (views, subscribers, estimatedRevenue, watchTimeMinutes)
 - `POST /channels/:id/sync` — 채널 통계 + Analytics + 영상 조회수 풀 동기화 (YouTube Data API + YouTube Analytics API)
@@ -57,7 +65,7 @@ Job 생성 및 상태 조회, 재시도.
 
 - `POST /jobs` — 채널 + 토픽으로 Job 생성 후 script-queue에 발행
 - `GET /jobs` — Job 목록 (channelId 쿼리로 필터링 가능)
-- `GET /jobs/:id` — Job 상세 조회
+- `GET /jobs/:id` — Job 상세 조회 (없으면 404)
 - `POST /jobs/auto-news` — Google News RSS 수집 후 뉴스 제목으로 Job 일괄 생성
 - `POST /jobs/:id/retry` — FAILED 상태 Job만 PENDING으로 초기화 후 script-queue 재발행
 
