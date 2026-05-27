@@ -353,9 +353,9 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <p className="text-[10px] text-white/30 mb-2 uppercase tracking-wider">조회수</p>
-            <div style={{ height: 140 }} className="[&_svg]:outline-none [&_.recharts-wrapper]:outline-none">
+            <div style={{ height: 140 }} className="[&_*]:outline-none">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 4, right: 20, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="rgba(255,255,255,0.15)" stopOpacity={1} />
@@ -371,9 +371,9 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
           </div>
           <div>
             <p className="text-[10px] text-white/30 mb-2 uppercase tracking-wider">구독자 증가</p>
-            <div style={{ height: 140 }} className="[&_svg]:outline-none [&_.recharts-wrapper]:outline-none">
+            <div style={{ height: 140 }} className="[&_*]:outline-none">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 4, right: 20, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="subsGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="rgba(255,255,255,0.12)" stopOpacity={1} />
