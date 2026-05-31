@@ -6,13 +6,16 @@ import {
   Param,
   Post,
   Query,
+  Res,
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
+import type { FastifyReply } from 'fastify';
 import { JobsService } from './jobs.service.js';
 import { CreateJobSchema } from './dto/create-job.dto.js';
 import { AutoNewsJobSchema } from './dto/auto-news.dto.js';
 import { JobNotFoundError, JobNotRetryableError } from './jobs.errors.js';
+import { Public } from '../auth/public.decorator.js';
 
 @Controller('jobs')
 export class JobsController {
@@ -42,6 +45,14 @@ export class JobsController {
     const result = AutoNewsJobSchema.safeParse(body);
     if (!result.success) throw new BadRequestException(result.error.issues);
     return this.service.createFromNews(result.data);
+  }
+
+  @Public()
+  @Get(':id/thumbnail')
+  async getThumbnail(@Param('id') id: string, @Res() res: FastifyReply) {
+    const buffer = await this.service.getThumbnail(id);
+    if (!buffer) throw new NotFoundException(`Job ${id}의 썸네일이 없습니다`);
+    void res.type('image/jpeg').send(buffer);
   }
 
   @Post(':id/retry')

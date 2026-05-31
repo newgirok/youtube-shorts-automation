@@ -20,9 +20,15 @@ interface SQSMessage {
 interface ScriptContent {
   title: string;
   script: string;
+  comment_bait?: string;
 }
 
 const sqs = new SQSClient({ region: process.env.AWS_REGION ?? 'ap-northeast-2' });
+
+// "80만 명" → "80만명" : 숫자+한국어 배수어 뒤 공백+단위를 붙여 edge-tts VTT 분리 방지
+function normalizeNumberUnits(text: string): string {
+  return text.replace(/(\d+[만억조천백십])\s+([명원개월일년주배곳건채팀회차])/g, '$1$2');
+}
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
   const env = parseEnv();
@@ -40,12 +46,21 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
       });
 
       const scriptBuf = await downloadFromS3(scriptS3Key);
-      const { title, script } = JSON.parse(scriptBuf.toString()) as ScriptContent;
+      const { title, script, comment_bait } = JSON.parse(scriptBuf.toString()) as ScriptContent;
+
+      // comment_bait 직전에 \n\n 삽입 → TTS 자연 pause (자막 표시는 subtitle.srt 기반이라 영향 없음)
+      let processedScript = script;
+      if (comment_bait) {
+        const idx = processedScript.lastIndexOf(comment_bait);
+        if (idx > 0 && processedScript[idx - 1] !== '\n') {
+          processedScript = `${processedScript.slice(0, idx)}\n\n${processedScript.slice(idx)}`;
+        }
+      }
 
       const tts = new EdgeTTSAdapter(env.EDGE_TTS_PATH);
       const audioPath = `/tmp/${jobId}-audio.mp3`;
       // 문장마다 단락 분리 → edge-tts가 문장별 VTT 엔트리 생성, 타이밍 정확도 향상
-      const ttsInput = `${title}.\n\n${script.replace(/([.!?])\s+(?=[가-힣A-Z])/g, '$1\n\n')}`;
+      const ttsInput = `${title}.\n\n${normalizeNumberUnits(processedScript).replace(/([.!?])\s+(?=[가-힣A-Z])/g, '$1\n\n')}`;
       await tts.synthesize(ttsInput, audioPath);
       log.info({ audioPath }, 'TTS 음성 생성 완료');
 

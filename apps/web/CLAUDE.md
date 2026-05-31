@@ -37,11 +37,13 @@ src/
 │   │   └── channels/[id]/
 │   │       ├── page.tsx          — 채널 초기 데이터 로드 (서버)
 │   │       └── ChannelClient.tsx — YPP 현황·차트·일별 테이블 (클라이언트)
+│   ├── api/
+│   │   └── thumbnail/[id]/route.ts — S3 썸네일 same-origin 프록시 (API_INTERNAL_URL 경유)
 │   ├── providers.tsx             — QueryClientProvider 래퍼
 │   └── layout.tsx                — 루트 레이아웃
 ├── components/
 │   ├── StatusTimeline.tsx        — Job 처리 단계 타임라인 + 재시도 버튼
-│   ├── VideoCard.tsx             — Job 카드 (썸네일·상태 배지·삭제 오버레이)
+│   ├── VideoCard.tsx             — Job 카드 (썸네일·상태 배지·삭제 오버레이, max-h-60 object-cover)
 │   ├── Sidebar.tsx               — 데스크톱 사이드 내비게이션
 │   ├── BottomNav.tsx             — 모바일 하단 내비게이션
 │   └── ui/                       — shadcn/ui 기본 컴포넌트
@@ -49,7 +51,7 @@ src/
 │   ├── types.ts                  — Job, Channel, AnalyticsRow, JobStatus 타입
 │   ├── api.ts                    — apiGet / apiPost / apiPatch / apiDelete 헬퍼
 │   ├── store.ts                  — Zustand: selectedChannelId, setSelectedChannelId, clearSelectedChannelId
-│   └── utils.ts                  — cn() 유틸
+│   └── utils.ts                  — cn() 유틸 + toProxyThumbUrl() S3 썸네일 → 프록시 URL 변환
 ├── auth.ts                       — NextAuth v5 (GoogleProvider + JWT)
 └── middleware.ts                 — 미인증 접근 → /login 리다이렉트
 ```
@@ -74,7 +76,7 @@ interface Job {
   startedAt: string | null;
   completedAt: string | null;
   youtubeVideoId: string | null;
-  thumbnailUrl: string | null;  // sync-videos 후 YouTube API에서 채워짐
+  thumbnailUrl: string | null;  // render-worker 완료 시 API 프록시 URL로 먼저 채워짐; sync-videos 후 YouTube URL로 대체될 수 있음
   privacyStatus: string; // 'public' | 'unlisted' | 'private'
 }
 
@@ -94,6 +96,13 @@ interface AnalyticsRow {
 ```
 
 ## 주요 동작 규칙
+
+### 썸네일 표시 전략
+- `thumbnailUrl`은 두 가지 값을 가질 수 있음:
+  1. **S3 URL** (`https://*.s3.amazonaws.com/jobs/{jobId}/thumbnail.jpg`): render-worker 완료 직후 상태. CORS 문제 방지를 위해 `toProxyThumbUrl()`로 `/api/thumbnail/{jobId}` 프록시 URL로 변환 후 사용
+  2. **YouTube URL** (`https://i.ytimg.com/vi/{videoId}/hqdefault.jpg`): upload-worker 완료 시 DB에 직접 저장. 프록시 불필요, 직접 사용
+- `toProxyThumbUrl(url)`: S3 URL이면 `/api/thumbnail/{jobId}` 반환, 그 외(YouTube URL 등)는 원본 반환
+- `/api/thumbnail/[id]` route: `API_INTERNAL_URL/jobs/{id}/thumbnail` 경유로 S3 콘텐츠를 same-origin으로 프록시. `Cache-Control: public, max-age=3600`
 
 ### 폴링
 - 홈(`/`): 진행 중 Job이 있으면 2초, 모두 완료/실패면 30초
@@ -140,7 +149,8 @@ interface AnalyticsRow {
 - 오늘 기준 28일 범위 고정 (`d.setDate(d.getDate() - (27 - i))`)
 - X축 포맷: M/D 형식 (`${parseInt(mm!)}/${parseInt(dd!)}`) — `toLocaleDateString` 사용 금지 (hydration 오류)
 - `interval={0}` 으로 모든 28개 tick 표시
-- 마지막 날짜 짤림 방지: `margin={{ right: 20 }}` (두 차트 모두 적용)
+- 날짜 선 정렬: `margin={{ top: 4, right: 20, left: 20, bottom: 0 }}` (두 차트 모두 적용) — left/right 대칭 20px 여백으로 첫·마지막 날짜 레이블 모두 표시, 선이 날짜 범위 내에서만 그려짐
+- `interval={6}` 으로 7일 간격 레이블만 표시 (28일 중 약 4개) — `interval={0}` 전체 표시 시 모바일에서 레이블 겹침 발생
 - 차트 클릭 시 흰색 outline 제거: `[&_*]:outline-none` (두 차트 모두 적용 — svg·wrapper 포함 모든 자식 대상)
 
 **스케줄러 패널 (overflow 처리):**

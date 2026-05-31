@@ -24,7 +24,7 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-white/10 bg-black/60 backdrop-blur-md md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex border-t border-white/20 bg-black/80 backdrop-blur-md md:hidden pb-[env(safe-area-inset-bottom)]">
       {items.map(({ href, Icon }) => {
         const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
         return (

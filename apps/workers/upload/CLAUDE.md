@@ -2,7 +2,7 @@
 
 SQS upload-queue를 폴링해 YouTube Data API로 영상을 업로드하는 Lambda 워커.
 
-파이프라인: upload-queue → [S3 영상 다운로드] → [YouTube 업로드] → DB 상태 COMPLETED 업데이트
+파이프라인: upload-queue → [S3 영상 다운로드] → [영상 품질 검증] → [YouTube 업로드] → DB 상태 COMPLETED 업데이트
 
 ## 처리 흐름
 
@@ -10,9 +10,11 @@ SQS upload-queue를 폴링해 YouTube Data API로 영상을 업로드하는 Lamb
 2. DB에서 채널의 암호화된 refreshToken 조회 → AES-256-GCM 복호화
 3. Job의 scriptContent(title, description, hashtags) 조회
 4. S3에서 영상(`jobs/{jobId}/output.mp4`) 다운로드 → `/tmp/{jobId}-output.mp4` 저장
-5. YouTube Data API v3로 영상 업로드
-6. DB 업데이트: `youtubeVideoId`, `privacyStatus: 'public'`, `status: 'COMPLETED'`, `completedAt`
-7. 실패 시: `status: 'FAILED'`, `failReason` 기록 후 예외 재throw (SQS 재시도)
+5. ffprobe로 업로드 전 영상 품질 검증 (`validateVideo()`) — 실패 시 즉시 FAILED
+6. YouTube Data API v3로 영상 업로드
+7. DB 업데이트: `youtubeVideoId`, `privacyStatus: 'public'`, `status: 'COMPLETED'`, `completedAt`
+   - `thumbnailUrl: https://i.ytimg.com/vi/{videoId}/hqdefault.jpg` 를 직접 DB에 저장 (`setYouTubeThumbnail()` 제거됨)
+8. 실패 시: `status: 'FAILED'`, `failReason` 기록 후 예외 재throw (SQS 재시도)
 
 ## YouTube 업로드 메타데이터
 

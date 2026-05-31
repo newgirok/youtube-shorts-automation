@@ -19,6 +19,7 @@ jobs/{jobId}/script.json
 jobs/{jobId}/audio.mp3
 jobs/{jobId}/subtitle.srt
 jobs/{jobId}/output.mp4
+jobs/{jobId}/thumbnail.jpg   — render-worker가 FFmpeg 3초 프레임으로 생성
 ```
 
 ## SQS 고정값
@@ -76,11 +77,11 @@ for (let attempt = 1; attempt <= 3; attempt++) {
 ## ScriptOutput 8개 필드 (변경 시 downstream 전체 수정)
 ```typescript
 interface ScriptOutput {
-  title: string;          // 20자 이내
+  title: string;          // 22자 이내
   hook: string;           // 첫 2초 훅
-  script: string;         // 180~250자
+  script: string;         // 210~260자 (title TTS 포함 총 35~45초)
   description: string;    // YouTube 영상 설명문 (3~5문단, 400~800자, 면책 공지 포함)
-  scenes: Scene[];        // 4~6개
+  scenes: Scene[];        // 4~5개
   hashtags: string[];
   thumbnail_text: string; // 8자 이내
   comment_bait: string;   // 25자 이내

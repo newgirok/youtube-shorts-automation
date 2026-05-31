@@ -54,7 +54,7 @@ export async function downloadSceneVideo(
   const query = `korean ${keyword}`;
   const encoded = encodeURIComponent(query);
   const page = Math.floor(Math.random() * 3) + 1;
-  const url = `https://api.pexels.com/videos/search?query=${encoded}&orientation=portrait&size=small&per_page=15&page=${page}`;
+  const url = `https://api.pexels.com/videos/search?query=${encoded}&orientation=portrait&size=large&per_page=15&page=${page}`;
 
   const data = await new Promise<string>((resolve, reject) => {
     get(url, { headers: { Authorization: apiKey } }, (res) => {

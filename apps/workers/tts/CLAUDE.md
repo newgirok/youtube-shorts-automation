@@ -16,6 +16,7 @@ SQS tts-queue를 폴링해 Edge-TTS로 음성을 합성하는 워커.
 
 - 엔진: Edge-TTS
 - 음성: `ko-KR-SunHiNeural`
+- 재생속도: `--rate +20%` (YouTube Shorts 60초 제한 대응)
 - 입력: `title` + `script` 필드 (ScriptOutput)
 - 출력: `/tmp/{jobId}-audio.mp3` → S3 `jobs/{jobId}/audio.mp3`
 

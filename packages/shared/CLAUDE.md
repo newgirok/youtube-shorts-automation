@@ -12,7 +12,7 @@
 | 모듈 | 경로 | 설명 |
 |---|---|---|
 | prisma | `src/prisma.ts` | Lambda 싱글턴 Prisma Client — 직접 `new PrismaClient()` 금지 |
-| s3 | `src/s3.ts` | `uploadToS3`, `downloadFromS3`, `jobKey` 유틸 |
+| s3 | `src/s3.ts` | `uploadToS3`, `downloadFromS3`, `jobKey` 유틸 — `.jpg/.jpeg` 포함 Content-Type 자동 판별 |
 | logger | `src/logger.ts` | `createLogger({ jobId, channelId })` — Pino 기반 구조적 로거 |
 | env | `src/env.ts` | `BaseEnvSchema` (Zod) — 각 앱에서 `.extend()`로 확장 |
 | types | `src/types.ts` | `ScriptOutput` (8필드), `ScriptContent` (title·description·hashtags·thumbnail_text), SQS 메시지 타입 |

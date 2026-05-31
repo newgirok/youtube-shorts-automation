@@ -16,6 +16,7 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
 
 1. S3에서 audio.mp3, subtitle.srt 다운로드
 2. DB의 `scriptContent.scenes` 배열 순회
+   - 씬 합계가 오디오보다 짧으면 마지막 씬을 오디오 끝까지 연장 (comment_bait 잘림 방지)
    - 각 scene의 `keyword`(영어)로 Pexels **동영상** 우선 시도 (`downloadSceneVideo`)
    - 동영상 실패 시 Pexels **이미지** fallback (`downloadSceneImage`)
    - 이미지도 Pexels 실패 시 `job.topic`으로 재시도
@@ -23,7 +24,8 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
    - `renderSceneClip()`: 이미지 → zoompan 효과 → 1080×1920 MP4 클립
 3. scenes가 없는 경우: topic 키워드로 단일 이미지 fallback (50초 zoom-in)
 4. `concatClipsWithAudio()`: 클립 concat → **헤더 오버레이** + 오디오 + **ASS 자막** burn-in → output.mp4
-   - FFmpeg vfFilter 끝에 `tpad=stop_mode=clone:stop_duration=60` 추가 — 씬 클립 합계가 오디오보다 짧을 때 마지막 프레임을 반복해 비디오 스트림 공백(음성만 나오는 freeze) 방지
+   - 출력 길이 = `min(concat_raw.mp4 길이, min(audio 길이, 60초))` — 씬 클립 합계가 오디오보다 짧으면 오디오를 잘라 화면 정지(tpad clone) 방지
+5. 썸네일 추출: FFmpeg `-ss 3 -vframes 1` → `jobs/{jobId}/thumbnail.jpg` S3 업로드 → DB `thumbnailUrl = '/jobs/{jobId}/thumbnail'` 저장 (non-fatal, 실패 시 무시)
 
 ## zoompan 효과
 
@@ -80,6 +82,16 @@ Style: Default,{FontName},76,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,
 - PrimaryColour=**&H00FFFFFF (흰색)**, OutlineColour=&H00000000(검정 박스)
 - Alignment=2 (하단 중앙), **MarginV=510** → 푸터 상단(y=1300) 직상단 배치
 - affiliate CTA 자막 없음
+
+## S3 출력 파일
+
+```
+jobs/{jobId}/output.mp4      — 최종 렌더링 영상
+jobs/{jobId}/thumbnail.jpg   — FFmpeg 3초 지점 프레임 캡처 썸네일
+```
+
+- `thumbnailUrl = '/jobs/{jobId}/thumbnail'` 형태로 DB 저장
+- API `GET /jobs/:id/thumbnail` 엔드포인트가 S3에서 프록시 서빙
 
 ## SQS 메시지 구조
 

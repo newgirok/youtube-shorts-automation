@@ -300,6 +300,23 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
     return { date: `${parseInt(mm!)}/${parseInt(dd!)}`, views: row?.views ?? 0, subscribers: row?.subscribers ?? 0 };
   });
 
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const update = () => setIsMobile(window.innerWidth < 768);
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  // 모바일: 9일 간격(균일) + 마지막 날짜 항상 포함 → 0, 9, 18, 27
+  const mobileTicks = (() => {
+    const result: string[] = [];
+    for (let i = 0; i < chartData.length; i += 9) result.push(chartData[i]!.date);
+    const last = chartData[chartData.length - 1]!.date;
+    if (!result.includes(last)) result.push(last);
+    return result;
+  })();
+
   const subscriberCount = channel.subscriberCount ?? 0;
   const totalViews = Number(channel.totalViews ?? 0);
   const uploadCount90d = channel.uploadCount90d ?? 0;
@@ -355,14 +372,14 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
             <p className="text-[10px] text-white/30 mb-2 uppercase tracking-wider">조회수</p>
             <div style={{ height: 140 }} className="[&_*]:outline-none">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 4, right: 20, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 4, right: 20, left: 20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="viewsGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="rgba(255,255,255,0.15)" stopOpacity={1} />
                       <stop offset="95%" stopColor="rgba(255,255,255,0)" stopOpacity={1} />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="date" interval={0} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 8 }} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="date" interval={0} ticks={isMobile ? mobileTicks : undefined} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 8 }} tickLine={false} axisLine={false} />
                   <Tooltip cursor={false} contentStyle={{ background: 'rgba(10,10,20,0.9)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, fontSize: 11, color: 'rgba(255,255,255,0.85)' }} labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4 }} itemStyle={{ color: 'rgba(255,255,255,0.85)' }} />
                   <Area type="monotone" dataKey="views" name="조회수" stroke="rgba(255,255,255,0.6)" strokeWidth={1.5} fill="url(#viewsGradient)" dot={false} isAnimationActive={false} />
                 </AreaChart>
@@ -373,14 +390,14 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
             <p className="text-[10px] text-white/30 mb-2 uppercase tracking-wider">구독자 증가</p>
             <div style={{ height: 140 }} className="[&_*]:outline-none">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 4, right: 20, left: -20, bottom: 0 }}>
+                <AreaChart data={chartData} margin={{ top: 4, right: 20, left: 20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="subsGradient" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="rgba(255,255,255,0.12)" stopOpacity={1} />
                       <stop offset="95%" stopColor="rgba(255,255,255,0)" stopOpacity={1} />
                     </linearGradient>
                   </defs>
-                  <XAxis dataKey="date" interval={0} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 8 }} tickLine={false} axisLine={false} />
+                  <XAxis dataKey="date" interval={0} ticks={isMobile ? mobileTicks : undefined} tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 8 }} tickLine={false} axisLine={false} />
                   <Tooltip cursor={false} contentStyle={{ background: 'rgba(10,10,20,0.9)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8, fontSize: 11, color: 'rgba(255,255,255,0.85)' }} labelStyle={{ color: 'rgba(255,255,255,0.5)', marginBottom: 4 }} itemStyle={{ color: 'rgba(255,255,255,0.85)' }} />
                   <Area type="monotone" dataKey="subscribers" name="구독자" stroke="rgba(255,255,255,0.5)" strokeWidth={1.5} fill="url(#subsGradient)" dot={false} isAnimationActive={false} />
                 </AreaChart>

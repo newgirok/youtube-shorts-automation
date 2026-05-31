@@ -2,9 +2,10 @@
 
 import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Eye, ThumbsUp, Clock, RefreshCw, ExternalLink } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
+import { toProxyThumbUrl } from '@/lib/utils';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import type { Job } from '@/lib/types';
 
@@ -28,6 +29,8 @@ export default function JobDetailPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const syncedRef = useRef(false);
+  const [thumbnailError, setThumbnailError] = useState(false);
+  const prevThumbUrlRef = useRef<string | null | undefined>(undefined);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ['job', id],
@@ -43,10 +46,37 @@ export default function JobDetailPage() {
   useEffect(() => {
     if (!job?.channelId || !job?.youtubeVideoId || syncedRef.current) return;
     syncedRef.current = true;
-    apiPost(`/channels/${job.channelId}/sync-videos`, {})
-      .then(() => queryClient.invalidateQueries({ queryKey: ['job', id] }))
-      .catch(() => {});
+    const channelId = job.channelId;
+
+    const doSync = () =>
+      apiPost(`/channels/${channelId}/sync-videos`, {})
+        .then(() => queryClient.invalidateQueries({ queryKey: ['job', id] }))
+        .catch(() => {});
+
+    doSync();
+    // YouTube 썸네일 처리 완료까지 대기 후 재sync (업로드 직후 회색 이미지 → 실제 썸네일 교체)
+    const t1 = setTimeout(doSync, 10_000);
+    const t2 = setTimeout(doSync, 40_000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [job?.channelId, job?.youtubeVideoId, id, queryClient]);
+
+  // thumbnailUrl이 새 URL로 바뀌면 에러 상태 리셋
+  useEffect(() => {
+    const newUrl = job?.thumbnailUrl;
+    if (prevThumbUrlRef.current !== undefined && prevThumbUrlRef.current !== newUrl) {
+      setThumbnailError(false);
+    }
+    prevThumbUrlRef.current = newUrl;
+  }, [job?.thumbnailUrl]);
+
+  // YouTube CDN 썸네일 미처리(404) 시 15초 후 자동 재시도
+  useEffect(() => {
+    if (!thumbnailError) return;
+    const url = job?.thumbnailUrl ?? '';
+    if (!url.includes('ytimg.com')) return;
+    const timer = setTimeout(() => setThumbnailError(false), 15_000);
+    return () => clearTimeout(timer);
+  }, [thumbnailError, job?.thumbnailUrl]);
 
   if (isLoading) {
     return (
@@ -75,9 +105,9 @@ export default function JobDetailPage() {
         {/* 메인 3컬럼 스켈레톤 */}
         <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 flex-1 lg:min-h-0">
           {/* 좌 패널 */}
-          <div className="lg:col-span-3 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 flex flex-col gap-3 min-h-[200px] lg:min-h-0">
+          <div className="lg:col-span-3 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 flex flex-col gap-3 min-h-[200px] lg:min-h-0 overflow-y-auto">
             <div className="h-3 w-16 rounded animate-pulse bg-white/10 shrink-0" />
-            <div className="w-full rounded-xl bg-white/10 animate-pulse aspect-video shrink-0" />
+            <div className="w-full h-52 rounded-xl bg-white/10 animate-pulse shrink-0" />
             <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 shrink-0 flex items-center justify-between gap-2">
               <div className="h-3 w-8 rounded animate-pulse bg-white/10" />
               <div className="h-4 w-14 rounded animate-pulse bg-white/10" />
@@ -96,32 +126,52 @@ export default function JobDetailPage() {
             </div>
           </div>
 
-          {/* 중 패널 */}
+          {/* 중 패널 — 타임라인 7단계 */}
           <div className="lg:col-span-4 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 overflow-y-auto min-h-[200px] lg:min-h-0">
             <div className="h-4 w-20 rounded animate-pulse bg-white/10 mb-4" />
             <div className="flex flex-col gap-4">
-              {[0, 1, 2, 3, 4, 5].map((i) => (
+              {[0, 1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <div className="w-4 h-4 rounded-full animate-pulse bg-white/10 shrink-0" />
-                  <div className="flex flex-col gap-1 flex-1">
-                    <div className="h-3 w-24 rounded animate-pulse bg-white/10" />
-                    <div className="h-2.5 w-16 rounded animate-pulse bg-white/10" />
-                  </div>
+                  <div className="w-8 h-8 rounded-full animate-pulse bg-white/10 shrink-0" />
+                  <div className="h-3 w-20 rounded animate-pulse bg-white/10" />
                 </div>
               ))}
             </div>
           </div>
 
-          {/* 우 패널 */}
+          {/* 우 패널 — 후크/썸네일텍스트/해시태그/스크립트/댓글유도 5섹션 */}
           <div className="lg:col-span-5 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 overflow-y-auto min-h-[200px] lg:min-h-0">
             <div className="h-4 w-24 rounded animate-pulse bg-white/10 mb-4" />
             <div className="space-y-4">
-              {[0, 1, 2, 3].map((i) => (
-                <div key={i}>
-                  <div className="h-3 w-16 rounded animate-pulse bg-white/10 mb-1.5" />
-                  <div className="h-4 w-full rounded animate-pulse bg-white/10" />
+              {/* 후크 */}
+              <div>
+                <div className="h-2.5 w-14 rounded animate-pulse bg-white/10 mb-1.5" />
+                <div className="h-5 w-full rounded animate-pulse bg-white/10" />
+              </div>
+              {/* 썸네일 텍스트 */}
+              <div>
+                <div className="h-2.5 w-20 rounded animate-pulse bg-white/10 mb-1.5" />
+                <div className="h-6 w-24 rounded-full animate-pulse bg-white/10" />
+              </div>
+              {/* 해시태그 */}
+              <div>
+                <div className="h-2.5 w-16 rounded animate-pulse bg-white/10 mb-1.5" />
+                <div className="flex flex-wrap gap-1.5">
+                  {[0,1,2,3,4].map(i => <div key={i} className="h-5 w-16 rounded-full animate-pulse bg-white/10" />)}
                 </div>
-              ))}
+              </div>
+              {/* 스크립트 */}
+              <div>
+                <div className="h-2.5 w-16 rounded animate-pulse bg-white/10 mb-1.5" />
+                <div className="rounded-xl bg-white/5 p-3 space-y-1.5">
+                  {[0,1,2,3,4].map(i => <div key={i} className="h-3 rounded animate-pulse bg-white/10" style={{ width: i === 4 ? '60%' : '100%' }} />)}
+                </div>
+              </div>
+              {/* 댓글 유도 */}
+              <div>
+                <div className="h-2.5 w-16 rounded animate-pulse bg-white/10 mb-1.5" />
+                <div className="h-4 w-3/4 rounded animate-pulse bg-white/10" />
+              </div>
             </div>
           </div>
         </div>
@@ -136,9 +186,7 @@ export default function JobDetailPage() {
   const title = job.scriptContent?.title ?? job.topic;
   const processingTime = calcProcessingTime(job.startedAt, job.completedAt);
   const isYoutubeDeleted = job.status === 'FAILED' && job.failReason === '유튜브에서 영상이 삭제되었습니다.';
-  const thumbnailUrl = job.youtubeVideoId
-    ? (job.thumbnailUrl ?? `https://img.youtube.com/vi/${job.youtubeVideoId}/hqdefault.jpg`)
-    : null;
+  const thumbnailUrl = toProxyThumbUrl(job.thumbnailUrl);
   const sc = job.scriptContent;
 
   return (
@@ -203,17 +251,18 @@ export default function JobDetailPage() {
       {/* 메인 가로 3컬럼 */}
       <div className="flex flex-col lg:grid lg:grid-cols-12 gap-3 flex-1 lg:min-h-0">
         {/* 좌: 영상 정보 — 모바일 1순위 */}
-        <div className="lg:col-span-3 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 flex flex-col gap-3 min-h-[200px] lg:min-h-0">
+        <div className="lg:col-span-3 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 flex flex-col gap-3 min-h-[200px] lg:min-h-0 overflow-y-auto">
           <p className="text-xs font-semibold text-white shrink-0">영상 정보</p>
           <div className="shrink-0">
-            {thumbnailUrl ? (
+            {thumbnailUrl && !thumbnailError ? (
               <img
                 src={thumbnailUrl}
                 alt={title}
-                className="w-full rounded-xl object-cover aspect-video"
+                onError={() => setThumbnailError(true)}
+                className="w-full max-h-60 rounded-xl object-cover"
               />
             ) : (
-              <div className="w-full rounded-xl bg-white/5 aspect-video flex items-center justify-center">
+              <div className="w-full h-36 rounded-xl bg-white/5 flex items-center justify-center">
                 <span className="text-xs text-white/30">썸네일 없음</span>
               </div>
             )}

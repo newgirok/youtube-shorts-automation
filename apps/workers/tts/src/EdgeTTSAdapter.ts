@@ -20,7 +20,7 @@ export class EdgeTTSAdapter implements TTSAdapter {
 
     const vttOut = this.vttPath(outputPath);
     execSync(
-      `"${this.edgeTtsPath}" --voice ko-KR-SunHiNeural --file "${textFile}" --write-media "${outputPath}" --write-subtitles "${vttOut}"`,
+      `"${this.edgeTtsPath}" --voice ko-KR-SunHiNeural --rate +20% --file "${textFile}" --write-media "${outputPath}" --write-subtitles "${vttOut}"`,
       { stdio: 'inherit', timeout: 120_000 }
     );
   }

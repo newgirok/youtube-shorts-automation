@@ -124,7 +124,7 @@ export function StatusTimeline({ job }: { job: Job }) {
             </div>
             <p className="text-sm font-semibold text-destructive">실패 원인</p>
           </div>
-          <p className="text-sm text-muted-foreground">{job.failReason ?? '알 수 없는 오류'}</p>
+          <p className="text-sm text-muted-foreground break-all">{job.failReason ?? '알 수 없는 오류'}</p>
           <Button variant="destructive" size="sm" onClick={handleRetry} className="mt-4">
             재시도
           </Button>

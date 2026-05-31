@@ -5,6 +5,7 @@ interface FfprobeStream {
   width?: number;
   height?: number;
   duration?: string;
+  nb_frames?: string;
 }
 
 interface FfprobeFormat {
@@ -47,8 +48,17 @@ export function validateVideo(videoPath: string, ffprobePath = 'ffprobe'): Valid
   if (isNaN(duration) || duration < 5) {
     return { valid: false, reason: `영상 길이 너무 짧음: ${duration.toFixed(1)}초` };
   }
-  if (duration > 65) {
-    return { valid: false, reason: `영상 길이 너무 김: ${duration.toFixed(1)}초 (Shorts 최대 60초)` };
+  if (duration > 60) {
+    return { valid: false, reason: `영상 길이 초과: ${duration.toFixed(1)}초 (Shorts 최대 60초)` };
+  }
+
+  const videoDur = parseFloat(video.duration ?? '');
+  const audioDur = parseFloat(audio.duration ?? '');
+  if (!isNaN(videoDur) && !isNaN(audioDur) && Math.abs(videoDur - audioDur) > 2) {
+    return {
+      valid: false,
+      reason: `영상/오디오 길이 불일치: 비디오 ${videoDur.toFixed(1)}초, 오디오 ${audioDur.toFixed(1)}초 (화면 정지 의심)`,
+    };
   }
 
   return { valid: true };

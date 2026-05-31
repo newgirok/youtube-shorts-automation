@@ -141,21 +141,19 @@ export class ChannelsService {
     // YouTube API는 한 번에 최대 50개 id 조회 가능
     const videoIds = jobs.map((j) => j.youtubeVideoId as string);
     const existingIds = new Set<string>();
-    const viewCountUpdates: Array<{ youtubeVideoId: string; viewCount: number; likeCount: number; privacyStatus: string; thumbnailUrl: string | null }> = [];
+    const viewCountUpdates: Array<{ youtubeVideoId: string; viewCount: number; likeCount: number; privacyStatus: string }> = [];
 
     for (let i = 0; i < videoIds.length; i += 50) {
       const chunk = videoIds.slice(i, i + 50);
-      const res = await yt.videos.list({ part: ['id', 'statistics', 'status', 'snippet'], id: chunk });
+      const res = await yt.videos.list({ part: ['id', 'statistics', 'status'], id: chunk });
       for (const item of res.data.items ?? []) {
         if (item.id) {
           existingIds.add(item.id);
-          const t = item.snippet?.thumbnails;
           viewCountUpdates.push({
             youtubeVideoId: item.id,
             viewCount: parseInt(item.statistics?.viewCount ?? '0', 10),
             likeCount: parseInt(item.statistics?.likeCount ?? '0', 10),
             privacyStatus: item.status?.privacyStatus ?? 'public',
-            thumbnailUrl: t?.maxres?.url ?? t?.high?.url ?? t?.medium?.url ?? null,
           });
         }
       }

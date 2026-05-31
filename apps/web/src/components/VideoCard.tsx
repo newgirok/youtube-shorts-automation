@@ -48,9 +48,9 @@ export function VideoCard({ video }: { video: JobType }) {
   return (
     <Card className="overflow-hidden cursor-pointer hover:ring-1 hover:ring-border transition-all">
       <div className="relative aspect-[9/16] max-h-36 bg-muted">
-        {!isDeleted && video.youtubeVideoId ? (
+        {!isDeleted && video.thumbnailUrl ? (
           <img
-            src={video.thumbnailUrl ?? `https://img.youtube.com/vi/${video.youtubeVideoId}/hqdefault.jpg`}
+            src={video.thumbnailUrl}
             alt={title}
             className="w-full h-full object-cover"
           />

@@ -70,8 +70,14 @@ Job 생성 및 상태 조회, 재시도.
 - `POST /jobs` — 채널 + 토픽으로 Job 생성 후 script-queue에 발행
 - `GET /jobs` — Job 목록 (channelId 쿼리로 필터링 가능)
 - `GET /jobs/:id` — Job 상세 조회 (없으면 404)
+- `GET /jobs/:id/thumbnail` — S3에서 썸네일 이미지(image/jpeg) 프록시 서빙 (없으면 404)
 - `POST /jobs/auto-news` — Google News RSS 수집 후 뉴스 제목으로 Job 일괄 생성
 - `POST /jobs/:id/retry` — FAILED 상태 Job만 PENDING으로 초기화 후 script-queue 재발행
+
+`thumbnailUrl` 반환 형식:
+- render-worker가 `/jobs/{jobId}/thumbnail` 형태로 DB 저장
+- `jobs.repository.ts`의 `resolveThumbUrl()`이 반환 시 `{API_BASE_URL}/jobs/{id}/thumbnail` 절대 URL로 변환
+- sync-videos 이후 YouTube URL(`https://img.youtube.com/vi/{id}/hqdefault.jpg`)로 대체될 수 있음
 
 `auto-news` 요청 바디:
 ```json

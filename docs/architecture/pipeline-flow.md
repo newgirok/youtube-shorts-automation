@@ -71,8 +71,10 @@
 │                                                         │
 │  SQS upload-queue 수신                                   │
 │  → S3에서 output.mp4 다운로드                             │
+│  → ffprobe 영상 품질 검증 (실패 시 FAILED)                │
 │  → YouTube Data API v3 업로드                            │
 │  → youtubeVideoId, 메타데이터 DB 저장                     │
+│  → thumbnailUrl: https://i.ytimg.com/vi/{videoId}/hqdefault.jpg DB 저장
 │  → Job status: UPLOAD_PROCESSING → COMPLETED            │
 └─────────────────────────────────────────────────────────┘
 ```
@@ -88,7 +90,7 @@
 | **실행 환경** | AWS Lambda (Node.js 20) |
 | **SQS 큐** | `script-queue` |
 | **입력** | `jobId`, `channelId`, `topic` |
-| **처리** | Gemini 2.5 Flash API — 뉴스 시사 특화, 25~35초 분량 스크립트 + scenes 생성 |
+| **처리** | Gemini 2.5 Flash API — 뉴스 시사 특화, 35~45초 분량 스크립트(210~260자) + scenes 생성 |
 | **출력** | `jobs/{jobId}/script.json` (S3) |
 | **다음 큐** | `tts-queue` |
 | **상태 전이** | `PENDING` → `SCRIPT_PROCESSING` |
@@ -109,7 +111,7 @@ interface ScriptMessage {
 | **실행 환경** | AWS Lambda (Node.js 20) |
 | **SQS 큐** | `tts-queue` |
 | **입력** | `jobId`, `channelId`, `scriptS3Key` |
-| **처리** | Edge-TTS `ko-KR-SunHiNeural` 음성 합성 |
+| **처리** | Edge-TTS `ko-KR-SunHiNeural --rate +20%` 음성 합성 (60초 제한 대응) |
 | **출력** | `jobs/{jobId}/audio.mp3` (S3) |
 | **다음 큐** | `subtitle-queue` |
 | **상태 전이** | `SCRIPT_PROCESSING` → `TTS_PROCESSING` |
@@ -151,8 +153,8 @@ interface SubtitleMessage {
 | **실행 환경** | ECS Fargate (상시 실행, `desired_count: 1`) |
 | **SQS 큐** | `render-queue` |
 | **입력** | `jobId`, `channelId`, `audioS3Key`, `subtitleS3Key` |
-| **처리** | scenes별 Pexels 이미지 다운로드 → zoompan 클립 생성 → FFmpeg concat + 오디오 + 자막 burn-in, 1080×1920 |
-| **출력** | `jobs/{jobId}/output.mp4` (S3) |
+| **처리** | scenes별 Pexels 동영상/이미지 다운로드 → zoompan 클립 생성 → FFmpeg concat + 오디오 + 자막 burn-in, 1080×1920 → FFmpeg 3초 프레임 썸네일 추출 |
+| **출력** | `jobs/{jobId}/output.mp4`, `jobs/{jobId}/thumbnail.jpg` (S3) |
 | **다음 큐** | `upload-queue` |
 | **상태 전이** | `SUBTITLE_PROCESSING` → `RENDER_PROCESSING` |
 
@@ -173,8 +175,8 @@ interface RenderMessage {
 | **실행 환경** | AWS Lambda (Node.js 20) |
 | **SQS 큐** | `upload-queue` |
 | **입력** | `jobId`, `channelId`, `videoS3Key` |
-| **처리** | YouTube Data API v3 — 영상 업로드, 제목/태그/설명 설정 |
-| **출력** | `youtubeVideoId` DB 저장, Job `COMPLETED` |
+| **처리** | ffprobe 영상 품질 검증 → YouTube Data API v3 업로드 — 제목/태그/설명 설정 |
+| **출력** | `youtubeVideoId` DB 저장, `thumbnailUrl: https://i.ytimg.com/vi/{videoId}/hqdefault.jpg` DB 저장, Job `COMPLETED` |
 | **다음 큐** | 없음 (파이프라인 종료) |
 | **상태 전이** | `RENDER_PROCESSING` → `UPLOAD_PROCESSING` → `COMPLETED` |
 
@@ -199,6 +201,11 @@ interface UploadMessage {
 | 오디오 | `jobs/{jobId}/audio.mp3` | 2단계 (tts-worker) |
 | 자막 | `jobs/{jobId}/subtitle.srt` | 3단계 (subtitle-worker) |
 | 최종 영상 | `jobs/{jobId}/output.mp4` | 4단계 (render-worker) |
+| 썸네일 | `jobs/{jobId}/thumbnail.jpg` | 4단계 (render-worker, FFmpeg 3초 프레임 추출 후 S3 저장) |
+
+**썸네일 URL 전환 흐름:**
+- render-worker 완료 → `thumbnailUrl` = S3 URL. web은 `/api/thumbnail/{jobId}` 프록시로 표시
+- upload-worker 완료 → `thumbnailUrl` = `https://i.ytimg.com/vi/{videoId}/hqdefault.jpg` 로 덮어씀
 
 ---
 

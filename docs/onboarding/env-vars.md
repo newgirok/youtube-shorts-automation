@@ -70,6 +70,7 @@ cp apps/web/.env.example apps/web/.env.local
 | `ENCRYPTION_KEY` |  | AES-256-GCM 암호화 키 (64자리 hex = 32 bytes) |
 | `WEB_ORIGIN` | - | CORS 허용 오리진 |
 | `API_INTERNAL_SECRET` | - | Web → API 내부 통신 인증 키 (openssl rand -hex 32 로 생성) |
+| `API_BASE_URL` | - | 썸네일 URL 절대 경로 생성용 (기본값: `http://localhost:3000`) |
 
 ### apps/workers/script
 
@@ -111,6 +112,7 @@ cp apps/web/.env.example apps/web/.env.local
 | `YOUTUBE_CLIENT_SECRET` |  | Google Cloud OAuth2 클라이언트 시크릿 |
 | `YOUTUBE_REFRESH_TOKEN` |  | YouTube 채널 OAuth2 refresh token |
 | `ENCRYPTION_KEY` |  | AES-256-GCM 암호화 키 |
+| `FFPROBE_PATH` | - | ffprobe 실행 경로 (Docker: `ffprobe`, Windows: 절대 경로). 업로드 전 영상 품질 검증용 |
 
 ### apps/web/.env.local
 

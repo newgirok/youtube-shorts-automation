@@ -81,9 +81,9 @@ Gemini API가 생성하는 스크립트는 아래 JSON 형식을 따릅니다:
 
 ```json
 {
-  "title": "영상 제목 (20자 이내, 충격·클릭 유도)",
+  "title": "영상 제목 (22자 이내, 충격·클릭 유도)",
   "hook": "첫 2초 훅 문장 (의문형 또는 충격 선언)",
-  "script": "전체 낭독 스크립트 (180~250자, comment_bait 마무리)",
+  "script": "전체 낭독 스크립트 (210~260자, 기승전결 구조, comment_bait 마무리)",
   "description": "YouTube 영상 설명문 (3~5문단, 400~800자). ~다고 합니다 중립 보도 문체. 마지막 문단 면책 공지.",
   "scenes": [{ "start": 0, "end": 6, "text": "...", "keyword": "영어 키워드", "effect": "zoom-in" }],
   "hashtags": ["#Shorts", "#시사", "#뉴스"],
@@ -96,9 +96,9 @@ Gemini API가 생성하는 스크립트는 아래 JSON 형식을 따릅니다:
 
 | 필드 | 규칙 | 비고 |
 |---|---|---|
-| `title` | 20자 이내, 충격·클릭 유도 | YouTube 제목으로 사용 |
+| `title` | 22자 이내, 충격·클릭 유도 | YouTube 제목으로 사용; TTS로 선행 낭독 |
 | `hook` | 첫 2초 훅 문장, 의문형 또는 충격 선언 | 시청자 이탈 방지용 ([용어 사전 참고](./terminology.md#hook)) |
-| `script` | 180~250자, 빠른 구어체 | TTS 입력, comment_bait으로 마무리 |
+| `script` | 210~260자, 기승전결 구어체 | TTS 입력; title 포함 총 35~45초; comment_bait으로 마무리 |
 | `description` | 3~5문단, 400~800자, `~다고 합니다` 중립 문체 | YouTube 영상 설명문으로 사용, 마지막 문단은 면책 공지 |
 | `hashtags` | 최소 `#Shorts` 포함 | YouTube description 말미에 삽입 |
 | `thumbnail_text` | 8자 이내 강렬한 문구 | 썸네일 이미지 오버레이 텍스트 |

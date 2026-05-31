@@ -23,6 +23,7 @@ function getContentType(key: string): string {
   if (key.endsWith('.mp3')) return 'audio/mpeg';
   if (key.endsWith('.srt')) return 'text/plain';
   if (key.endsWith('.json')) return 'application/json';
+  if (key.endsWith('.jpg') || key.endsWith('.jpeg')) return 'image/jpeg';
   return 'application/octet-stream';
 }
 

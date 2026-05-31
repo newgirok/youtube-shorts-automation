@@ -1,19 +1,23 @@
+export interface ScriptScene {
+  start: number;
+  end: number;
+  text: string;
+  keyword: string;
+  effect: 'zoom-in' | 'zoom-out' | 'pan-left' | 'pan-right';
+}
+
 export interface ScriptOutput {
   title: string;
   hook: string;
   script: string;
   description: string;
+  scenes: ScriptScene[];
   hashtags: string[];
   thumbnail_text: string;
   comment_bait: string;
 }
 
-export interface ScriptContent {
-  title?: string;
-  description?: string;
-  hashtags?: string[];
-  thumbnail_text?: string;
-}
+export type ScriptContent = Partial<ScriptOutput>;
 
 export interface BaseSQSMessage {
   jobId: string;

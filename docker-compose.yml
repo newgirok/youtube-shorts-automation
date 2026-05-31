@@ -19,6 +19,7 @@ services:
       - AWS_SECRET_ACCESS_KEY=test
     volumes:
       - ./infra/localstack/init:/etc/localstack/init/ready.d
+      - localstack_data:/var/lib/localstack
     healthcheck:
       test: ["CMD", "awslocal", "sqs", "list-queues"]
       interval: 10s
@@ -147,6 +148,7 @@ services:
     env_file: .env.local
     environment:
       <<: *docker-env
+      FFPROBE_PATH: ffprobe
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -155,3 +157,4 @@ services:
 
 volumes:
   postgres_data:
+  localstack_data:

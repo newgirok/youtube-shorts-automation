@@ -2,7 +2,8 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { SQSClient, SendMessageCommand, ChangeMessageVisibilityCommand } from '@aws-sdk/client-sqs';
 import { prisma, downloadFromS3, uploadToS3, jobKey, createLogger } from '@shorts/shared';
-import { renderSceneClip, renderSceneFromVideo, concatClipsWithAudio, type SceneEffect } from './renderer.js';
+import type { ScriptContent, ScriptScene } from '@shorts/shared';
+import { renderSceneClip, renderSceneFromVideo, concatClipsWithAudio, measureDuration } from './renderer.js';
 import { downloadSceneImage, downloadSceneVideo } from './image-generator.js';
 import type { Env } from './env.js';
 
@@ -11,20 +12,6 @@ interface Message {
   channelId: string;
   audioS3Key: string;
   subtitleS3Key: string;
-}
-
-interface Scene {
-  start: number;
-  end: number;
-  text: string;
-  keyword: string;
-  effect: SceneEffect;
-}
-
-interface ScriptContent {
-  title?: string;
-  thumbnail_text?: string;
-  scenes?: Scene[];
 }
 
 export async function processMessage(
@@ -68,6 +55,9 @@ export async function processMessage(
     ]);
     writeFileSync(audioPath, audioBuf);
 
+    const ffprobePath = env.FFMPEG_PATH.replace(/ffmpeg(\.exe)?$/, 'ffprobe$1');
+    const audioDuration = measureDuration(ffprobePath, audioPath);
+
     const job = await prisma.job.findUnique({
       where: { id: jobId },
       select: {
@@ -77,14 +67,19 @@ export async function processMessage(
     });
 
     const scriptContent = job?.scriptContent as ScriptContent | null;
-    const scenes: Scene[] = scriptContent?.scenes ?? [];
-    const fontName = env.FONTS_DIR
-      ? 'SB Aggro Bold'
-      : (process.platform === 'win32' ? 'Malgun Gothic Bold' : 'NanumSquare ExtraBold');
+    const scenes: ScriptScene[] = scriptContent?.scenes ?? [];
+    const fontName = 'SB Aggro Bold';
 
     const clipPaths: string[] = [];
 
     if (scenes.length > 0) {
+      // 씬 합계가 오디오보다 짧으면 마지막 씬을 오디오 끝까지 연장 (comment_bait 잘림 방지)
+      const totalSceneDuration = scenes.reduce((sum, s) => sum + (s.end - s.start), 0);
+      if (audioDuration > totalSceneDuration) {
+        const lastScene = scenes[scenes.length - 1]!;
+        lastScene.end += audioDuration - totalSceneDuration;
+      }
+
       log.info({ count: scenes.length }, '장면별 렌더링 시작');
 
       for (let i = 0; i < scenes.length; i++) {
@@ -127,15 +122,25 @@ export async function processMessage(
     writeFileSync(srtPath, finalSrt, 'utf-8');
 
     log.info('FFmpeg 최종 합성 시작');
-    concatClipsWithAudio(clipPaths, audioPath, srtPath, outputPath, env.FFMPEG_PATH, fontName, tmpDir, scriptContent?.title ?? '', env.FONTS_DIR);
+    const thumbnailPath = join(tmpDir, `${jobId}-thumbnail.jpg`);
+    concatClipsWithAudio(clipPaths, audioPath, srtPath, outputPath, env.FFMPEG_PATH, fontName, tmpDir, scriptContent?.title ?? '', env.FONTS_DIR, thumbnailPath);
 
     const videoBuf = readFileSync(outputPath);
     const videoS3Key = jobKey(jobId, 'output.mp4');
     await uploadToS3(videoS3Key, videoBuf);
 
+    let thumbnailUrl: string | undefined;
+    try {
+      await uploadToS3(jobKey(jobId, 'thumbnail.jpg'), readFileSync(thumbnailPath));
+      thumbnailUrl = `/jobs/${jobId}/thumbnail`;
+      log.info('썸네일 생성 완료');
+    } catch (thumbErr) {
+      log.warn({ thumbErr }, '썸네일 업로드 실패 (무시)');
+    }
+
     await prisma.job.update({
       where: { id: jobId },
-      data: { videoS3Key },
+      data: { videoS3Key, ...(thumbnailUrl ? { thumbnailUrl } : {}) },
     });
 
     await sqs.send(

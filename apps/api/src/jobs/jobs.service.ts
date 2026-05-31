@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
-import { createLogger } from '@shorts/shared';
+import { createLogger, downloadFromS3, jobKey } from '@shorts/shared';
 import { JobsRepository } from './jobs.repository.js';
 import { JobNotFoundError, JobNotRetryableError } from './jobs.errors.js';
 import { fetchNewsTopics } from './news-fetcher.js';
@@ -47,6 +47,14 @@ export class JobsService {
     if (items.length === 0) throw new Error('수집된 뉴스 없음');
     log.info({ category: dto.category, count: items.length }, '뉴스 자동 수집 완료');
     return Promise.all(items.map((item) => this.create(dto.channelId, item.title)));
+  }
+
+  async getThumbnail(id: string): Promise<Buffer | null> {
+    try {
+      return await downloadFromS3(jobKey(id, 'thumbnail.jpg'));
+    } catch {
+      return null;
+    }
   }
 
   async retry(id: string) {

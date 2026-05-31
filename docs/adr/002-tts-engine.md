@@ -8,7 +8,7 @@
 
 ## 결정
 
-**Phase 0~6:** Edge-TTS `ko-KR-SunHiNeural` 사용
+**Phase 0~6:** Edge-TTS `ko-KR-SunHiNeural --rate +20%` 사용
 
 - API 키 불필요 — Phase 0 검증 즉시 착수 가능
 - Microsoft Azure 기반으로 음질 양호
@@ -25,3 +25,4 @@
 - tts-worker 내부 구현을 인터페이스로 추상화해두면 엔진 교체 시 worker 외부 변경 없음
 - Edge-TTS는 비공식 API 의존 — Microsoft 정책 변경 시 중단 가능성 있음 (수용)
 - `ko-KR-SunHiNeural` 외 다른 음성 사용 시 품질 재검증 필요
+- `--rate +20%` 적용으로 기본 속도 대비 재생시간 ~17% 단축 → YouTube Shorts 60초 제한 내 수용 가능
