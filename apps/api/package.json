@@ -6,7 +6,7 @@
   "main": "./dist/main.js",
   "scripts": {
     "build": "tsc",
-    "dev": "node --env-file=../../.env.local ../../node_modules/tsx/dist/cli.mjs watch --tsconfig tsconfig.dev.json src/main.ts",
+    "dev": "node --env-file=../../.env.local --import=@swc-node/register/esm-register --watch src/main.ts",
     "start": "node dist/main.js",
     "lint": "eslint src --ext .ts"
   },
@@ -25,7 +25,10 @@
     "zod": "^4.0.0"
   },
   "devDependencies": {
+    "@swc-node/register": "^1.11.1",
+    "@swc/core": "^1.15.40",
     "@types/node": "^22.0.0",
+    "ts-node": "^10.9.2",
     "tsx": "^4.0.0",
     "typescript": "^5.7.0"
   }

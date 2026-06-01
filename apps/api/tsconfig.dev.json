@@ -1,3 +1,12 @@
 {
-  "extends": "./tsconfig.json"
+  "extends": "./tsconfig.json",
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "swcOptions": {
+    "jsc": {
+      "transform": {
+        "decoratorMetadata": true,
+        "legacyDecorator": true
+      }
+    }
+  }
 }

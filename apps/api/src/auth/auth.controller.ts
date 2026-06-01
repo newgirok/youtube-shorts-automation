@@ -1,5 +1,5 @@
 import { Controller, Get, Inject, Query, Res } from '@nestjs/common';
-import { FastifyReply } from 'fastify';
+import type { FastifyReply } from 'fastify';
 import { AuthService } from './auth.service.js';
 import { Public } from './public.decorator.js';
 
