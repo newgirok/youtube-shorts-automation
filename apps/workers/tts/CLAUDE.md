@@ -22,16 +22,27 @@ SQS tts-queue를 폴링해 Edge-TTS로 음성을 합성하는 워커.
 
 ## TTS 입력 전처리 (handler.ts)
 
-스크립트를 문장 단위로 `\n\n` 단락 분리하여 전달한다.
-edge-tts가 단락 경계를 VTT 엔트리로 분리하므로, subtitle-worker의 자막 타이밍 정확도가 향상된다.
+3단계 전처리 후 edge-tts에 전달한다.
 
 ```typescript
-const ttsInput = `${title}.\n\n${script.replace(/([.!?])\s+(?=[가-힣A-Z])/g, '$1\n\n')}`;
+// 1. comment_bait 직전 \n\n 삽입 → TTS 자연 pause (자막 타이밍과 무관)
+let processedScript = script;
+if (comment_bait) {
+  const idx = processedScript.lastIndexOf(comment_bait);
+  if (idx > 0 && processedScript[idx - 1] !== '\n') {
+    processedScript = `${processedScript.slice(0, idx)}\n\n${processedScript.slice(idx)}`;
+  }
+}
+
+// 2. 숫자+배수어 뒤 공백 제거 ("80만 명" → "80만명") — edge-tts VTT 엔트리 과분할 방지
+// 3. 마침표/느낌표/물음표 뒤 한글·대문자 → \n\n 단락 분리 → 문장별 VTT 엔트리 생성
+const ttsInput = `${title}.\n\n${normalizeNumberUnits(processedScript).replace(/([.!?])\s+(?=[가-힣A-Z])/g, '$1\n\n')}`;
 await tts.synthesize(ttsInput, audioPath);
 ```
 
-- 마침표/느낌표/물음표 뒤에 한글 또는 대문자가 이어지면 `\n\n`으로 분리
-- 제목과 본문 사이에도 `\n\n` 삽입
+- 1단계: comment_bait 직전 단락 경계 삽입 → TTS 음성에 자연스러운 정지 구간 생성
+- 2단계: `normalizeNumberUnits` — `(\d+[만억조천백십])\s+([명원개월일년주배곳건채팀회차])` 패턴의 공백 제거 → edge-tts가 숫자+단위를 별도 VTT 엔트리로 분할하는 현상 방지
+- 3단계: 마침표/느낌표/물음표 뒤에 한글 또는 대문자가 이어지면 `\n\n`으로 분리 → 문장별 VTT 엔트리 생성, subtitle-worker의 자막 타이밍 정확도 향상
 - 이 처리 없이 전달하면 VTT가 긴 블록으로 묶여 자막 타이밍이 부정확해짐
 
 ## VTT 출력

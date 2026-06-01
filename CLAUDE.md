@@ -9,7 +9,7 @@
 - TTS: Edge-TTS `ko-KR-SunHiNeural --rate +20%` (60초 제한 대응)
 - 자막: `script.json`의 `script` 필드 → 직접 SRT 생성 (faster-whisper 없음)
 - 렌더링: Pexels + zoompan (FontSize=76, ASS 자막, affiliate CTA 없음)
-- 썸네일: render-worker가 FFmpeg으로 3초 프레임 추출 → S3 저장 → upload-worker 완료 시 `https://i.ytimg.com/vi/{videoId}/hqdefault.jpg` DB 저장 (S3 URL은 web의 `/api/thumbnail/[id]` 프록시 경유)
+- 썸네일: render-worker가 FFmpeg으로 첫 프레임 추출 (헤더·푸터 오버레이 적용, `-vframes 1`) → S3 저장 → upload-worker 완료 시 `https://i.ytimg.com/vi/{videoId}/hqdefault.jpg` DB 저장 (S3 URL은 web의 `/api/thumbnail/[id]` 프록시 경유)
 - YouTube: `categoryId: '25'`, `containsSyntheticMedia: true`
 - description 형식: `{Gemini 생성 본문 설명}\n\n{해시태그}` (AI 공시 텍스트 없음, API 플래그로 대체)
 - 모든 패키지 ESM — import 경로에 `.js` 확장자 필수

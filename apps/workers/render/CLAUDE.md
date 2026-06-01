@@ -25,7 +25,7 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
 3. scenes가 없는 경우: topic 키워드로 단일 이미지 fallback (50초 zoom-in)
 4. `concatClipsWithAudio()`: 클립 concat → **헤더 오버레이** + 오디오 + **ASS 자막** burn-in → output.mp4
    - 출력 길이 = `min(concat_raw.mp4 길이, min(audio 길이, 60초))` — 씬 클립 합계가 오디오보다 짧으면 오디오를 잘라 화면 정지(tpad clone) 방지
-5. 썸네일 추출: FFmpeg `-ss 3 -vframes 1` → `jobs/{jobId}/thumbnail.jpg` S3 업로드 → DB `thumbnailUrl = '/jobs/{jobId}/thumbnail'` 저장 (non-fatal, 실패 시 무시)
+5. 썸네일 추출: FFmpeg `-vframes 1` (헤더·푸터 오버레이 적용 첫 프레임, `concatPath` 기준) → `jobs/{jobId}/thumbnail.jpg` S3 업로드 → DB `thumbnailUrl = '/jobs/{jobId}/thumbnail'` 저장 (non-fatal, 실패 시 무시)
 
 ## zoompan 효과
 
