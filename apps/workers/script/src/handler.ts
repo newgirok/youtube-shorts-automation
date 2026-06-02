@@ -12,6 +12,10 @@ interface SQSMessage {
 
 const sqs = new SQSClient({ region: process.env.AWS_REGION ?? 'ap-northeast-2' });
 
+// Windows CP949 → UTF-8 잘못 해석 시 나타나는 replacement character 제거
+const toSafeMsg = (err: unknown) =>
+  (err instanceof Error ? err.message : String(err)).replace(/�/g, '?');
+
 export const handler: SQSHandler = async (event: SQSEvent) => {
   const env = parseEnv();
 
@@ -53,7 +57,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
         where: { id: jobId },
         data: {
           status: 'FAILED',
-          failReason: err instanceof Error ? err.message : String(err),
+          failReason: toSafeMsg(err),
         },
       });
       throw err;

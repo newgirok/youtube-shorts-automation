@@ -7,6 +7,9 @@ import { renderSceneClip, renderSceneFromVideo, concatClipsWithAudio, measureDur
 import { downloadSceneImage, downloadSceneVideo } from './image-generator.js';
 import type { Env } from './env.js';
 
+const toSafeMsg = (err: unknown) =>
+  (err instanceof Error ? err.message : String(err)).replace(/�/g, "?");
+
 interface Message {
   jobId: string;
   channelId: string;
@@ -157,7 +160,7 @@ export async function processMessage(
       where: { id: jobId },
       data: {
         status: 'FAILED',
-        failReason: err instanceof Error ? err.message : String(err),
+        failReason: toSafeMsg(err),
       },
     });
     throw err;

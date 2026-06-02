@@ -7,6 +7,9 @@ import { uploadToYouTube } from './uploader.js';
 import { validateVideo } from './validator.js';
 import { parseEnv } from './env.js';
 
+const toSafeMsg = (err: unknown) =>
+  (err instanceof Error ? err.message : String(err)).replace(/�/g, "?");
+
 interface SQSMessage {
   jobId: string;
   channelId: string;
@@ -91,7 +94,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
         where: { id: jobId },
         data: {
           status: 'FAILED',
-          failReason: err instanceof Error ? err.message : String(err),
+          failReason: toSafeMsg(err),
         },
       });
       throw err;

@@ -120,6 +120,7 @@ services:
     environment:
       <<: *docker-env
       PYTHON_PATH: python3
+      FFPROBE_PATH: ffprobe
     depends_on:
       migrate:
         condition: service_completed_successfully

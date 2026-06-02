@@ -25,6 +25,9 @@ interface ScriptContent {
 
 const sqs = new SQSClient({ region: process.env.AWS_REGION ?? 'ap-northeast-2' });
 
+const toSafeMsg = (err: unknown) =>
+  (err instanceof Error ? err.message : String(err)).replace(/�/g, '?');
+
 // "80만 명" → "80만명" : 숫자+한국어 배수어 뒤 공백+단위를 붙여 edge-tts VTT 분리 방지
 function normalizeNumberUnits(text: string): string {
   return text.replace(/(\d+[만억조천백십])\s+([명원개월일년주배곳건채팀회차])/g, '$1$2');
@@ -99,7 +102,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
         where: { id: jobId },
         data: {
           status: 'FAILED',
-          failReason: err instanceof Error ? err.message : String(err),
+          failReason: toSafeMsg(err),
         },
       });
       throw err;
