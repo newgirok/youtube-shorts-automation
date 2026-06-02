@@ -48,12 +48,14 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
       const scriptBuf = await downloadFromS3(scriptS3Key);
       const { title, script, comment_bait } = JSON.parse(scriptBuf.toString()) as ScriptContent;
 
-      // comment_bait 직전에 \n\n 삽입 → TTS 자연 pause (자막 표시는 subtitle.srt 기반이라 영향 없음)
+      // comment_bait 앞 구두점을 제거하고 공백으로 연결 → '~하는데 여러분은~' 자연스러운 흐름
+      // (\n\n 삽입 방식은 TTS가 마침표 정지처럼 과도하게 끊어 읽는 문제 발생)
       let processedScript = script;
       if (comment_bait) {
         const idx = processedScript.lastIndexOf(comment_bait);
-        if (idx > 0 && processedScript[idx - 1] !== '\n') {
-          processedScript = `${processedScript.slice(0, idx)}\n\n${processedScript.slice(idx)}`;
+        if (idx > 0) {
+          const before = processedScript.slice(0, idx).trimEnd().replace(/[.!?,，。]+$/, '');
+          processedScript = `${before} ${processedScript.slice(idx)}`;
         }
       }
 
