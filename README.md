@@ -26,7 +26,9 @@ POST /jobs  또는  POST /jobs/auto-news
 ```bash
 pnpm install
 docker-compose up          # LocalStack + PostgreSQL + 전체 Worker 자동 기동
-curl -X POST http://localhost:3000/jobs   -H "Content-Type: application/json"   -d '{"channelId": "<id>", "topic": "한국 경제 전망"}'
+curl -X POST http://localhost:3000/jobs \
+  -H "Content-Type: application/json" \
+  -d '{"channelId": "<id>", "topic": "한국 경제 전망"}'
 ```
 
 자세한 환경 세팅 → [로컬 환경 세팅 가이드](docs/onboarding/local-setup.md)
