@@ -194,7 +194,7 @@ export default function JobDetailPage() {
   const sc = job.scriptContent;
 
   return (
-    <div className="flex flex-col px-4 py-4 md:px-6 gap-3 lg:h-screen lg:overflow-y-auto">
+    <div className="flex flex-col px-4 pt-6 pb-4 md:px-6 gap-3 lg:h-screen lg:overflow-y-auto">
       {/* 헤더 */}
       <div className="shrink-0 flex items-center gap-3 justify-between">
         <h1 className="text-base font-semibold text-white truncate">{title}</h1>
@@ -257,7 +257,7 @@ export default function JobDetailPage() {
         {/* 좌: 영상 정보 — 모바일 1순위 */}
         <div className="lg:col-span-3 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 flex flex-col gap-3 min-h-[200px] lg:min-h-0 overflow-y-auto">
           <p className="text-xs font-semibold text-white shrink-0">영상 정보</p>
-          <div className="relative shrink-0 w-full h-48 rounded-xl overflow-hidden bg-black/20">
+          <div className="relative shrink-0 w-full h-60 rounded-xl overflow-hidden bg-black/20">
             {showPlayer && job.youtubeVideoId ? (
               <iframe
                 className="absolute inset-0 w-full h-full"
