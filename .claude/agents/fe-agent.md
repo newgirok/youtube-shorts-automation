@@ -19,46 +19,48 @@ disallowedTools:
 ## 담당 범위
 
 - `apps/web/src/app/(auth)/` — 로그인 페이지, NextAuth 설정
-- `apps/web/src/app/(dashboard)/dashboard/` — Job 카드 피드
-- `apps/web/src/app/(dashboard)/jobs/new/` — Job 생성 폼
-- `apps/web/src/app/(dashboard)/jobs/[id]/` — Job 상태 타임라인 + 재시도
+- `apps/web/src/app/(dashboard)/` — 홈(토픽 입력·갤러리), Job 상세
+- `apps/web/src/app/(dashboard)/dashboard/[id]/` — Job 상태 타임라인 + 재시도
 - `apps/web/src/app/(dashboard)/channels/[id]/` — 채널 관리
 - `apps/web/src/components/` — 공통 UI 컴포넌트
 
 ## 주요 화면별 스펙
 
-### `/dashboard`
-- 채널 탭 + 날짜별 Job 카드 피드
-- JobCard: status Badge, 날짜, `scriptContent.title`, 조회수
-- 이번 달 요약: 총 업로드·성공/실패·총 조회수
+### `/` (홈)
+- 토픽 입력 textarea + 생성하기 버튼 — 채널 미연결 시 disabled
+- 카테고리 버튼 (종합·정치·경제·사회) — `POST /jobs/auto-news` 호출
+- 연/월 필터 + Job 카드 갤러리 카루셀 (activeChannelId 있을 때만 표시)
+- 진행 중 Job 있으면 2초, 모두 완료·실패 시 30초 폴링
+- 서버 컴포넌트(page.tsx)에서 `GET /channels` fetch → HomeClient에 prop 전달
 
-### `/jobs/new`
-- 채널 선택 드롭다운 (`GET /channels` 로 채널 목록 로드)
-- 토픽 텍스트 입력
-- 제출 → `POST /jobs` → 성공 시 `/jobs/{id}` 리다이렉트
-
-### `/jobs/[id]`
-- StatusTimeline: PENDING → SCRIPT → TTS → SUBTITLE → RENDER → UPLOAD → COMPLETED
+### `/dashboard/[id]`
+- StatusTimeline: PENDING → 스크립트 → TTS → 자막 → 렌더링 → 업로드 → 완료
 - 각 단계: 완료/진행 중/대기 아이콘, 시작 시각, 소요 시간
-- FAILED 시: `failReason` + 재시도 버튼
+- FAILED 시: `failReason` + 재시도 버튼 (삭제된 영상이면 재시도 미노출)
+- 완료 시: 썸네일, 조회수·좋아요, YouTube 링크, privacyStatus 배지
 
 ### `/channels/[id]`
-- 업로드 스케줄 cron 입력
-- 토픽 큐 CRUD (드래그앤드롭 순서 변경 구현 시 `@dnd-kit/core`, `@dnd-kit/sortable` 패키지 추가 필요)
-- Analytics 테이블: 날짜별 views·subscribers·estimatedRevenue
-- YPP 진행률: 구독자 1,000명 / 시청시간 4,000시간
+- YPP 달성 현황 (1단계·2단계 진행률)
+- Recharts 차트: 최근 28일 조회수·구독자 (YouTube Analytics API)
+- 자동 업로드 스케줄러: 주기(매시간·매일·매주)·시간·요일·카테고리 설정
+- 채널 정보: 이름·카테고리·운영 상태·개설일·업로드 설정
 
 ## API 엔드포인트 연동 (apps/api 기준)
 
 | 화면 | 메서드 | 경로 |
 |---|---|---|
 | 채널 목록 | GET | `/channels` |
-| Job 생성 | POST | `/jobs` |
-| Job 목록 | GET | `/jobs?channelId&date` |
-| Job 상세 | GET | `/jobs/:id` |
-| 재시도 | POST | `/jobs/:id/retry` |
+| 채널 상세 | GET | `/channels/:id` |
+| 채널 동기화 | POST | `/channels/:id/sync` |
+| 영상 조회수 동기화 | POST | `/channels/:id/sync-videos` |
 | 채널 스케줄 | PATCH | `/channels/:id/schedule` |
 | Analytics | GET | `/channels/:id/analytics` |
+| Job 생성 | POST | `/jobs` |
+| Auto-News | POST | `/jobs/auto-news` |
+| Job 목록 | GET | `/jobs?channelId` |
+| Job 상세 | GET | `/jobs/:id` |
+| 썸네일 프록시 | GET | `/jobs/:id/thumbnail` |
+| 재시도 | POST | `/jobs/:id/retry` |
 
 ## 참고 문서
 - `docs/prd.md` — 화면별 기능 요구사항

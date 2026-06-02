@@ -90,12 +90,10 @@ Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라
 
 | 페이지 | 기능 |
 |---|---|
-| `/` | 로그인 / 랜딩 |
-| `/dashboard` | 채널 탭 + 날짜별 Job 카드 피드 (2초 폴링, 조회수 실시간 표시), 이번 달 요약 |
-| `/dashboard` | 토픽 입력 폼 + `POST /jobs`, `POST /jobs/auto-news` |
+| `/login` | Google 소셜 로그인 (NextAuth v5) |
+| `/` | 토픽 입력 폼 + 카테고리 버튼 (Auto-News) + Job 카드 갤러리 (2초 폴링) |
 | `/dashboard/[id]` | Job 상태 타임라인, 실패 시 failReason + 재시도, privacyStatus 표시 |
-| `/channels` | 채널 목록, OAuth2 연결, 활성화 토글 |
-| `/channels/[id]` | 업로드 스케줄 설정, 성과 테이블 (views·subscribers·watchTimeMinutes), YPP 진행률 대시보드 |
+| `/channels/[id]` | YPP 진행률, 채널 성과 차트, 자동 업로드 스케줄러 설정 |
 
 **Job 상태 전이:**
 
@@ -111,7 +109,7 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
   2. YouTube Analytics API: 최근 30일 일별 views, subscribersGained, estimatedMinutesWatched → `ChannelAnalytics` upsert
   3. YouTube Data API: 모든 영상 조회수·likeCount·privacyStatus 동기화
   4. 삭제된 영상 자동 감지 → `status=FAILED`, `failReason='유튜브에서 영상이 삭제되었습니다.'`
-- 채널 탭 전환 시 자동 sync 실행
+- 홈 페이지 마운트 시 자동 sync 실행
 
 ### 4-6. 모니터링 및 알림
 

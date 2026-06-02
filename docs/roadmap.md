@@ -164,13 +164,13 @@
     - Google 로그인 후 `/dashboard` 이동
     - 미인증 `/dashboard` 접근 시 `/login` 리다이렉트
 
-- **P2-2.** `/dashboard` — Job 카드 피드 + 2초 폴링 `[FE][BE]`
-  - 채널 전환 시 자동 sync (`POST /channels/:id/sync`) 실행
-  - Job 카드: 상태 Badge, 날짜, 제목, 조회수 실시간 표시
-  - 이번 달 요약: 총 업로드·성공/실패·총 조회수
+- **P2-2.** `/` — 홈 (토픽 입력·Auto-News·Job 갤러리) `[FE][BE]`
+  - 홈 마운트 시 자동 sync (`POST /channels/:id/sync`) 실행
+  - Job 카드 갤러리: 상태 Badge, 제목, 조회수 실시간 표시 (2초 폴링)
+  - 카테고리 버튼 (종합·정치·경제·사회) → `POST /jobs/auto-news` 호출
   - 검증
     - Job 상태 변경이 2초 이내 반영
-    - 채널 탭 전환 → 자동 sync → 최신 데이터 표시
+    - 채널 미연결 시 입력 폼 disabled
 
 - **P2-3.** `/dashboard/[id]` — 상태 타임라인 + 재시도 `[FE][BE]`
   - `StatusTimeline`: 각 단계 완료/진행/대기 표시
