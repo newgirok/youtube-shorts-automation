@@ -4,6 +4,17 @@ SQS upload-queue를 폴링해 YouTube Data API로 영상을 업로드하는 Lamb
 
 파이프라인: upload-queue → [S3 영상 다운로드] → [영상 품질 검증] → [YouTube 업로드] → DB 상태 COMPLETED 업데이트
 
+## 에러 메시지 인코딩 처리
+
+Windows 로컬 환경에서 `failReason`에 깨진 문자(`�`) 저장 방지:
+
+```typescript
+const toSafeMsg = (err: unknown) =>
+  (err instanceof Error ? err.message : String(err)).replace(/�/g, '?');
+```
+
+`failReason` DB 저장 시 `toSafeMsg(err)` 사용.
+
 ## 처리 흐름
 
 1. SQS 메시지 수신: `{ jobId, channelId, videoS3Key }`

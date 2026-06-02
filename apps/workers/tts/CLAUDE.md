@@ -12,6 +12,17 @@ SQS tts-queue를 폴링해 Edge-TTS로 음성을 합성하는 워커.
 - `local-runner.ts` — Docker Compose 환경용 SQS Long Polling 루프
 - `env.ts` — 환경변수 파싱 (`EDGE_TTS_PATH`, `SQS_SUBTITLE_QUEUE_URL` 등)
 
+## 에러 메시지 인코딩 처리
+
+Windows 로컬 환경에서 `failReason`에 깨진 문자(`�`) 저장 방지:
+
+```typescript
+const toSafeMsg = (err: unknown) =>
+  (err instanceof Error ? err.message : String(err)).replace(/�/g, '?');
+```
+
+`failReason` DB 저장 시 `toSafeMsg(err)` 사용.
+
 ## TTS 설정
 
 - 엔진: Edge-TTS

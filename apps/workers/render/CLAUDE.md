@@ -12,6 +12,17 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
 - `index.ts` — SQS Long Polling 진입점 (Fargate 상시 실행)
 - `env.ts` — 환경변수 파싱 (`PEXELS_API_KEY`, `FFMPEG_PATH` 등)
 
+## 에러 메시지 인코딩 처리
+
+Windows 로컬 개발 환경에서 `execSync` 실패 시 cmd.exe stderr가 CP949로 출력되어 `failReason`에 `�`(replacement character)가 포함되는 문제 방지:
+
+```typescript
+const toSafeMsg = (err: unknown) =>
+  (err instanceof Error ? err.message : String(err)).replace(/�/g, '?');
+```
+
+`failReason` DB 저장 시 반드시 `toSafeMsg(err)` 사용. Docker(Linux) 환경에서는 발생하지 않으나 로컬 직접 실행 시 필요.
+
 ## 렌더링 파이프라인
 
 1. S3에서 audio.mp3, subtitle.srt 다운로드

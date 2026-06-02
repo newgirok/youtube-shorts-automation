@@ -11,6 +11,17 @@ SQS script-queue를 폴링해 Gemini API로 Shorts 스크립트를 생성하는 
 - `local-runner.ts` — Docker Compose 환경용 SQS Long Polling 루프
 - `env.ts` — 환경변수 파싱 (`GEMINI_API_KEY`, `SQS_TTS_QUEUE_URL` 등)
 
+## 에러 메시지 인코딩 처리
+
+Windows 로컬 환경에서 `failReason`에 깨진 문자(`�`) 저장 방지:
+
+```typescript
+const toSafeMsg = (err: unknown) =>
+  (err instanceof Error ? err.message : String(err)).replace(/�/g, '?');
+```
+
+`failReason` DB 저장 시 `toSafeMsg(err)` 사용.
+
 ## 모델 및 SDK
 
 - 모델: `gemini-2.5-flash` (`@google/generative-ai` SDK)
@@ -52,6 +63,16 @@ interface Scene {
   `'진짜 어이가 없는 상황이라고'` / `'기가 막힌 상황이라고'` / `'분통이 터지는 상황이라고'` / `'경악스러운 상황이라고'` / `'말도 안 되는 상황이라고'` / `'진짜 개빡친 상황이라고'`
 - 종결어 제한: `~라고 함` 계열 최대 2회, `~이라고/~상황이라고` 계열 최대 2회, 같은 계열 연속 배치 금지
 - 마무리: `comment_bait` 질문으로 반드시 종료 (공분·논란·의견 충돌 유발)
+
+### 레퍼런스 스크립트 — 카테고리별 3개 few-shot 예시
+
+**[기] 공통 규칙**: 구체적 수치(금액·횟수·퍼센트·인원수)와 인물명·기관명 2개 이상 필수. 막연한 감성 표현만으로 채우는 것 절대 금지.
+
+**[정치 예시]** — 혐의 수·법원 출두 횟수·의원 수·지지율 추세 포함  
+**[경제 예시]** — 금리%·환율·물가 상승률·폐업 건수 포함  
+**[사회 예시]** — 혈중알코올 수치·구형량·사고 증가율 포함
+
+실제 예시 텍스트는 `script-generator.ts`의 `SYSTEM_PROMPT` 내 레퍼런스 섹션에 있음. `script-generator.ts` 수정 시 이 규칙과 일치하는지 검토 필요.
 
 ## SQS 메시지 구조
 
