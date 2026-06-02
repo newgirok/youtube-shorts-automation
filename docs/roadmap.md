@@ -8,26 +8,26 @@
 ## 진행 현황
 
 - **Phase 0** — 핵심 리스크 검증 ✅ 완료 → 운영 워커(`apps/workers/*`)로 흡수
-- **Phase 1** — 로컬 파이프라인 구현
-  - [] P1-1. Monorepo 초기화 `[DevOps]`
-  - [] P1-2. `packages/shared` — 공통 기반 `[BE]`
-  - [] P1-3. `apps/api` — POST /jobs `[BE]`
-  - [] P1-4. `apps/workers/script` — Gemini 2.5 Flash, ScriptOutput(8필드) `[BE][AI]`
-  - [] P1-5. `apps/workers/tts` `[BE]`
-  - [] P1-6. `apps/workers/subtitle` _(Fargate)_ — 스크립트 기반 SRT 생성 `[BE][DevOps]`
-  - [] P1-7. `apps/workers/render` _(Fargate)_ — Pexels + zoompan + FFmpeg `[BE][DevOps]`
-  - [] P1-8. `apps/workers/upload` + 수동 E2E `[BE]`
-  - [] P1-9. Docker Compose 통합 로컬 환경 `[DevOps]`
-- **Phase 2** — 웹 대시보드
-  - [] P2-1. `apps/web` 초기화 + NextAuth Google OAuth `[FE]`
-  - [] P2-2. `/dashboard` — Job 카드 피드 + 2초 폴링 + 조회수 실시간 표시 `[FE][BE]`
-  - [] P2-3. `/dashboard/[id]` — 상태 타임라인 + 재시도 `[FE][BE]`
-  - [] P2-4. `/channels/[id]` — 채널 관리 + YPP 진행률 대시보드 `[FE][BE]`
-  - [] P2-5. YouTube OAuth2 채널 연결 + `refresh_token` 암호화 저장 `[BE]`
-  - [] P2-6. `POST /jobs/auto-news` — Google News RSS 수집 + Job 일괄 생성 `[BE]`
-  - [] P2-7. `POST /channels/:id/sync` — YouTube Data API + Analytics API 풀 동기화 `[BE]`
-  - [] P2-8. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
-  - [] P2-9. `Job.privacyStatus` 추적 `[BE]`
+- **Phase 1** — 로컬 파이프라인 구현 ✅ 완료
+  - [x] P1-1. Monorepo 초기화 `[DevOps]`
+  - [x] P1-2. `packages/shared` — 공통 기반 `[BE]`
+  - [x] P1-3. `apps/api` — POST /jobs `[BE]`
+  - [x] P1-4. `apps/workers/script` — Gemini 2.5 Flash, ScriptOutput(8필드) `[BE][AI]`
+  - [x] P1-5. `apps/workers/tts` `[BE]`
+  - [x] P1-6. `apps/workers/subtitle` _(Fargate)_ — VTT 기반 SRT 생성 (색상 하이라이트 미구현) `[BE][DevOps]`
+  - [x] P1-7. `apps/workers/render` _(Fargate)_ — Pexels + zoompan + FFmpeg `[BE][DevOps]`
+  - [x] P1-8. `apps/workers/upload` + 수동 E2E `[BE]`
+  - [x] P1-9. Docker Compose 통합 로컬 환경 `[DevOps]`
+- **Phase 2** — 웹 대시보드 ✅ 완료
+  - [x] P2-1. `apps/web` 초기화 + NextAuth Google OAuth `[FE]`
+  - [x] P2-2. `/` — 홈 (토픽 입력·Auto-News·Job 갤러리) `[FE][BE]`
+  - [x] P2-3. `/dashboard/[id]` — 상태 타임라인 + 재시도 `[FE][BE]`
+  - [x] P2-4. `/channels/[id]` — 채널 관리 + YPP 진행률 대시보드 `[FE][BE]`
+  - [x] P2-5. YouTube OAuth2 채널 연결 + `refresh_token` 암호화 저장 `[BE]`
+  - [x] P2-6. `POST /jobs/auto-news` — Google News RSS 수집 + Job 일괄 생성 `[BE]`
+  - [x] P2-7. `POST /channels/:id/sync` — YouTube Data API + Analytics API 풀 동기화 `[BE]`
+  - [x] P2-8. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
+  - [x] P2-9. `Job.privacyStatus` 추적 `[BE]`
 - **Phase 3** — AWS 서버리스 이관
   - [ ] P3-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
   - [ ] P3-2. Supabase 연결 + 마이그레이션 `[BE][DevOps]`
@@ -103,7 +103,7 @@
 - **P1-4.** `apps/workers/script` `[BE][AI]`
   - 모델: `gemini-2.5-flash` 고정
   - 출력 JSON 8개 필드: `title`, `hook`, `script`, `description`, `scenes[]`, `hashtags`, `thumbnail_text`, `comment_bait`
-  - 콘텐츠 방향: 한국 뉴스·시사 특화, 25~35초, 강한 구어체, comment_bait 마무리
+  - 콘텐츠 방향: 한국 뉴스·시사 특화, 35~45초, 강한 구어체, comment_bait 마무리
   - 검증
     - S3에 `jobs/{jobId}/script.json` 생성, 8개 필드 모두 존재
     - `tts-queue` 발행 확인
@@ -111,13 +111,13 @@
 - **P1-5.** `apps/workers/tts` `[BE]`
   - Edge-TTS `ko-KR-SunHiNeural` → `audio.mp3`
   - 검증
-    - S3에 `audio.mp3` 생성, `ffprobe` 길이 25~35초
+    - S3에 `audio.mp3` 생성, `ffprobe` 길이 35~45초
     - `subtitle-queue` 발행 확인
 
 - **P1-6.** `apps/workers/subtitle` _(Fargate)_ `[BE][DevOps]`
-  - faster-whisper 없음 — 스크립트 텍스트 기반 SRT 생성
-  - `ffprobe`로 오디오 길이 측정 → 문자 수 비례 타임스탬프 계산
-  - 시사 키워드(빨간색 `#FF4C4C`) + 숫자/단위(노란색 `#FFE135`) 하이라이트
+  - faster-whisper 없음 — VTT 기반 SRT 생성 (VTT 없으면 문자 수 비례 fallback)
+  - Edge-TTS 생성 subtitle.vtt → 문장별 타이밍 → 20자 이하 청크 분할
+  - 색상 하이라이트 미구현 (ASS BorderStyle=3 불투명 박스 자막만 사용)
   - 검증
     - 로컬 Docker로 S3에 `subtitle.srt` 생성
     - 타임스탬프 구간 합계 = 오디오 총 길이
@@ -125,7 +125,7 @@
 - **P1-7.** `apps/workers/render` _(Fargate)_ `[BE][DevOps]`
   - `script.json`의 `scenes[]` 배열 기반 Pexels 동영상(우선)/이미지(fallback) 다운로드
   - zoompan 효과 (zoom-in/out, pan-left/right) 클립 생성, `-r 30` fps 정규화, `-stream_loop -1` 루프
-  - 클립 concat + 헤더 오버레이(검정 패널+제목 2줄) + 오디오 + ASS 자막 burn-in (FontSize=72, BorderStyle=3 불투명박스, MarginV=510)
+  - 클립 concat + 헤더 오버레이(검정 패널+제목 2줄) + 오디오 + ASS 자막 burn-in (FontSize=76, BorderStyle=3 불투명박스, MarginV=510)
   - affiliate CTA 자막 없음
   - 검증
     - 로컬 Docker로 S3에 `output.mp4` 생성
@@ -145,10 +145,10 @@
     - `docker-compose up` 한 번으로 전체 스택 기동
     - `POST /jobs` 한 번으로 PENDING → COMPLETED 자동 완료
 
-**완료 기준**
-- [] `docker-compose up` 한 번으로 전체 스택 기동
-- [] `POST /jobs` 한 번으로 PENDING → COMPLETED 자동 완료 (수동 개입 없음)
-- [] 모바일 유튜브 앱에서 자막·오디오 품질 합격
+**완료 기준** ✅
+- [x] `docker-compose up` 한 번으로 전체 스택 기동
+- [x] `POST /jobs` 한 번으로 PENDING → COMPLETED 자동 완료 (수동 개입 없음)
+- [x] 모바일 유튜브 앱에서 자막·오디오 품질 합격
 
 ---
 
@@ -218,11 +218,11 @@
   - 검증
     - Job 상세에서 privacyStatus 표시
 
-**완료 기준**
-- [] 대시보드에서 채널·Job 관리 전 기능 동작
-- [] 재시도 기능 정상 동작
-- [] Analytics 데이터 수집 및 YPP 진행률 표시
-- [] 뉴스 자동 수집 + Job 생성 (`auto-news`)
+**완료 기준** ✅
+- [x] 대시보드에서 채널·Job 관리 전 기능 동작
+- [x] 재시도 기능 정상 동작
+- [x] Analytics 데이터 수집 및 YPP 진행률 표시
+- [x] 뉴스 자동 수집 + Job 생성 (`auto-news`)
 
 > Playwright 검증 완료: 로그인, 대시보드 채널·Job 목록·통계, Job 상세·타임라인, 재시도, 2초 폴링, 채널 sync 모두 정상 동작.
 
