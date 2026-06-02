@@ -21,21 +21,23 @@ enum JobStatus {
 }
 
 model Channel {
-  id               String             @id @default(cuid())
-  youtubeId        String             @unique
-  name             String
-  niche            String
-  refreshToken     String             // AES-256-GCM 암호화
-  uploadSchedule   String             @default("0 9 * * *")
-  affiliateUrl     String?
-  isActive         Boolean            @default(true)
-  subscriberCount  Int                @default(0)
-  totalViews       BigInt             @default(0)
-  isYPPQualified   Boolean            @default(false)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  jobs             Job[]
-  analytics        ChannelAnalytics[]
+  id                String    @id @default(cuid())
+  youtubeId         String    @unique
+  name              String
+  niche             String
+  refreshToken      String    // AES-256-GCM 암호화
+  uploadSchedule    String?
+  schedulerEnabled  Boolean   @default(false)
+  schedulerCategory String    @default("top")
+  affiliateUrl      String?
+  isActive          Boolean   @default(true)
+  subscriberCount   Int       @default(0)
+  totalViews        BigInt    @default(0)
+  isYPPQualified    Boolean   @default(false)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  jobs              Job[]
+  analytics         ChannelAnalytics[]
 }
 
 model Job {
@@ -50,6 +52,7 @@ model Job {
   subtitleS3Key    String?
   videoS3Key       String?
   youtubeVideoId   String?
+  thumbnailUrl     String?
   privacyStatus    String    @default("public")
   viewCount        BigInt    @default(0)
   likeCount        BigInt    @default(0)
@@ -79,8 +82,13 @@ model ChannelAnalytics {
 
 | 마이그레이션 | 변경 내용 |
 |---|---|
+| `20260511123832_init` | 초기 스키마 (Channel, Job, ChannelAnalytics, JobStatus) |
 | `20260519000000_add_watch_time_minutes` | `ChannelAnalytics.watchTimeMinutes BigInt @default(0)` 추가 |
 | `20260520000000_add_privacy_status` | `Job.privacyStatus String @default("public")` 추가 |
+| `20260525152454_add_scheduler_fields` | `Channel.schedulerEnabled`, `schedulerCategory`, `uploadSchedule String?` 변경 |
+| `20260525180000_add_job_thumbnail_url` | `Job.thumbnailUrl String?` 추가 |
+| `20260525190000_drop_channel_analytics` | ChannelAnalytics 삭제 |
+| `20260525200000_restore_channel_analytics` | ChannelAnalytics 복원 |
 
 ---
 
@@ -94,9 +102,11 @@ model ChannelAnalytics {
 │ youtubeId       String (UNIQUE)      │
 │ name            String               │
 │ niche           String               │
-│ refreshToken    String (암호화)       │
-│ uploadSchedule  String               │
-│ affiliateUrl    String?              │
+│ refreshToken      String (암호화)     │
+│ uploadSchedule    String?            │
+│ schedulerEnabled  Boolean            │
+│ schedulerCategory String             │
+│ affiliateUrl      String?            │
 │ isActive        Boolean              │
 │ subscriberCount Int                  │
 │ totalViews      BigInt               │
@@ -121,6 +131,7 @@ model ChannelAnalytics {
 │ subtitleS3Key  String?               │
 │ videoS3Key     String?               │
 │ youtubeVideoId String?               │
+│ thumbnailUrl   String?               │
 │ privacyStatus  String                │
 │ viewCount      BigInt                │
 │ likeCount      BigInt                │
@@ -156,12 +167,14 @@ model ChannelAnalytics {
 | `name` | `String` | 채널 표시 이름 |
 | `niche` | `String` | 채널 콘텐츠 주제 카테고리 (예: `"재테크"`, `"IT 뉴스"`) |
 | `refreshToken` | `String` | YouTube OAuth2 refresh_token (AES-256-GCM 암호화) |
-| `uploadSchedule` | `String` | cron 표현식 — 일일 업로드 시간 (기본값: `"0 9 * * *"`) |
+| `uploadSchedule` | `String?` | cron 표현식 — 일일 업로드 시간 (null이면 스케줄 미설정) |
+| `schedulerEnabled` | `Boolean` | 자동 업로드 스케줄러 활성화 여부 |
+| `schedulerCategory` | `String` | 뉴스 자동 수집 카테고리 (`top` \| `politics` \| `business` \| `nation`) |
 | `affiliateUrl` | `String?` | 쿠팡 파트너스 링크 (null이면 CTA 자막 미삽입) |
 | `isActive` | `Boolean` | 비활성화 시 EventBridge 스케줄에서 제외 |
 | `subscriberCount` | `Int` | YouTube Analytics에서 주기적으로 동기화 |
 | `totalViews` | `BigInt` | 채널 전체 누적 조회수 (BigInt 이유: 수억 이상 가능) |
-| `isYPPQualified` | `Boolean` | YPP 달성 여부 (구독자 1,000명 + 시청 시간 4,000시간) |
+| `isYPPQualified` | `Boolean` | YPP 달성 여부 (2단계 기준: 비즈니스 규칙 참고) |
 | `createdAt` | `DateTime` | 채널 최초 연결 시각 |
 | `updatedAt` | `DateTime` | 마지막 정보 갱신 시각 |
 
@@ -206,6 +219,7 @@ EventBridge Scheduler는 **Unix cron** 형식을 사용합니다:
 | `subtitleS3Key` | `String?` | S3 경로: `jobs/{jobId}/subtitle.srt` |
 | `videoS3Key` | `String?` | S3 경로: `jobs/{jobId}/output.mp4` |
 | `youtubeVideoId` | `String?` | 업로드 완료 후 YouTube 영상 ID |
+| `thumbnailUrl` | `String?` | 썸네일 URL. render 완료 시 `/jobs/{jobId}/thumbnail` (API 프록시 경로); upload 완료 시 `https://i.ytimg.com/vi/{videoId}/hqdefault.jpg` |
 | `privacyStatus` | `String` | YouTube 영상 공개 상태 (기본값: `"public"`). sync 시 YouTube API에서 실시간 갱신. |
 | `viewCount` | `BigInt` | YouTube Analytics에서 동기화한 조회수 |
 | `likeCount` | `BigInt` | YouTube Analytics에서 동기화한 좋아요 수 |
