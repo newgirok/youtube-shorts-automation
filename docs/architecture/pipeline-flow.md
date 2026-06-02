@@ -19,7 +19,7 @@
 │                                                         │
 │  SQS script-queue 수신                                   │
 │  → Gemini 2.5 Flash API 호출                             │
-│  → script.json 생성 (scenes 포함)                        │
+│  → script.json 생성 (scenes 포함, script 210~350자)       │
 │  → S3 저장: jobs/{jobId}/script.json                    │
 │  → Job status: SCRIPT_PROCESSING → (다음 단계)           │
 │  → SQS tts-queue 발행                                    │
@@ -32,7 +32,7 @@
 │  SQS tts-queue 수신                                      │
 │  → S3에서 script.json 다운로드                            │
 │  → Edge-TTS (ko-KR-SunHiNeural) 음성 합성               │
-│  → S3 저장: jobs/{jobId}/audio.mp3                      │
+│  → S3 저장: jobs/{jobId}/audio.mp3, subtitle.vtt        │
 │  → Job status: TTS_PROCESSING → (다음 단계)              │
 │  → SQS subtitle-queue 발행                               │
 └─────────────────────────────────────────────────────────┘
@@ -90,7 +90,7 @@
 | **실행 환경** | AWS Lambda (Node.js 20) |
 | **SQS 큐** | `script-queue` |
 | **입력** | `jobId`, `channelId`, `topic` |
-| **처리** | Gemini 2.5 Flash API — 뉴스 시사 특화, 35~45초 분량 스크립트(210~260자) + scenes 생성 |
+| **처리** | Gemini 2.5 Flash API — 뉴스 시사 특화, 35~45초 분량 스크립트(210~350자, 최대 380자 검증) + scenes 생성 |
 | **출력** | `jobs/{jobId}/script.json` (S3) |
 | **다음 큐** | `tts-queue` |
 | **상태 전이** | `PENDING` → `SCRIPT_PROCESSING` |
@@ -132,7 +132,7 @@ interface TTSMessage {
 | **실행 환경** | ECS Fargate (상시 실행, `desired_count: 1`) |
 | **SQS 큐** | `subtitle-queue` |
 | **입력** | `jobId`, `channelId`, `audioS3Key` |
-| **처리** | ffprobe로 오디오 길이 측정 → script.json의 script 필드를 문장 분할하여 시간 비례 SRT 생성, 시사 키워드/숫자 하이라이트 적용 |
+| **처리** | S3에서 audio.mp3 + subtitle.vtt 다운로드 → VTT 기반 SRT 생성 (vtt 없으면 ffprobe 오디오 길이 측정 후 글자 비례 fallback), 20자 이하 청크 분할 |
 | **출력** | `jobs/{jobId}/subtitle.srt` (S3) |
 | **다음 큐** | `render-queue` |
 | **상태 전이** | `TTS_PROCESSING` → `SUBTITLE_PROCESSING` |
@@ -142,7 +142,8 @@ interface TTSMessage {
 interface SubtitleMessage {
   jobId: string;
   channelId: string;
-  audioS3Key: string;   // "jobs/{jobId}/audio.mp3"
+  audioS3Key: string;           // "jobs/{jobId}/audio.mp3"
+  subtitleVttS3Key?: string;    // "jobs/{jobId}/subtitle.vtt" (Edge-TTS 생성, 없으면 비례 fallback)
 }
 ```
 
@@ -153,7 +154,7 @@ interface SubtitleMessage {
 | **실행 환경** | ECS Fargate (상시 실행, `desired_count: 1`) |
 | **SQS 큐** | `render-queue` |
 | **입력** | `jobId`, `channelId`, `audioS3Key`, `subtitleS3Key` |
-| **처리** | scenes별 Pexels 동영상/이미지 다운로드 → zoompan 클립 생성 → FFmpeg concat + 오디오 + 자막 burn-in, 1080×1920 → FFmpeg 3초 프레임 썸네일 추출 |
+| **처리** | scenes별 Pexels 동영상/이미지 다운로드 → zoompan 클립 생성 → FFmpeg concat + 오디오 + ASS 자막 burn-in, 1080×1920 → FFmpeg 첫 프레임(-vframes 1) 썸네일 추출 |
 | **출력** | `jobs/{jobId}/output.mp4`, `jobs/{jobId}/thumbnail.jpg` (S3) |
 | **다음 큐** | `upload-queue` |
 | **상태 전이** | `SUBTITLE_PROCESSING` → `RENDER_PROCESSING` |

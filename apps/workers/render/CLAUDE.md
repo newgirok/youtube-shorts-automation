@@ -87,7 +87,7 @@ Style: Default,{FontName},76,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,
 
 ```
 jobs/{jobId}/output.mp4      — 최종 렌더링 영상
-jobs/{jobId}/thumbnail.jpg   — FFmpeg 3초 지점 프레임 캡처 썸네일
+jobs/{jobId}/thumbnail.jpg   — FFmpeg 첫 프레임 캡처 썸네일 (-vframes 1)
 ```
 
 - `thumbnailUrl = '/jobs/{jobId}/thumbnail'` 형태로 DB 저장
