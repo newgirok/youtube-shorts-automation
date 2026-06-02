@@ -339,24 +339,6 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
       {/* 상단 여백 — 배경 노출 */}
       <div className="h-[46vh]" />
 
-      {/* 채널 탭 */}
-      {channels.length > 1 && (
-        <div className="mb-3 flex items-center gap-1 rounded-full bg-black/30 backdrop-blur-sm p-1 w-fit">
-          {channels.map((ch) => (
-            <button
-              key={ch.id}
-              onClick={() => setSelectedChannelId(ch.id)}
-              className={cn(
-                'rounded-full px-3 py-1.5 text-sm font-medium transition-colors',
-                activeChannelId === ch.id ? 'bg-white text-gray-900' : 'text-white/70 hover:text-white',
-              )}
-            >
-              {ch.name}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* 프롬프트 — 버튼 포함 */}
       <div className="w-full max-w-2xl px-4">
         <form onSubmit={handleSubmit}>
