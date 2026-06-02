@@ -22,7 +22,7 @@ SQS script-queue를 폴링해 Gemini API로 Shorts 스크립트를 생성하는 
 interface ScriptOutput {
   title: string;          // 22자 이내 영상 제목
   hook: string;           // 첫 2초 훅 문장
-  script: string;         // 전체 낭독 스크립트 (210~260자, title TTS 포함 총 35~45초)
+  script: string;         // 전체 낭독 스크립트 (210~350자, 최대 380자 검증, title TTS 포함 총 35~45초)
   description: string;    // YouTube 영상 설명문 (3~5문단, 400~800자)
                           // ~다고 합니다 중립 보도 문체, 마지막 문단 면책 공지 포함
   scenes: Scene[];        // 4~5개 장면, start~end 합산 총 35~43초
@@ -45,7 +45,7 @@ interface Scene {
 ## 콘텐츠 방향
 
 - 장르: 한국 시사/사회 이슈 특화 YouTube Shorts
-- 길이: `title` TTS 포함 총 35~45초 분량 (스크립트 단독 210~260자)
+- 길이: `title` TTS 포함 총 35~45초 분량 (스크립트 단독 210~350자, 최대 380자 검증)
 - 서사 구조: 기승전결 4단계 — `[기: 팩트 나열]→[승: 감정피크 '~상황이라고']→[전: 반전 '~상황이라고 함.']→[결: comment_bait]`
 - 말투: 강한 구어체 (`맞짱 뜨고`, `인질삼아`, `보다못한`, `슬슬 꺾이기 시작한`, `개빡쳤다`, `~해 버린`, `~버리겠다면서`)
 - 감정 피크 표현 6종 (주제에 맞는 것 하나 선택, 반복 금지):

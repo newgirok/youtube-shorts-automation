@@ -79,7 +79,7 @@ for (let attempt = 1; attempt <= 3; attempt++) {
 interface ScriptOutput {
   title: string;          // 22자 이내
   hook: string;           // 첫 2초 훅
-  script: string;         // 210~260자 (title TTS 포함 총 35~45초)
+  script: string;         // 210~350자 (최대 380자 검증, title TTS 포함 총 35~45초)
   description: string;    // YouTube 영상 설명문 (3~5문단, 400~800자, 면책 공지 포함)
   scenes: Scene[];        // 4~5개
   hashtags: string[];
