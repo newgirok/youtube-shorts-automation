@@ -276,6 +276,7 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
     apiPost(`/channels/${initial.id}/sync`, {})
       .then(() => {
         queryClient.invalidateQueries({ queryKey: ['channel', initial.id] });
+        queryClient.invalidateQueries({ queryKey: ['analytics', initial.id] });
       })
       .catch(() => {});
   }, [initial.id, queryClient]);

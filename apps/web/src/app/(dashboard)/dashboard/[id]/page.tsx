@@ -50,7 +50,10 @@ export default function JobDetailPage() {
 
     const doSync = () =>
       apiPost(`/channels/${channelId}/sync-videos`, {})
-        .then(() => queryClient.invalidateQueries({ queryKey: ['job', id] }))
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['job', id] });
+          queryClient.invalidateQueries({ queryKey: ['jobs', channelId] });
+        })
         .catch(() => {});
 
     doSync();
