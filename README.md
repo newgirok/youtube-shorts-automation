@@ -4,19 +4,11 @@
 
 토픽 입력 한 줄로 스크립트 생성 → TTS → 자막 → 영상 합성 → YouTube 업로드까지 전 과정을 자동화하는 서버리스 파이프라인.
 
+<p align="center">
+  <img src="assets/demo/dashboard.gif" alt="YouTube Shorts Automation 대시보드" width="824">
+</p>
+
 뉴스·시사 쇼츠 채널 특화: Google News RSS 자동 수집 → Gemini 2.5 Flash 스크립트 생성 → Edge-TTS → FFmpeg 렌더링 → YouTube 업로드.
-
-## 빠른 시작
-
-```bash
-pnpm install
-docker-compose up          # LocalStack + PostgreSQL + 전체 Worker 자동 기동
-curl -X POST http://localhost:3000/jobs \
-  -H "Content-Type: application/json" \
-  -d '{"channelId": "<id>", "topic": "한국 경제 전망"}'
-```
-
-자세한 환경 세팅 → [로컬 환경 세팅 가이드](docs/onboarding/local-setup.md)
 
 ## 파이프라인
 
@@ -29,7 +21,15 @@ POST /jobs  또는  POST /jobs/auto-news
   → upload-worker  (YouTube API       → COMPLETED)
 ```
 
-상세 흐름·상태 전이·실패 처리 → [파이프라인 문서](docs/architecture/pipeline-flow.md)
+## 빠른 시작
+
+```bash
+pnpm install
+docker-compose up          # LocalStack + PostgreSQL + 전체 Worker 자동 기동
+curl -X POST http://localhost:3000/jobs   -H "Content-Type: application/json"   -d '{"channelId": "<id>", "topic": "한국 경제 전망"}'
+```
+
+자세한 환경 세팅 → [로컬 환경 세팅 가이드](docs/onboarding/local-setup.md)
 
 ## 문서
 
