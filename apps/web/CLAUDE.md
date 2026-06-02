@@ -139,6 +139,16 @@ interface AnalyticsRow {
 - 홈·채널 페이지 마운트 시 `POST /channels/:id/sync` 호출 → Jobs 목록/채널 정보 refetch
 - 홈 페이지: 잡이 완료되는 순간(`hasProcessing: true → false` 전환) `POST /channels/:id/sync-videos` 자동 호출 → thumbnailUrl DB 갱신 → 갤러리 썸네일 즉시 표시
 - `/dashboard/[id]` 페이지: `youtubeVideoId` 최초 감지 시 `sync-videos` 자동 호출 (1회, `syncedRef` 패턴)
+
+#### invalidate 범위 (쿼리 누락 방지)
+| sync 호출 위치 | invalidate 대상 |
+|---|---|
+| `ChannelClient` sync 완료 | `['channel', id]` + `['analytics', id]` 모두 |
+| `HomeClient` sync 완료 | `['jobs', channelId]` |
+| `HomeClient` sync-videos 완료 | `['jobs', channelId]` |
+| `JobDetailPage` sync-videos 완료 | `['job', id]` + `['jobs', channelId]` 모두 |
+
+`analytics` 누락 시: 채널 성과 추이 차트가 최초 진입 시 빈 상태로 표시되다가 새로고침 후에야 나타나는 버그 발생
 - 채널 상세 페이지의 **채널 성과 추이** 차트는 `ChannelAnalytics` 테이블 데이터를 사용한다.
   - 데이터는 sync 시 YouTube Analytics API로 채운다.
   - GCP 프로젝트에서 YouTube Analytics API가 비활성화되어 있으면 차트가 skeleton placeholder로 표시된다. (→ `apps/api/CLAUDE.md` GCP 사전 조건 참고)
@@ -173,6 +183,16 @@ const NEWS_CATEGORIES = [
   { key: 'nation', label: '사회' },
 ];
 ```
+
+### YouTube 인라인 플레이어 (`/dashboard/[id]`)
+
+- `youtubeVideoId` 있는 Job만 재생 가능 (COMPLETED 상태)
+- 썸네일 hover → 재생 버튼 오버레이 (`group-hover:opacity-100`, `pointer-events-none`)
+- 클릭 → `showPlayer = true` → YouTube iframe으로 전환 (autoplay, rel=0)
+- 썸네일·플레이어 컨테이너: `h-60` 고정 (전환 시 레이아웃 변화 없음)
+- X 버튼: `absolute top-2 right-2 z-10`, 클릭 시 `showPlayer = false`
+- iframe src: `https://www.youtube.com/embed/{youtubeVideoId}?autoplay=1&rel=0`
+- `youtubeVideoId` 없으면 클릭 무반응 (재생 버튼 미노출)
 
 ### YPP 달성 기준 (2단계)
 - 1단계 (기본 수익 창출): 구독자 ≥ 500 AND 90일 업로드 ≥ 3회 AND 쇼츠 조회수(90일) ≥ 300만
