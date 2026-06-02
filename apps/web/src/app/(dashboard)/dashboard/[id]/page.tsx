@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { Eye, ThumbsUp, Clock, RefreshCw, ExternalLink } from 'lucide-react';
+import { Eye, ThumbsUp, Clock, RefreshCw, ExternalLink, Play, X } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
 import { toProxyThumbUrl } from '@/lib/utils';
 import { StatusTimeline } from '@/components/StatusTimeline';
@@ -30,6 +30,7 @@ export default function JobDetailPage() {
   const queryClient = useQueryClient();
   const syncedRef = useRef(false);
   const [thumbnailError, setThumbnailError] = useState(false);
+  const [showPlayer, setShowPlayer] = useState(false);
   const prevThumbUrlRef = useRef<string | null | undefined>(undefined);
 
   const { data: job, isLoading } = useQuery<Job>({
@@ -257,13 +258,42 @@ export default function JobDetailPage() {
         <div className="lg:col-span-3 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-4 flex flex-col gap-3 min-h-[200px] lg:min-h-0 overflow-y-auto">
           <p className="text-xs font-semibold text-white shrink-0">영상 정보</p>
           <div className="shrink-0">
-            {thumbnailUrl && !thumbnailError ? (
-              <img
-                src={thumbnailUrl}
-                alt={title}
-                onError={() => setThumbnailError(true)}
-                className="w-full max-h-60 rounded-xl object-cover"
-              />
+            {showPlayer && job.youtubeVideoId ? (
+              <div className="relative w-full">
+                <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingTop: '177.78%' }}>
+                  <iframe
+                    className="absolute inset-0 w-full h-full"
+                    src={`https://www.youtube.com/embed/${job.youtubeVideoId}?autoplay=1&rel=0`}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                  />
+                </div>
+                <button
+                  onClick={() => setShowPlayer(false)}
+                  className="absolute top-2 right-2 p-1 rounded-full bg-black/70 text-white hover:bg-black/90 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : thumbnailUrl && !thumbnailError ? (
+              <div
+                className={`relative group ${job.youtubeVideoId ? 'cursor-pointer' : ''}`}
+                onClick={() => { if (job.youtubeVideoId) setShowPlayer(true); }}
+              >
+                <img
+                  src={thumbnailUrl}
+                  alt={title}
+                  onError={() => setThumbnailError(true)}
+                  className="w-full max-h-60 rounded-xl object-cover"
+                />
+                {job.youtubeVideoId && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl pointer-events-none">
+                    <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Play className="w-5 h-5 text-white fill-white translate-x-0.5" />
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="w-full h-36 rounded-xl bg-white/5 flex items-center justify-center">
                 <span className="text-xs text-white/30">썸네일 없음</span>
