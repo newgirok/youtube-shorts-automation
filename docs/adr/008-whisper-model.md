@@ -6,9 +6,9 @@
 
 faster-whisper는 subtitle-worker에서 **완전히 제거**되었다.
 
-현재 subtitle-worker는 Whisper 없이 `script.json`의 `script` 필드를 직접 읽어 문장 분할 후 시간 비례로 SRT를 생성한다 (`processor.ts`의 `buildSrt()` 함수). ffprobe로 오디오 길이만 측정하며, 별도 ML 모델을 사용하지 않는다.
+현재 subtitle-worker는 Whisper 없이 Edge-TTS가 생성한 `subtitle.vtt`의 word-level 타임스탬프를 기반으로 SRT를 생성한다 (`processor.ts`의 `buildSrtFromVtt()` 함수). vtt가 없을 경우 ffprobe로 오디오 길이를 측정해 `script.json`의 `script` 필드를 글자 비례로 배분하는 fallback을 사용한다. 별도 ML 모델을 사용하지 않는다.
 
-**교체 이유:** TTS로 생성한 음성은 스크립트 텍스트와 완전히 일치하므로 음성 인식(STT) 단계가 불필요하다. 스크립트 기반 SRT 생성이 더 정확하고, Fargate 메모리 및 콜드 스타트 부담을 줄인다.
+**교체 이유:** TTS로 생성한 음성은 스크립트 텍스트와 완전히 일치하고, Edge-TTS가 word-level 타임스탬프를 VTT로 제공하므로 음성 인식(STT) 단계가 불필요하다. VTT 기반 SRT 생성이 더 정확하고, Fargate 메모리 및 콜드 스타트 부담을 줄인다.
 
 이 ADR은 결정 배경과 기술 검토 내용을 보존하기 위해 그대로 유지한다.
 
@@ -42,9 +42,8 @@ Fargate subtitle-worker는 8GB 메모리를 할당한다. 공식 Whisper로는 l
 
 medium과 large-v2는 90% 목표를 충족하지 못하거나 타임스탬프 오차 기준을 초과한다. Fargate는 렌더링을 위해 어차피 상시 실행 중이므로 large-v3의 추가 메모리 비용은 미미하다.
 
-## 결과
+## 결과 (ADR 008 Superseded 시점 기준)
 
-- Fargate subtitle-worker 메모리 할당: 8GB 고정 (large-v3 3GB + 버퍼)
-- 모델을 medium으로 줄이면 인식률 목표 미달 → 변경 금지
-- 모델 파일은 Docker 이미지 빌드 시 캐시하거나 EFS 마운트로 관리 (Cold Start 최소화)
-- `language: 'ko'` 명시 필수 — 자동 감지 시 일본어 오감지 발생
+- 당시 계획: Fargate subtitle-worker 메모리 할당 8GB (large-v3 3GB + 버퍼)
+- faster-whisper 제거 후 subtitle-worker는 ML 모델 없이 동작하며, Fargate 메모리 요건이 크게 줄었다
+- 현재 subtitle-worker 배포 계획: 2vCPU/8GB (Phase 3, roadmap P3-4)

@@ -13,16 +13,11 @@
 pnpm install
 
 # 2. 환경변수 설정
-cp .env.example .env.local  # 실제 값 입력 필요
+cp .env.example .env.local              # 루트 (API, workers 공통)
+cp apps/web/.env.example apps/web/.env.local  # Next.js 전용
 
-# 3. 인프라 시작 (PostgreSQL + LocalStack)
-docker-compose up -d postgres localstack
-
-# 4. DB 마이그레이션
-pnpm --filter @shorts/shared prisma:migrate
-
-# 5. 개발 서버 시작 (전체 앱)
-pnpm dev
+# 3. 전체 스택 기동 (LocalStack + PostgreSQL + 마이그레이션 자동 실행 + 전체 Worker)
+docker compose up -d
 ```
 
 환경변수 항목별 설명은 [환경변수 가이드](./onboarding/env-vars.md)를 확인하세요.
@@ -76,7 +71,7 @@ pnpm dev
 pnpm install
 
 # 인프라 컨테이너 시작
-docker-compose up -d
+docker compose up -d
 
 # 전체 개발 서버 시작 (Turborepo)
 pnpm dev
@@ -89,7 +84,7 @@ pnpm --filter @shorts/api dev
 pnpm --filter @shorts/shared prisma:migrate
 
 # Prisma Studio (DB 관리 UI)
-pnpm --filter @shorts/shared prisma:studio
+pnpm --filter @shorts/shared exec prisma studio
 
 # 전체 빌드
 pnpm build

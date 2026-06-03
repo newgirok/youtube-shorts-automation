@@ -26,4 +26,4 @@ Worker 간 메시지 전달에 SQS를 사용할 때 Standard Queue와 FIFO Queue
 ## 결과
 
 - 같은 Job 메시지가 두 번 처리될 수 있음 — S3 업로드는 키가 동일하면 덮어쓰므로 안전
-- DLQ에 쌓인 메시지는 CloudWatch 알람으로 감지 (Phase 3에서 구현)
+- DLQ에 쌓인 메시지는 CloudWatch 알람으로 감지 (Phase 4에서 구현)

@@ -55,14 +55,14 @@ youtube-shorts-automation/
 │       │   └── src/
 │       │       └── script-generator.ts  # ScriptOutput(8필드): title,hook,script,description,scenes[],hashtags,thumbnail_text,comment_bait
 │       ├── tts/                      # SQS → Edge-TTS → audio.mp3
-│       ├── subtitle/                 # ECS Fargate: 스크립트 기반 SRT 생성 (faster-whisper 제거됨)
+│       ├── subtitle/                 # ECS Fargate: Edge-TTS VTT 기반 SRT 생성 (faster-whisper 제거됨)
 │       │   └── src/
-│       │       └── processor.ts      # ffprobe 길이 측정 → script.json 기반 SRT 생성 → 시사 키워드 하이라이트
-│       ├── render/                   # ECS Fargate: Pexels 이미지 + zoompan + FFmpeg → output.mp4
+│       │       └── processor.ts      # VTT 기반 SRT 생성 (vtt 없으면 ffprobe 길이 측정 후 글자 비례 fallback)
+│       ├── render/                   # ECS Fargate: Pexels 동영상/이미지 + zoompan + FFmpeg → output.mp4 + thumbnail.jpg
 │       │   └── src/
-│       │       ├── processor.ts      # scenes 배열 기반 이미지 다운로드 + 클립 생성
-│       │       ├── renderer.ts       # zoompan 효과 (zoom-in/out, pan-left/right), FontSize=46 자막
-│       │       └── image-generator.ts  # Pexels API 이미지 검색·다운로드
+│       │       ├── processor.ts      # scenes 배열 기반 동영상/이미지 다운로드 + 클립 생성 + thumbnail.jpg 추출
+│       │       ├── renderer.ts       # zoompan 효과 (zoom-in/out, pan-left/right), FontSize=76 ASS 자막 (BorderStyle=3), 헤더 오버레이
+│       │       └── image-generator.ts  # Pexels API 동영상/이미지 검색·다운로드
 │       └── upload/                   # SQS → YouTube Data API → COMPLETED
 │           └── src/
 │               └── uploader.ts       # description+해시태그 설명문, categoryId=25(뉴스), containsSyntheticMedia: true
@@ -72,7 +72,7 @@ youtube-shorts-automation/
 │           └── schema.prisma         # Channel·Job·ChannelAnalytics 모델 (privacyStatus, watchTimeMinutes 포함)
 ├── infra/
 │   ├── localstack/init/init-aws.sh   # LocalStack: SQS 5큐+DLQ·S3 초기화
-│   └── terraform/                   # Terraform 모듈 (ECR, ECS, SQS)
+│   └── terraform/                   # Terraform 모듈 (ECR, ECS, SQS, IAM, S3)
 ├── docs/
 │   ├── README.md                     # 문서 허브
 │   ├── prd.md                        # 제품 요구사항 문서

@@ -4,7 +4,7 @@
 
 ## 현황 업데이트
 
-subtitle-worker는 2026-05-21 기준 faster-whisper를 제거하고 스크립트 기반 SRT 생성으로 전환됐다. Fargate 유지 이유가 "모델 메모리"에서 "SQS Long Polling 상시 실행"으로 변경됐으며, 메모리 할당은 8GB에서 축소 가능하다. render-worker는 FFmpeg CPU 집약 작업으로 여전히 Fargate 필수.
+subtitle-worker는 2026-05-21 기준 faster-whisper를 제거하고 Edge-TTS VTT 기반 SRT 생성으로 전환됐다. Fargate 유지 이유가 "모델 메모리"에서 "SQS Long Polling 상시 실행"으로 변경됐다. Phase 3 배포 계획 기준 subtitle: 2vCPU/8GB, render: 4vCPU/16GB. render-worker는 FFmpeg CPU 집약 작업으로 여전히 Fargate 필수.
 
 ## 배경
 

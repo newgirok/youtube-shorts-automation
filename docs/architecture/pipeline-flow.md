@@ -42,10 +42,9 @@
 │  3단계: subtitle-worker (ECS Fargate, 상시 실행)          │
 │                                                         │
 │  SQS subtitle-queue Long Polling 수신                    │
-│  → S3에서 audio.mp3, script.json 다운로드                │
-│  → ffprobe로 오디오 길이 측정                             │
-│  → script.script 문장 분할 → 시간 비례 SRT 생성           │
-│  → 시사 키워드(빨강) + 숫자(노랑) 하이라이트 적용           │
+│  → S3에서 audio.mp3, subtitle.vtt(선택) 다운로드          │
+│  → VTT 기반 SRT 생성 (vtt 없으면 ffprobe 길이 측정 후     │
+│     script.json 글자 비례 fallback), 20자 이하 청크 분할  │
 │  → S3 저장: jobs/{jobId}/subtitle.srt                   │
 │  → Job status: SUBTITLE_PROCESSING → (다음 단계)         │
 │  → SQS render-queue 발행                                 │
@@ -57,10 +56,11 @@
 │                                                         │
 │  SQS render-queue Long Polling 수신                      │
 │  → S3에서 audio.mp3, subtitle.srt 다운로드               │
-│  → scenes별 Pexels 이미지 다운로드 (keyword 영어 검색)     │
-│  → FFmpeg: 이미지 → zoompan 클립 (zoom-in/out, pan-l/r) │
-│  → FFmpeg: 클립 concat + 오디오 + 자막 burn-in (1080×1920)│
-│  → S3 저장: jobs/{jobId}/output.mp4                     │
+│  → scenes별 Pexels 동영상/이미지 다운로드 (keyword 영어)  │
+│  → FFmpeg: 동영상/이미지 → zoompan 클립 (1080×1920, 30fps)│
+│  → FFmpeg: 클립 concat + 헤더 오버레이 + 오디오 + ASS 자막 burn-in │
+│  → FFmpeg: `-vframes 1` 첫 프레임 썸네일 추출             │
+│  → S3 저장: jobs/{jobId}/output.mp4, thumbnail.jpg      │
 │  → Job status: RENDER_PROCESSING → (다음 단계)           │
 │  → SQS upload-queue 발행                                 │
 └─────────────────────────────────────────────────────────┘
@@ -132,7 +132,7 @@ interface TTSMessage {
 | **실행 환경** | ECS Fargate (상시 실행, `desired_count: 1`) |
 | **SQS 큐** | `subtitle-queue` |
 | **입력** | `jobId`, `channelId`, `audioS3Key` |
-| **처리** | S3에서 audio.mp3 + subtitle.vtt 다운로드 → VTT 기반 SRT 생성 (vtt 없으면 ffprobe 오디오 길이 측정 후 글자 비례 fallback), 20자 이하 청크 분할 |
+| **처리** | S3에서 audio.mp3 + subtitle.vtt(선택) 다운로드 → VTT 기반 SRT 생성 (vtt 없으면 ffprobe 오디오 길이 측정 후 script.json 글자 비례 fallback), 20자 이하 청크 분할 |
 | **출력** | `jobs/{jobId}/subtitle.srt` (S3) |
 | **다음 큐** | `render-queue` |
 | **상태 전이** | `TTS_PROCESSING` → `SUBTITLE_PROCESSING` |
@@ -154,7 +154,7 @@ interface SubtitleMessage {
 | **실행 환경** | ECS Fargate (상시 실행, `desired_count: 1`) |
 | **SQS 큐** | `render-queue` |
 | **입력** | `jobId`, `channelId`, `audioS3Key`, `subtitleS3Key` |
-| **처리** | scenes별 Pexels 동영상/이미지 다운로드 → zoompan 클립 생성 → FFmpeg concat + 오디오 + ASS 자막 burn-in, 1080×1920 → FFmpeg 첫 프레임(-vframes 1) 썸네일 추출 |
+| **처리** | scenes별 Pexels 동영상/이미지 다운로드 → zoompan 클립 생성 → FFmpeg concat + 헤더 오버레이 + 오디오 + ASS 자막 burn-in (FontSize=76, BorderStyle=3, MarginV=510) → FFmpeg `-vframes 1` 첫 프레임 썸네일 추출 (헤더·푸터 오버레이 적용) |
 | **출력** | `jobs/{jobId}/output.mp4`, `jobs/{jobId}/thumbnail.jpg` (S3) |
 | **다음 큐** | `upload-queue` |
 | **상태 전이** | `SUBTITLE_PROCESSING` → `RENDER_PROCESSING` |
