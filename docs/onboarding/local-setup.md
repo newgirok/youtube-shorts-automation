@@ -88,7 +88,7 @@ pnpm dev
 | `pnpm --filter @shorts/api dev` | API 서버만 실행 |
 | `pnpm --filter @shorts/web dev` | Next.js만 실행 |
 | `pnpm --filter @shorts/shared prisma:migrate` | Prisma 마이그레이션 (Docker 외부 실행 시) |
-| `pnpm --filter @shorts/shared prisma:studio` | Prisma Studio (DB GUI) |
+| `pnpm --filter @shorts/shared exec prisma studio` | Prisma Studio (DB GUI) |
 
 ---
 
@@ -156,7 +156,7 @@ pnpm --filter @shorts/tts-worker dev
 
 > 직접 실행 시 `.env.local`의 호스트명이 `localhost` 기준으로 설정되어 있는지 확인합니다. Docker 내부 호스트명(`postgres`, `localstack`)은 직접 실행 환경에서 동작하지 않습니다.
 
-> subtitle-worker는 `python3`, `ffprobe`가 PATH에 있어야 합니다 (Docker 컨테이너 외부 실행 시).
+> subtitle-worker는 `ffprobe`가 PATH에 있어야 합니다 (Docker 컨테이너 외부 실행 시). faster-whisper 제거 후 python3 불필요.
 
 ---
 
@@ -195,10 +195,10 @@ DATABASE_URL=postgresql://...?pgbouncer=true&connection_limit=1
 
 ## Phase 2 — 웹 대시보드 (로컬 개발)
 
-`docker-compose up`으로 로컬 API를 기동한 상태에서 대시보드를 개발·검증한다.
+`docker compose up -d`로 로컬 API를 기동한 상태에서 대시보드를 개발·검증한다.
 
 ```bash
-# 웹 개발 서버 시작 (docker-compose up이 실행 중이어야 함)
+# 웹 개발 서버 시작 (docker compose up -d가 실행 중이어야 함)
 pnpm --filter web dev
 ```
 

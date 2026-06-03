@@ -238,7 +238,7 @@ const heartbeat = setInterval(async () => {
   await sqs.changeMessageVisibility({
     QueueUrl: process.env.SQS_QUEUE_URL,
     ReceiptHandle: message.ReceiptHandle,
-    VisibilityTimeout: 600, // 10분으로 재연장
+    VisibilityTimeout: 600, // Worker 타임아웃 × 2 (subtitle: 600, render: 1200)
   });
 }, 30_000);
 

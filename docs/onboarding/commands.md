@@ -19,16 +19,15 @@ pnpm --filter @shorts/web dev
 ## Prisma (`packages/shared` 기준)
 
 ```bash
-pnpm --filter @shorts/shared prisma:generate   # Prisma Client 재생성
-pnpm --filter @shorts/shared prisma migrate dev  # 개발 마이그레이션 생성
-pnpm --filter @shorts/shared prisma:migrate    # 프로덕션 마이그레이션 적용
-pnpm --filter @shorts/shared prisma studio     # DB GUI
+pnpm --filter @shorts/shared prisma:generate        # Prisma Client 재생성
+pnpm --filter @shorts/shared prisma:migrate         # 마이그레이션 적용 (prisma migrate deploy)
+pnpm --filter @shorts/shared exec prisma studio     # DB GUI (Prisma Studio)
 ```
 
 ## Docker Compose (로컬 통합 환경)
 
 ```bash
-docker-compose up             # 전체 스택 기동 (LocalStack·PostgreSQL·전체 Worker 포함)
-docker-compose up localstack  # LocalStack만 기동
-docker-compose down -v        # 스택 종료 + 볼륨 삭제
+docker compose up             # 전체 스택 기동 (LocalStack·PostgreSQL·전체 Worker 포함)
+docker compose up localstack  # LocalStack만 기동
+docker compose down -v        # 스택 종료 + 볼륨 삭제
 ```

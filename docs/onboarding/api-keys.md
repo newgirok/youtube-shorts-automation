@@ -68,10 +68,10 @@ upload-worker의 YouTube 업로드 및 API 서버의 채널 동기화·Analytics
 |-----------|------|-------------|
 | `YOUTUBE_CLIENT_ID` | 이 **프로그램(앱)** 자체의 신분증 | 변경 불필요 |
 | `YOUTUBE_CLIENT_SECRET` | 위 신분증의 비밀번호 | 변경 불필요 |
-| `YOUTUBE_REFRESH_TOKEN` | 특정 **사용자 계정**의 접근 허가증 | **반드시 교체** |
 
-`CLIENT_ID`와 `CLIENT_SECRET`은 GCP 프로젝트가 동일하다면 업로드 대상 계정이 달라져도 그대로 유지됩니다.  
-`REFRESH_TOKEN`은 "이 계정의 채널에 업로드해도 좋다"는 특정 사용자의 허가증이므로, 업로드 대상 계정이 바뀌면 반드시 새로 발급해야 합니다.
+`CLIENT_ID`와 `CLIENT_SECRET`은 GCP 프로젝트가 동일하다면 업로드 대상 계정이 달라져도 그대로 유지됩니다.
+
+> refresh_token은 웹 대시보드에서 `GET /auth/youtube` → OAuth 플로우를 통해 발급되며, DB에 AES-256-GCM으로 암호화되어 저장됩니다. `.env.local`에 별도 저장할 필요가 없습니다.
 
 ### 1단계: API 활성화
 
@@ -120,46 +120,29 @@ YOUTUBE_CLIENT_ID=123456789-abc...apps.googleusercontent.com
 YOUTUBE_CLIENT_SECRET=GOCSPX-...
 ```
 
-### 4단계: Refresh Token 발급
+### 4단계: 채널 연결 (웹 대시보드 사용)
 
-URL: [https://developers.google.com/oauthplayground](https://developers.google.com/oauthplayground)
+`YOUTUBE_CLIENT_ID`와 `YOUTUBE_CLIENT_SECRET` 설정 후 웹 대시보드(`http://localhost:3001`)에서 채널을 연결합니다.
 
-1. 우측 상단 톱니바퀴(Settings) 클릭
-   - **Use your own OAuth credentials** 체크
-   - 3단계에서 복사한 Client ID / Client Secret 입력 → **[Close]**
+1. 대시보드 접속 → Google 로그인
+2. 사이드바 하단 YouTube 아이콘 클릭 → OAuth 팝업 열림
+3. `GET /auth/youtube` 엔드포인트가 OAuth 인증 URL로 리다이렉트
+4. YouTube 채널 소유 Google 계정으로 로그인 및 권한 허용
+5. 완료 후 팝업이 닫히고 채널 정보가 대시보드에 표시됨
 
-2. 좌측 Step 1 — 스코프 선택 (3개 모두 필요):
-   - `YouTube Data API v3` → `https://www.googleapis.com/auth/youtube.upload` 선택
-   - `YouTube Data API v3` → `https://www.googleapis.com/auth/youtube.readonly` 선택
-   - `YouTube Analytics API` → `https://www.googleapis.com/auth/yt-analytics.readonly` 선택
-   - **[Authorize APIs]** 클릭
+refresh_token은 OAuth 플로우에서 자동으로 AES-256-GCM 암호화되어 DB에 저장됩니다. `.env.local`에 별도로 저장할 필요가 없습니다.
 
-> 세 스코프 모두 선택해야 합니다. 누락 시 채널 sync(`POST /channels/:id/sync`) 호출 시 403 오류가 발생합니다.
+> 경고창이 뜨면 **고급 → 이동** 클릭합니다. (앱이 아직 GCP 검증 전 상태인 경우)
 
-3. Google 계정 로그인 및 권한 **[허용]**
-   - 경고창이 뜨면 **고급 → 이동** 클릭
+### 채널 추가·전환 절차
 
-4. Step 2 — **[Exchange authorization code for tokens]** 클릭
+다른 YouTube 채널을 추가하거나 변경할 때:
 
-5. 응답 JSON에서 `refresh_token` 값 복사 → `.env.local`에 저장:
-
-```bash
-YOUTUBE_REFRESH_TOKEN=1//04...
-```
-
-### 업로드 대상 계정 전환 절차
-
-다른 YouTube 채널로 업로드 대상을 변경할 때:
-
-1. Google Cloud 콘솔 → OAuth 동의 화면 → Test users에 새 계정 이메일 등록
-2. OAuth 2.0 Playground에서 **[Authorize APIs]** 클릭 후 **새 계정으로 로그인**
-3. 스코프 3개(`youtube.upload`, `youtube.readonly`, `yt-analytics.readonly`) 모두 선택
-4. Step 2에서 새로 발급된 `refresh_token` 복사
-5. `.env.local`의 `YOUTUBE_REFRESH_TOKEN` 값만 교체
+1. Google Cloud 콘솔 → OAuth 동의 화면 → Test users에 새 계정 이메일 등록 (미등록 계정은 403 발생)
+2. 웹 대시보드에서 YouTube 아이콘 클릭 → 새 계정으로 OAuth 플로우 진행
+3. 채널 연결 완료 후 DB에 암호화된 refresh_token이 자동 저장됨
 
 > `YOUTUBE_CLIENT_ID`와 `YOUTUBE_CLIENT_SECRET`은 변경하지 않습니다.
-
-> 웹 대시보드에서 채널을 연결할 경우(`GET /auth/youtube` → OAuth 플로우) refresh_token은 DB에 암호화 저장됩니다. 이 경우 `.env.local`의 `YOUTUBE_REFRESH_TOKEN`은 로컬 진단 스크립트(`scripts/run-pipeline.ts`) 전용으로만 사용됩니다.
 
 ### 일일 할당량
 
@@ -311,7 +294,6 @@ URL: [https://console.aws.amazon.com/secretsmanager/](https://console.aws.amazon
 - [ ] `AWS_ENDPOINT_URL` — LocalStack: `http://localhost:4566`
 - [ ] `YOUTUBE_CLIENT_ID` — Google Cloud Console에서 발급
 - [ ] `YOUTUBE_CLIENT_SECRET` — Google Cloud Console에서 발급
-- [ ] `YOUTUBE_REFRESH_TOKEN` — OAuth 2.0 Playground에서 발급
 - [ ] `YOUTUBE_REDIRECT_URI` — `https://developers.google.com/oauthplayground`
 - [ ] `PEXELS_API_KEY` — Pexels 대시보드에서 발급
 - [ ] `ENCRYPTION_KEY` — 64자리 hex 직접 생성

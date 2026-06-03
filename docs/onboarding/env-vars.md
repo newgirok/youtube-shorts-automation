@@ -55,6 +55,7 @@ cp apps/web/.env.example apps/web/.env.local
 | `DATABASE_URL` |  | - | PostgreSQL 연결 문자열 (로컬: `localhost:5432`) |
 | `AWS_REGION` |  | `ap-northeast-2` | AWS 리전 |
 | `S3_BUCKET_NAME` |  | - | S3 버킷명 |
+| `LOG_LEVEL` | - | `info` | Pino 로그 레벨 (`trace` \| `debug` \| `info` \| `warn` \| `error` \| `fatal`) |
 | `AWS_ACCESS_KEY_ID` | - | - | AWS 액세스 키 (LocalStack: `test`) |
 | `AWS_SECRET_ACCESS_KEY` | - | - | AWS 시크릿 키 (LocalStack: `test`) |
 | `AWS_ENDPOINT_URL` | - | - | LocalStack 엔드포인트 (로컬: `http://localhost:4566`) |
@@ -100,9 +101,10 @@ cp apps/web/.env.example apps/web/.env.local
 |--------|------|------|
 | `SQS_RENDER_QUEUE_URL` |  | 수신 큐 URL |
 | `SQS_UPLOAD_QUEUE_URL` |  | upload-worker SQS 큐 URL |
-| `PEXELS_API_KEY` |  | Pexels 이미지 검색 API 키 (pexels.com/api에서 발급, 배경 이미지 생성용) |
+| `PEXELS_API_KEY` |  | Pexels 이미지/동영상 검색 API 키 (pexels.com/api에서 발급, 배경 소스용) |
 | `FFMPEG_PATH` | - | FFmpeg 실행 경로 (Docker: `ffmpeg`, Windows: 절대 경로) |
 | `FFPROBE_PATH` | - | ffprobe 실행 경로 (Docker: `ffprobe`, Windows: 절대 경로) |
+| `FONTS_DIR` | - | 폰트 디렉토리 경로 (Docker: `/app/fonts`, 미설정 시 OS 기본 폰트 fallback) |
 
 ### apps/workers/upload
 
@@ -110,8 +112,7 @@ cp apps/web/.env.example apps/web/.env.local
 |--------|------|------|
 | `YOUTUBE_CLIENT_ID` |  | Google Cloud OAuth2 클라이언트 ID |
 | `YOUTUBE_CLIENT_SECRET` |  | Google Cloud OAuth2 클라이언트 시크릿 |
-| `YOUTUBE_REFRESH_TOKEN` |  | YouTube 채널 OAuth2 refresh token |
-| `ENCRYPTION_KEY` |  | AES-256-GCM 암호화 키 |
+| `ENCRYPTION_KEY` |  | AES-256-GCM 암호화 키 (64자리 hex = 32 bytes) |
 | `FFPROBE_PATH` | - | ffprobe 실행 경로 (Docker: `ffprobe`, Windows: 절대 경로). 업로드 전 영상 품질 검증용 |
 
 ### apps/web/.env.local
