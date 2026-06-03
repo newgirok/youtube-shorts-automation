@@ -55,6 +55,9 @@ out/
 # MCP 로그
 .mcp.log
 
+# agentmemory (iii 엔진이 CWD 기준으로 생성하는 런타임 데이터)
+/data/
+
 # OS
 .DS_Store
 Thumbs.db
