@@ -8,16 +8,18 @@
 
 ### 1. 채널당 매일 1개 쇼츠 업로드
 
-- EventBridge Scheduler가 채널별 `uploadSchedule` (cron 형식)에 따라 매일 Job을 자동 생성합니다.
+- `Channel.schedulerEnabled = true`인 채널에 대해 `uploadSchedule` (cron 형식)에 따라 Job을 자동 생성합니다.
+- Phase 1~2 (로컬): NestJS `@Cron('* * * * *')` 스케줄러가 1분마다 cron 표현식을 평가해 Job 생성.
+- Phase 3+ (AWS): EventBridge Scheduler로 채널별 cron 스케줄 이관 예정.
 - `Channel.isActive = false`인 채널은 스케줄에서 제외됩니다.
 - 스케줄 기본값: `"0 9 * * *"` (UTC 오전 9시, KST 오후 6시)
 - 채널별로 독립적인 스케줄 설정이 가능합니다.
 
-### 2. 토픽 큐 소진 시 자동 생성
+### 2. 스케줄러 자동 뉴스 수집
 
-- 채널에 사전 등록된 토픽 큐가 있으면 순서대로 사용합니다.
-- 토픽 큐가 소진되면 script-worker가 Gemini API로 채널 niche에 맞는 토픽을 자동 생성합니다.
-- 자동 생성된 토픽은 다시 큐에 저장되지 않습니다 (매번 새로 생성).
+- 스케줄러가 Job을 자동 생성할 때 `Channel.schedulerCategory`(기본: `top`)를 기준으로 Google News RSS에서 뉴스 제목을 topic으로 사용합니다.
+- `POST /jobs/auto-news` 엔드포인트를 통해 수동으로도 카테고리별 뉴스 Job을 일괄 생성할 수 있습니다.
+- 카테고리: `top`(종합) / `politics`(정치) / `business`(경제) / `nation`(사회)
 
 ### 3. 보안 규칙
 

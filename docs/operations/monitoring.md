@@ -4,8 +4,8 @@
 
 | Phase | 구현 항목 |
 |-------|-----------|
-| Phase 2 (현재) | 로컬 Docker Compose 로그, `docker compose logs -f` |
-| Phase 3 | CloudWatch 로그 수집, Lambda/Fargate 에러율 알람, Supabase 대시보드 |
+| Phase 1~2 (완료) | 로컬 Docker Compose 로그, `docker compose logs -f` |
+| Phase 3 (진행 예정) | CloudWatch 로그 수집, Lambda/Fargate 에러율 알람, Supabase 대시보드 |
 | Phase 4 | SQS DLQ 알림 (dlq-notifier Lambda, Slack/Discord Webhook) |
 | Phase 7 | Sentry, AWS Budget Alert, CI/CD sourcemaps 업로드 |
 
@@ -126,7 +126,7 @@ resource "aws_cloudwatch_metric_alarm" "fargate_task_stopped" {
 | `RENDER_PROCESSING` | render-worker 처리 중 |
 | `UPLOAD_PROCESSING` | upload-worker 처리 중 |
 | `COMPLETED` | 모든 단계 완료 |
-| `FAILED` | 오류 발생, `failureReason` 컬럼 확인 필요 |
+| `FAILED` | 오류 발생, `failReason` 컬럼 확인 필요 |
 
 ### 운영 검증 SQL 쿼리
 
@@ -136,7 +136,7 @@ resource "aws_cloudwatch_metric_alarm" "fargate_task_stopped" {
 SELECT
   id,
   channel_id,
-  failure_reason,
+  fail_reason,
   updated_at
 FROM jobs
 WHERE status = 'FAILED'
@@ -148,25 +148,26 @@ ORDER BY updated_at DESC;
 
 ```sql
 SELECT
-  failure_reason,
+  fail_reason,
   COUNT(*) AS cnt,
   ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS pct
 FROM jobs
 WHERE status = 'FAILED'
   AND updated_at > NOW() - INTERVAL '30 days'
-GROUP BY failure_reason
+GROUP BY fail_reason
 ORDER BY cnt DESC;
 ```
 
 **FAILED 상태 재시도**
 
-```sql
-UPDATE jobs
-SET status = 'PENDING', failure_reason = NULL
-WHERE id = '<job_id>';
+대시보드 `/dashboard/[id]`에서 재시도 버튼을 클릭하거나, API를 직접 호출한다:
+
+```bash
+curl -X POST http://localhost:3000/jobs/<job_id>/retry \
+  -H "x-internal-secret: <API_INTERNAL_SECRET>"
 ```
 
-재시도 후 해당 SQS 큐에 메시지를 다시 전송해야 한다.
+API가 `status = PENDING`으로 초기화하고 script-queue에 메시지를 재발행한다.
 
 ---
 

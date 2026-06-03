@@ -36,7 +36,7 @@ docker compose logs -f script-worker
 | web | 3001 | Next.js 웹 |
 | script-worker | - | Gemini 스크립트 생성 |
 | tts-worker | - | TTS 음성 합성 |
-| subtitle-worker | - | 스크립트 기반 SRT 자막 생성 |
+| subtitle-worker | - | VTT 기반 SRT 자막 생성 |
 | render-worker | - | FFmpeg 영상 렌더링 |
 | upload-worker | - | YouTube 업로드 |
 
@@ -106,7 +106,7 @@ cd apps/workers/upload && serverless deploy --stage prod
 
 subtitle-worker (스크립트 기반 SRT 생성)와 render-worker (FFmpeg)는 Fargate로 운영된다.
 
-> subtitle-worker는 faster-whisper를 사용하지 않습니다. S3의 `script.json`에서 스크립트를 읽어 직접 SRT를 생성하므로 GPU/모델 의존성이 없습니다.
+> subtitle-worker는 faster-whisper를 사용하지 않습니다. tts-worker가 생성한 VTT(word-level timing)를 기반으로 SRT를 생성하므로 GPU/모델 의존성이 없습니다.
 
 ```bash
 # 1. Docker 이미지 빌드
@@ -162,6 +162,10 @@ pnpm --filter @shorts/shared prisma:migrate
 | `20260511123832_init` | 초기 스키마 생성 |
 | `20260519000000_add_watch_time_minutes` | `ChannelAnalytics.watchTimeMinutes` 컬럼 추가 |
 | `20260520000000_add_privacy_status` | `Job.privacyStatus` 컬럼 추가 (기본값 `public`) |
+| `20260525152454_add_scheduler_fields` | `Channel.schedulerEnabled`, `schedulerCategory`, `uploadSchedule` 컬럼 추가 |
+| `20260525180000_add_job_thumbnail_url` | `Job.thumbnailUrl` 컬럼 추가 |
+| `20260525190000_drop_channel_analytics` | `ChannelAnalytics` 테이블 삭제 |
+| `20260525200000_restore_channel_analytics` | `ChannelAnalytics` 테이블 복원 |
 
 ---
 
