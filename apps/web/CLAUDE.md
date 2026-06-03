@@ -43,13 +43,13 @@ src/
 │   └── layout.tsx                — 루트 레이아웃
 ├── components/
 │   ├── StatusTimeline.tsx        — Job 처리 단계 타임라인 + 재시도 버튼
-│   ├── VideoCard.tsx             — Job 카드 (썸네일·상태 배지·삭제 오버레이, max-h-60 object-cover)
+│   ├── VideoCard.tsx             — Job 카드 (썸네일·상태 배지·삭제 오버레이, aspect-[9/16] max-h-36, thumbnailUrl 직접 사용 — 프록시 미경유)
 │   ├── Sidebar.tsx               — 데스크톱 사이드 내비게이션
 │   ├── BottomNav.tsx             — 모바일 하단 내비게이션
 │   └── ui/                       — shadcn/ui 기본 컴포넌트
 ├── lib/
 │   ├── types.ts                  — Job, Channel, AnalyticsRow, JobStatus 타입
-│   ├── api.ts                    — apiGet / apiPost / apiPatch / apiDelete 헬퍼
+│   ├── api.ts                    — apiGet / apiPost / apiPatch / apiDelete 헬퍼 (API_INTERNAL_URL → NEXT_PUBLIC_API_URL 폴백, NEXT_PUBLIC_API_SECRET Bearer 헤더 자동 첨부)
 │   ├── store.ts                  — Zustand: selectedChannelId, setSelectedChannelId, clearSelectedChannelId
 │   └── utils.ts                  — cn() 유틸 + toProxyThumbUrl() S3 썸네일 → 프록시 URL 변환
 ├── auth.ts                       — NextAuth v5 (GoogleProvider + JWT)
@@ -81,7 +81,17 @@ interface Job {
 }
 
 interface Channel {
-  // ...기존 필드...
+  id: string;
+  name: string;
+  niche: string;
+  isActive: boolean;
+  subscriberCount?: number;
+  totalViews?: number;
+  uploadCount90d?: number;
+  shortsViews90d?: number;
+  uploadSchedule?: string | null;
+  schedulerEnabled?: boolean;
+  schedulerCategory?: string;
   isYPPQualified?: boolean;  // YPP 자격 여부
   createdAt?: string;        // 채널 등록일 (ISO 8601)
 }
@@ -138,7 +148,7 @@ interface AnalyticsRow {
 ### 채널 sync
 - 홈·채널 페이지 마운트 시 `POST /channels/:id/sync` 호출 → Jobs 목록/채널 정보 refetch
 - 홈 페이지: 잡이 완료되는 순간(`hasProcessing: true → false` 전환) `POST /channels/:id/sync-videos` 자동 호출 → thumbnailUrl DB 갱신 → 갤러리 썸네일 즉시 표시
-- `/dashboard/[id]` 페이지: `youtubeVideoId` 최초 감지 시 `sync-videos` 자동 호출 (1회, `syncedRef` 패턴)
+- `/dashboard/[id]` 페이지: `youtubeVideoId` 최초 감지 시 `sync-videos` 즉시 호출 후 10초·40초 뒤 재호출 (YouTube CDN 썸네일 처리 완료 대기, `syncedRef` 패턴으로 중복 실행 방지)
 
 #### invalidate 범위 (쿼리 누락 방지)
 | sync 호출 위치 | invalidate 대상 |
@@ -158,9 +168,9 @@ interface AnalyticsRow {
 **차트 규칙:**
 - 오늘 기준 28일 범위 고정 (`d.setDate(d.getDate() - (27 - i))`)
 - X축 포맷: M/D 형식 (`${parseInt(mm!)}/${parseInt(dd!)}`) — `toLocaleDateString` 사용 금지 (hydration 오류)
-- `interval={0}` 으로 모든 28개 tick 표시
+- `interval={0}` 으로 모든 28개 tick 표시 (데스크톱)
 - 날짜 선 정렬: `margin={{ top: 4, right: 20, left: 20, bottom: 0 }}` (두 차트 모두 적용) — left/right 대칭 20px 여백으로 첫·마지막 날짜 레이블 모두 표시, 선이 날짜 범위 내에서만 그려짐
-- `interval={6}` 으로 7일 간격 레이블만 표시 (28일 중 약 4개) — `interval={0}` 전체 표시 시 모바일에서 레이블 겹침 발생
+- 모바일(`window.innerWidth < 768`): `ticks` prop에 9일 간격(인덱스 0, 9, 18, 27) + 마지막 날짜 항상 포함하는 `mobileTicks` 배열 전달 — `interval={0}` 유지하면서 tick 목록을 직접 제한
 - 차트 클릭 시 흰색 outline 제거: `[&_*]:outline-none` (두 차트 모두 적용 — svg·wrapper 포함 모든 자식 대상)
 
 **스케줄러 패널 (overflow 처리):**
@@ -196,8 +206,8 @@ const NEWS_CATEGORIES = [
 
 ### YPP 달성 기준 (2단계)
 - 1단계 (기본 수익 창출): 구독자 ≥ 500 AND 90일 업로드 ≥ 3회 AND 쇼츠 조회수(90일) ≥ 300만
-- 2단계 (광고 수익): 쇼츠 조회수(90일) ≥ 1,000만 OR 시청시간(12개월) ≥ 3,000시간
+- 2단계 (광고 수익): 쇼츠 조회수(90일) ≥ 1,000만
 
 ### 인증
-- `src/auth.ts`: GoogleProvider + JWT 세션
-- `src/middleware.ts`: `api|_next|login|close|popup|favicon|이미지·영상 확장자` 경로 제외 후 미인증 접근을 `/login`으로 리다이렉트
+- `src/auth.ts`: GoogleProvider + JWT 세션, `secret`은 `AUTH_SECRET` 우선 → `NEXTAUTH_SECRET` 폴백
+- `src/middleware.ts`: `api|_next/static|_next/image|_next|login|close|popup|favicon.ico|이미지·영상 확장자(.jpg/.jpeg/.png/.gif/.svg/.webp/.ico/.mp4/.webm/.ogg)` 경로 제외 후 미인증 접근을 `/login`으로 리다이렉트

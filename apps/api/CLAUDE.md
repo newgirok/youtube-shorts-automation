@@ -48,7 +48,7 @@ YouTube 채널 CRUD 및 동기화.
 - `GET /channels` — isActive=true 채널 목록 (id, name, niche만 반환)
 - `GET /channels/:id` — 채널 상세 + YPP 통계(uploadCount90d, shortsViews90d)
 - `DELETE /channels/:id` — 채널 연결 해제 (isActive=false, 데이터 보존)
-- `PATCH /channels/:id/schedule` — uploadSchedule cron 표현식 업데이트
+- `PATCH /channels/:id/schedule` — 스케줄 설정 업데이트 (cronExpression, schedulerEnabled, schedulerCategory 중 일부 또는 전체)
 - `GET /channels/:id/analytics` — 최근 30일 일별 analytics (views, subscribers, estimatedRevenue, watchTimeMinutes)
 - `POST /channels/:id/sync` — 채널 통계 + Analytics + 영상 조회수 풀 동기화 (YouTube Data API + YouTube Analytics API)
 - `POST /channels/:id/sync-videos` — 영상 조회수·privacyStatus 동기화 + 삭제된 영상 FAILED 처리
@@ -64,13 +64,21 @@ YouTube 채널 CRUD 및 동기화.
 > 활성화 URL: `https://console.developers.google.com/apis/api/youtubeanalytics.googleapis.com/overview?project={GCP_PROJECT_ID}`
 > 에러는 `.catch(warn)` 으로 무시하므로 나머지 sync(채널 통계·영상 조회수)는 정상 동작한다.
 
+### `scheduler/`
+1분마다 실행되는 자동 업로드 스케줄러 (`@Cron('* * * * *')`).
+
+- `schedulerEnabled=true`인 채널을 대상으로 `uploadSchedule` cron 표현식을 평가
+- 직전 1분 이내에 cron이 트리거됐으면 (`shouldRunNow`) `createFromNews`로 Job 1개 생성
+- 이미 진행 중인 Job이 있으면 스킵 (`hasActiveJob` 체크)
+- 타임존: `Asia/Seoul` (`cron-parser` 사용)
+
 ### `jobs/`
 Job 생성 및 상태 조회, 재시도.
 
 - `POST /jobs` — 채널 + 토픽으로 Job 생성 후 script-queue에 발행
 - `GET /jobs` — Job 목록 (channelId 쿼리로 필터링 가능)
 - `GET /jobs/:id` — Job 상세 조회 (없으면 404)
-- `GET /jobs/:id/thumbnail` — S3에서 썸네일 이미지(image/jpeg) 프록시 서빙 (없으면 404)
+- `GET /jobs/:id/thumbnail` — S3에서 썸네일 이미지(image/jpeg) 프록시 서빙 (없으면 404, `@Public()` 인증 제외)
 - `POST /jobs/auto-news` — Google News RSS 수집 후 뉴스 제목으로 Job 일괄 생성
 - `POST /jobs/:id/retry` — FAILED 상태 Job만 PENDING으로 초기화 후 script-queue 재발행
 
@@ -90,4 +98,23 @@ Job 생성 및 상태 조회, 재시도.
 
 뉴스 출처: Google News RSS (`news.google.com/rss`, 한국어/KR 로케일)
 
-`retry` 조건: `Job.status === 'FAILED'`만 허용. 다른 상태에서 호출 시 400 BadRequest.
+`retry` 조건: `Job.status === 'FAILED'`만 허용. Job이 없으면 404 NotFound, 다른 상태에서 호출 시 400 BadRequest.
+
+### 인증 방식
+전역 `InternalKeyGuard` 적용 — 모든 요청에 `x-internal-secret` 헤더 필요 (`API_INTERNAL_SECRET` 환경변수와 비교).
+예외: `@Public()` 데코레이터가 붙은 핸들러는 인증 제외.
+- `GET /health` — `@Public()`
+- `GET /jobs/:id/thumbnail` — `@Public()`
+- `GET /auth/youtube` — `@Public()` (컨트롤러 단위)
+- `GET /auth/youtube/callback` — `@Public()` (컨트롤러 단위)
+
+### 필수 환경변수
+```
+YOUTUBE_CLIENT_ID
+YOUTUBE_CLIENT_SECRET
+YOUTUBE_REDIRECT_URI
+ENCRYPTION_KEY
+SQS_SCRIPT_QUEUE_URL
+API_INTERNAL_SECRET
+```
+`main.ts` 시작 시 누락 여부를 직접 체크 후 즉시 종료. `@shorts/shared`의 `parseBaseEnv()`도 추가로 호출.

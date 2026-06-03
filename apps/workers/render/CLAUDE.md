@@ -6,11 +6,11 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
 
 ## 주요 모듈
 
-- `processor.ts` — S3 파일 다운로드, scenes 기반 클립 생성, FFmpeg 최종 합성, upload-queue 발행
+- `processor.ts` — S3 파일 다운로드, scenes 기반 클립 생성, FFmpeg 최종 합성, upload-queue 발행 (heartbeat `VisibilityTimeout: 1200`)
 - `renderer.ts` — FFmpeg zoompan 클립 렌더링 (`renderSceneClip`, `renderSceneFromVideo`), 클립 concat + 헤더 + 자막 burn-in (`concatClipsWithAudio`)
 - `image-generator.ts` — Pexels API로 scene keyword 기반 배경 동영상/이미지 검색·다운로드 (`PEXELS_API_KEY` 필요)
 - `index.ts` — SQS Long Polling 진입점 (Fargate 상시 실행)
-- `env.ts` — 환경변수 파싱 (`PEXELS_API_KEY`, `FFMPEG_PATH` 등)
+- `env.ts` — 환경변수 파싱 (`PEXELS_API_KEY`, `FFMPEG_PATH`, `FFPROBE_PATH`, `FONTS_DIR` 등)
 
 ## 에러 메시지 인코딩 처리
 
@@ -82,7 +82,8 @@ const toSafeMsg = (err: unknown) =>
 2. ASS 파일 내용 직접 수정:
    - `PlayResX: 1080`, `PlayResY: 1920` 으로 교체
    - `Style: Default` 라인 전체 교체 (아래 값 사용)
-3. `ass='subtitle.ass'` 필터로 burn-in
+3. ASS 파일의 SRT→ASS 센티초 반올림으로 생기는 엔트리 오버랩을 `fixAssOverlaps()`로 보정 (겹치는 `end`를 다음 `start - 1cs`로 조정, libass가 자막을 위로 밀어 버리는 현상 방지)
+4. `ass='subtitle.ass'` 필터로 burn-in
 
 ```
 Style: Default,{FontName},76,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,3,10,0,2,40,40,510,1

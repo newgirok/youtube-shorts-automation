@@ -45,6 +45,14 @@ function skipTitleEntries(entries: VttEntry[], title: string): VttEntry[] {
 2. S3에서 `jobs/{jobId}/script.json` → `script` 필드 추출
 3. `buildSrt()`: 전체 길이 대비 글자 수 비례로 타임스탬프 계산
 
+## 환경변수
+
+| 변수 | 기본값 | 설명 |
+|---|---|---|
+| `SQS_SUBTITLE_QUEUE_URL` | (필수) | 수신 큐 URL |
+| `SQS_RENDER_QUEUE_URL` | (필수) | 발행 큐 URL |
+| `PYTHON_PATH` | `python` | Python 실행 경로 (미사용, 향후 확장 대비) |
+
 ## 핵심 상수
 
 | 상수 | 값 | 설명 |
@@ -71,6 +79,10 @@ const text = raw
   .replace(/\s{2,}/g, ' ')
   .trim();
 ```
+
+## Heartbeat
+
+`processMessage` 진입 직후 30초 간격으로 `ChangeMessageVisibility`를 호출해 `VisibilityTimeout: 600`(10분)으로 연장한다. `finally` 블록에서 반드시 `clearInterval`로 정리한다.
 
 ## SQS 메시지 구조
 
