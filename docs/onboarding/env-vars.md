@@ -93,7 +93,7 @@ cp apps/web/.env.example apps/web/.env.local
 |--------|------|------|
 | `SQS_SUBTITLE_QUEUE_URL` |  | 수신 큐 URL |
 | `SQS_RENDER_QUEUE_URL` |  | render-worker SQS 큐 URL |
-| `PYTHON_PATH` | - | Python 실행 경로 (Docker: `python`, Windows: 절대 경로) |
+| `PYTHON_PATH` | - | Python 실행 경로 (기본값: `python`, 현재 미사용 — 향후 확장 대비) |
 
 ### apps/workers/render
 
