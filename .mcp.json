@@ -1,39 +1,28 @@
 {
   "mcpServers": {
     "shrimp-task-manager": {
-      "command": "npx",
-      "args": ["-y", "@cjo4m06/mcp-shrimp-task-manager"],
+      "command": "node",
+      "args": ["C:\\Users\\tlswl\\.mcp-servers\\shrimp-task-manager\\dist\\index.js"],
       "env": {
-        "DATA_DIR": "${workspaceFolder}/.shrimp-data",
-        "RULES_FILE_PATH": "${workspaceFolder}/shrimp-rules.md"
+        "DATA_DIR": "C:\\Users\\tlswl\\workspace\\youtube-shorts-automation\\.shrimp-data",
+        "RULES_FILE_PATH": "C:\\Users\\tlswl\\workspace\\youtube-shorts-automation\\shrimp-rules.md"
       },
       "type": "stdio"
     },
     "playwright": {
-      "command": "npx",
-      "args": ["-y", "@playwright/mcp@0.0.75", "--output-dir", ".playwright-mcp"],
+      "command": "pnpm",
+      "args": ["dlx", "@playwright/mcp@0.0.75", "--output-dir", ".playwright-mcp"],
       "type": "stdio"
     },
     "terraform": {
-      "command": "npx",
-      "args": ["-y", "@awslabs/terraform-mcp-server@latest"],
+      "command": "pnpm",
+      "args": ["dlx", "terraform-mcp-server"],
       "type": "stdio"
     },
-    "aws-serverless": {
-      "command": "npx",
-      "args": ["-y", "@awslabs/aws-serverless-mcp-server@latest"],
-      "type": "stdio",
-      "env": {
-        "AWS_REGION": "ap-northeast-2"
-      }
-    },
     "sentry": {
-      "command": "npx",
-      "args": ["-y", "@sentry/mcp-server@0.34.0"],
-      "type": "stdio",
-      "env": {
-        "SENTRY_AUTH_TOKEN": "${SENTRY_AUTH_TOKEN}"
-      }
+      "command": "pnpm",
+      "args": ["dlx", "@sentry/mcp-server@0.34.0"],
+      "type": "stdio"
     }
   }
 }
