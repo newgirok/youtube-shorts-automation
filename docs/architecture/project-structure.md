@@ -21,7 +21,7 @@ youtube-shorts-automation/
 │   └── settings.json                 # Claude Code 프로젝트 설정 (PostToolUse·permissions deny)
 ├── .env.example                      # 환경변수 템플릿 (루트 서비스용)
 ├── .env.local                        # 공통 환경변수 (gitignore)
-├── .mcp.json                         # MCP 서버 설정 (Shrimp Task Manager·Playwright·Terraform·AWS·Sentry)
+├── .mcp.json                         # MCP 서버 설정 (Shrimp Task Manager·Playwright·Terraform·Sentry)
 ├── docker-compose.yml                # 로컬 통합 환경 (LocalStack + PostgreSQL + Workers)
 ├── package.json                      # 루트 패키지 (공통 스크립트·devDependencies)
 ├── pnpm-workspace.yaml               # pnpm 워크스페이스 패키지 경로 선언
@@ -35,7 +35,7 @@ youtube-shorts-automation/
 │   │       │   ├── auth.controller.ts  # Google OAuth 채널 연결 엔드포인트
 │   │       │   └── auth.service.ts     # OAuth 토큰 교환 + DB 저장 (yt-analytics.readonly 스코프 포함)
 │   │       ├── channels/
-│   │       │   ├── channels.controller.ts  # GET /channels, GET /channels/:id/analytics, POST /channels/:id/sync, POST /channels/:id/sync-videos
+│   │       │   ├── channels.controller.ts  # GET /channels, GET /channels/:id, PATCH /channels/:id/schedule, DELETE /channels/:id, GET /channels/:id/analytics, POST /channels/:id/sync, POST /channels/:id/sync-videos
 │   │       │   └── channels.service.ts     # YouTube Data API + Analytics API 동기화
 │   │       └── jobs/
 │   │           ├── jobs.controller.ts  # POST /jobs, GET /jobs, POST /jobs/auto-news, POST /jobs/:id/retry

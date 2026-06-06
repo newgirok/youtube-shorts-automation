@@ -151,6 +151,7 @@ packages/shared/
 | `GET` | `/channels` | 활성 채널 목록 |
 | `GET` | `/channels/:id` | 채널 상세 + YPP 통계 |
 | `PATCH` | `/channels/:id/schedule` | 업로드 cron 스케줄 변경 |
+| `DELETE` | `/channels/:id` | 채널 연결 해제 (isActive=false, 데이터 보존) |
 | `GET` | `/channels/:id/analytics` | 최근 30일 일별 analytics |
 | `POST` | `/channels/:id/sync` | 채널 통계 + Analytics + 영상 조회수 풀 동기화 |
 | `POST` | `/channels/:id/sync-videos` | 영상 조회수·privacyStatus 동기화 + 삭제 영상 처리 |
