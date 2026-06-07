@@ -37,10 +37,12 @@ youtube-shorts-automation/
 │   │       ├── channels/
 │   │       │   ├── channels.controller.ts  # GET /channels, GET /channels/:id, PATCH /channels/:id/schedule, DELETE /channels/:id, GET /channels/:id/analytics, POST /channels/:id/sync, POST /channels/:id/sync-videos
 │   │       │   └── channels.service.ts     # YouTube Data API + Analytics API 동기화
-│   │       └── jobs/
-│   │           ├── jobs.controller.ts  # POST /jobs, GET /jobs, POST /jobs/auto-news, POST /jobs/:id/retry
-│   │           ├── jobs.service.ts     # Job 생성 → SQS 발행, 뉴스 RSS 수집
-│   │           └── news-fetcher.ts     # Google News RSS 수집 (카테고리별, 한국어/KR)
+│   │       ├── jobs/
+│   │       │   ├── jobs.controller.ts  # POST /jobs, GET /jobs, GET /jobs/:id, GET /jobs/:id/thumbnail(@Public), POST /jobs/auto-news, POST /jobs/:id/retry
+│   │       │   ├── jobs.service.ts     # Job 생성 → SQS 발행, 뉴스 RSS 수집
+│   │       │   └── news-fetcher.ts     # Google News RSS 수집 (카테고리별, 한국어/KR)
+│   │       └── scheduler/
+│   │           └── scheduler.service.ts  # @Cron('* * * * *') — schedulerEnabled 채널 uploadSchedule 평가 → createFromNews(count:1)
 │   ├── web/                          # Next.js 15 (App Router) — 대시보드
 │   │   └── src/
 │   │       ├── app/

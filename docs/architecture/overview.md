@@ -158,6 +158,11 @@ packages/shared/
 | `GET` | `/auth/youtube` | YouTube OAuth 인증 URL 리다이렉트 |
 | `GET` | `/auth/youtube/callback` | OAuth 코드 교환 + 채널 upsert |
 
+> **인-프로세스 자동 스케줄러**: API 내부 `@Cron('* * * * *')`이 1분마다 실행.
+> `Channel.schedulerEnabled = true`이고 `uploadSchedule` cron이 직전 1분 이내에 해당하면,
+> 진행 중인 Job이 없는 채널에 한해 `createFromNews(count: 1)`를 자동 호출한다.
+> 타임존: `Asia/Seoul`. Phase 3+ AWS 이관 후 EventBridge Scheduler로 대체 예정(P4-1).
+
 ---
 
 ## 외부 서비스 의존성
