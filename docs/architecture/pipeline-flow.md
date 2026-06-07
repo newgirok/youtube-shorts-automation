@@ -112,7 +112,7 @@ interface ScriptMessage {
 | **SQS 큐** | `tts-queue` |
 | **입력** | `jobId`, `channelId`, `scriptS3Key` |
 | **처리** | Edge-TTS `ko-KR-SunHiNeural --rate +20%` 음성 합성 (60초 제한 대응) |
-| **출력** | `jobs/{jobId}/audio.mp3` (S3) |
+| **출력** | `jobs/{jobId}/audio.mp3`, `jobs/{jobId}/subtitle.vtt` (S3) |
 | **다음 큐** | `subtitle-queue` |
 | **상태 전이** | `SCRIPT_PROCESSING` → `TTS_PROCESSING` |
 
@@ -200,9 +200,10 @@ interface UploadMessage {
 |---|---|---|
 | 스크립트 | `jobs/{jobId}/script.json` | 1단계 (script-worker) |
 | 오디오 | `jobs/{jobId}/audio.mp3` | 2단계 (tts-worker) |
-| 자막 | `jobs/{jobId}/subtitle.srt` | 3단계 (subtitle-worker) |
+| 자막 VTT | `jobs/{jobId}/subtitle.vtt` | 2단계 (tts-worker, 선택적 — 없으면 subtitle-worker가 글자 비례 fallback) |
+| 자막 SRT | `jobs/{jobId}/subtitle.srt` | 3단계 (subtitle-worker) |
 | 최종 영상 | `jobs/{jobId}/output.mp4` | 4단계 (render-worker) |
-| 썸네일 | `jobs/{jobId}/thumbnail.jpg` | 4단계 (render-worker, FFmpeg 첫 프레임 추출 `-vframes 1` 후 S3 저장) |
+| 썸네일 | `jobs/{jobId}/thumbnail.jpg` | 4단계 (render-worker, FFmpeg `-vframes 1` 첫 프레임 추출 후 S3 저장) |
 
 **썸네일 URL 전환 흐름:**
 - render-worker 완료 → `thumbnailUrl` = S3 URL. web은 `/api/thumbnail/{jobId}` 프록시로 표시

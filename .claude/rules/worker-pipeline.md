@@ -17,9 +17,10 @@ PENDING
 ```
 jobs/{jobId}/script.json
 jobs/{jobId}/audio.mp3
+jobs/{jobId}/subtitle.vtt    — tts-worker가 생성 (선택적, 없으면 subtitle-worker가 글자 비례 fallback)
 jobs/{jobId}/subtitle.srt
 jobs/{jobId}/output.mp4
-jobs/{jobId}/thumbnail.jpg   — render-worker가 FFmpeg 3초 프레임으로 생성
+jobs/{jobId}/thumbnail.jpg   — render-worker가 FFmpeg -vframes 1 첫 프레임으로 생성
 ```
 
 ## SQS 고정값
