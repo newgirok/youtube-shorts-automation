@@ -28,7 +28,7 @@
   - [x] P2-7. `POST /channels/:id/sync` — YouTube Data API + Analytics API 풀 동기화 `[BE]`
   - [x] P2-8. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
   - [x] P2-9. `Job.privacyStatus` 추적 `[BE]`
-  - [x] P2-10. API 인-프로세스 자동 스케줄러 `[BE]` — `@Cron('* * * * *')` 1분 폴링, `schedulerEnabled` 채널의 `uploadSchedule` cron 평가 → `createFromNews(count:1)` 자동 호출 (Asia/Seoul, 중복 방지). Phase 4 EventBridge로 대체 예정.
+  - [x] P2-10. API 인-프로세스 자동 스케줄러 `[BE]` — `@Cron('* * * * *')` 1분 폴링, `schedulerEnabled` 채널의 `uploadSchedule` cron 평가 → `createFromNews(count:1, category: schedulerCategory)` 자동 호출 (Asia/Seoul, 중복 방지). Phase 4 EventBridge로 대체 예정.
 - **Phase 3** — AWS 서버리스 이관
   - [ ] P3-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
   - [ ] P3-2. Supabase 연결 + 마이그레이션 `[BE][DevOps]`

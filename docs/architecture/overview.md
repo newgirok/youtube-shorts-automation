@@ -150,7 +150,7 @@ packages/shared/
 | `POST` | `/jobs/:id/retry` | FAILED Job 재시도 |
 | `GET` | `/channels` | 활성 채널 목록 |
 | `GET` | `/channels/:id` | 채널 상세 + YPP 통계 |
-| `PATCH` | `/channels/:id/schedule` | 업로드 cron 스케줄 변경 |
+| `PATCH` | `/channels/:id/schedule` | 업로드 cron 스케줄·`schedulerEnabled`·`schedulerCategory` 변경 |
 | `DELETE` | `/channels/:id` | 채널 연결 해제 (isActive=false, 데이터 보존) |
 | `GET` | `/channels/:id/analytics` | 최근 30일 일별 analytics |
 | `POST` | `/channels/:id/sync` | 채널 통계 + Analytics + 영상 조회수 풀 동기화 |
@@ -161,6 +161,7 @@ packages/shared/
 > **인-프로세스 자동 스케줄러**: API 내부 `@Cron('* * * * *')`이 1분마다 실행.
 > `Channel.schedulerEnabled = true`이고 `uploadSchedule` cron이 직전 1분 이내에 해당하면,
 > 진행 중인 Job이 없는 채널에 한해 `createFromNews(count: 1)`를 자동 호출한다.
+> 뉴스 카테고리는 `Channel.schedulerCategory` 값 사용 (`'top' | 'politics' | 'business' | 'nation'`).
 > 타임존: `Asia/Seoul`. Phase 3+ AWS 이관 후 EventBridge Scheduler로 대체 예정(P4-1).
 
 ---
