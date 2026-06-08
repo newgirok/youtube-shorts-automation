@@ -121,6 +121,11 @@ function parseOutput(text: string): ScriptOutput {
     throw new Error(`SCRIPT_TOO_LONG:${parsed.script.length}`);
   }
 
+  // 격식체 종결어 금지 — script에 ~습니다/~입니다 포함 시 재시도 강제
+  if (parsed.script && /습니다|입니다/.test(parsed.script)) {
+    throw new Error('SCRIPT_FORMAL_ENDING');
+  }
+
   if (parsed.title) {
     parsed.title = stripTitleSpecialChars(parsed.title);
   }
@@ -140,7 +145,7 @@ export async function generateScript(topic: string, channelId: string): Promise<
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       const status = typeof err === 'object' && err !== null ? (err as { status?: number }).status : undefined;
-      const isRetryable = status === 503 || msg.startsWith('SCRIPT_TOO_LONG');
+      const isRetryable = status === 503 || msg.startsWith('SCRIPT_TOO_LONG') || msg === 'SCRIPT_FORMAL_ENDING';
       if (isRetryable && attempt < MAX_RETRIES - 1) {
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1)));
         continue;

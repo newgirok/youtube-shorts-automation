@@ -25,7 +25,8 @@ const toSafeMsg = (err: unknown) =>
 ## 모델 및 SDK
 
 - 모델: `gemini-2.5-flash` (`@google/generative-ai` SDK)
-- 503 응답 또는 `SCRIPT_TOO_LONG` 오류 시 최대 3회 재시도, 재시도 간 지연 5초 × (시도 횟수)
+- 503 응답, `SCRIPT_TOO_LONG`, `SCRIPT_FORMAL_ENDING` 오류 시 최대 3회 재시도, 재시도 간 지연 5초 × (시도 횟수)
+- `SCRIPT_FORMAL_ENDING`: script 필드에 `~습니다|~입니다` 패턴이 포함된 경우 (`parseOutput` 내 코드 검증)
 
 ## 출력 JSON 구조 (ScriptOutput)
 
