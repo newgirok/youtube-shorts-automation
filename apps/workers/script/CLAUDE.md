@@ -35,7 +35,7 @@ interface ScriptOutput {
   hook: string;           // 첫 2초 훅 문장
   script: string;         // 전체 낭독 스크립트 (210~350자, 최대 380자 검증, title TTS 포함 총 35~45초)
   description: string;    // YouTube 영상 설명문 (3~5문단, 400~800자)
-                          // ~다고 합니다 중립 보도 문체, 마지막 문단 면책 공지 포함
+                          // 뉴스 직접 서술체 ('~했습니다', '~됩니다'). ~이라고 합니다 반복 금지. 마지막 문단 면책 공지 포함
   scenes: Scene[];        // 4~5개 장면, start~end 합산 총 35~43초
   hashtags: string[];     // 해시태그 배열
   thumbnail_text: string; // 썸네일 임팩트 문구 (8자 이내)

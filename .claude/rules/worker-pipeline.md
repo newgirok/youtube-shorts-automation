@@ -81,7 +81,7 @@ interface ScriptOutput {
   title: string;          // 22자 이내
   hook: string;           // 첫 2초 훅
   script: string;         // 210~350자 (최대 380자 검증, title TTS 포함 총 35~45초)
-  description: string;    // YouTube 영상 설명문 (3~5문단, 400~800자, 면책 공지 포함)
+  description: string;    // YouTube 영상 설명문 (3~5문단, 400~800자). 뉴스 직접 서술체, ~이라고 합니다 반복 금지. 면책 공지 포함
   scenes: Scene[];        // 4~5개
   hashtags: string[];
   thumbnail_text: string; // 8자 이내
