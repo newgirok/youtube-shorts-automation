@@ -28,7 +28,7 @@ function ProgressBar({ value, max, label }: { value: number; max: number; label:
 }
 
 type Freq = '매시간' | '매일' | '매주';
-type Category = 'top' | 'politics' | 'business' | 'nation';
+type Category = 'top' | 'business' | 'technology' | 'health' | 'science' | 'nation';
 
 const HOURS = Array.from({ length: 24 }, (_, i) => ({
   value: i,
@@ -42,8 +42,9 @@ const DAYS = [
 ];
 
 const NEWS_CATEGORIES: { key: Category; label: string }[] = [
-  { key: 'top', label: '종합' }, { key: 'politics', label: '정치' },
-  { key: 'business', label: '경제' }, { key: 'nation', label: '사회' },
+  { key: 'top', label: '종합' },     { key: 'business', label: '경제' },
+  { key: 'technology', label: '기술' }, { key: 'health', label: '의료' },
+  { key: 'science', label: '환경' },   { key: 'nation', label: '사회' },
 ];
 
 function cronToSchedule(cron: string): { freq: Freq; hour: number; day: number } {

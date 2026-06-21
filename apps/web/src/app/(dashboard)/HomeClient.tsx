@@ -300,10 +300,9 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
   }
 
   const NEWS_CATEGORIES = [
-    { key: 'top', label: '종합' },
-    { key: 'politics', label: '정치' },
-    { key: 'business', label: '경제' },
-    { key: 'nation', label: '사회' },
+    { key: 'top', label: '종합' },     { key: 'business', label: '경제' },
+    { key: 'technology', label: '기술' }, { key: 'health', label: '의료' },
+    { key: 'science', label: '환경' },   { key: 'nation', label: '사회' },
   ] as const;
 
   async function handleAutoNews(category: string) {
