@@ -70,15 +70,30 @@ function skipTitleEntries(entries: VttEntry[], title: string): VttEntry[] {
 
 ## VTT 파싱 주의사항
 
-edge-tts가 `--write-subtitles`로 생성하는 VTT에는 `<break>` 등 HTML 태그가 텍스트에 남을 수 있다. `parseVttEntries`에서 아래와 같이 제거한다:
+edge-tts가 `--write-subtitles`로 생성하는 VTT에는 두 가지 이상 케이스가 있다:
+
+### 정상 케이스 — word-level VTT
+각 단어마다 타임스탬프 엔트리가 생성된다. `<break>` 등 HTML 태그가 텍스트에 남을 수 있어 제거한다.
+
+### 비정상 케이스 — SSML 원문 유출
+`--file` 옵션 사용 시 일부 상황에서 word-level 타임스탬프 대신 SSML 원문(`<speak><prosody rate="+20%">...`) 전체가 단일 VTT 엔트리에 담겨 저장된다.
+이 경우 자막 텍스트가 `speak>결국...` 형태로 오염된다.
+
+`parseVttEntries`에서 SSML 마크업 포함 엔트리를 감지해 무효 처리한다:
 
 ```typescript
+// SSML 오염 엔트리 감지 → 스킵
+if (/speak>|<prosody|<break/.test(raw)) { i++; continue; }
+
+// 일반 태그 제거
 const text = raw
   .replace(/<[^>]*>/g, '')
   .replace(/\bbreak\s[^>]*\/>/g, '')
   .replace(/\s{2,}/g, ' ')
   .trim();
 ```
+
+파싱 후 유효 엔트리가 0개이면 (`vttSrt.trim()` 빈 문자열) `buildSrt(script, totalMs)` 문자 비례 fallback을 사용한다.
 
 ## Heartbeat
 

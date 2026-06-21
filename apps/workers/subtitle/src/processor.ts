@@ -37,6 +37,12 @@ function parseVttEntries(vtt: string): VttEntry[] {
     if (lines[i].includes('-->')) {
       const [startStr, endStr] = lines[i].split('-->');
       const raw = lines[i + 1]?.trim() ?? '';
+      // edge-tts가 --file 옵션 사용 시 SSML 원문을 VTT 텍스트로 출력하는 경우 감지 → 무효 처리
+      // (speak>, <prosody, <break 등 SSML 마크업 포함 시 해당 엔트리 전체 스킵)
+      if (/speak>|<prosody|<break/.test(raw)) {
+        i++;
+        continue;
+      }
       // edge-tts가 <break> 태그를 VTT 텍스트에 남길 수 있으므로 제거
       const text = raw
         .replace(/<[^>]*>/g, '')
@@ -292,8 +298,15 @@ export async function processMessage(
       const allEntries = parseVttEntries(vttBuf.toString('utf-8'));
       // TTS 입력 첫 단락이 제목 → 해당 VTT 엔트리 건너뜀 (음성으로만 재생)
       const entries = skipTitleEntries(allEntries, title);
-      srtContent = buildSrtFromVtt(entries, totalMs);
-      log.info({ total: allEntries.length, skipped: allEntries.length - entries.length }, 'VTT → SRT 변환 완료 (제목 제외)');
+      const vttSrt = buildSrtFromVtt(entries, totalMs);
+      if (vttSrt.trim()) {
+        srtContent = vttSrt;
+        log.info({ total: allEntries.length, skipped: allEntries.length - entries.length }, 'VTT → SRT 변환 완료 (제목 제외)');
+      } else {
+        // edge-tts가 SSML 원문을 VTT로 출력하는 경우 등 VTT 파싱 결과가 비어있으면 문자 비례로 fallback
+        log.warn({ total: allEntries.length }, 'VTT 파싱 결과 비어있음 — 문자 비례 타이밍으로 fallback');
+        srtContent = buildSrt(script, totalMs);
+      }
     } else {
       // fallback: 문자 수 비례 타이밍
       log.info('VTT 없음, 문자 수 비례 타이밍 사용');
