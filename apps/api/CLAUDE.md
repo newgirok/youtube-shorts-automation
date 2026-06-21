@@ -91,7 +91,7 @@ Job 생성 및 상태 조회, 재시도.
 ```json
 {
   "channelId": "string",
-  "category": "top | politics | business | nation",  // 기본값: "top"
+  "category": "top | business | technology | health | science | nation",  // 기본값: "top"
   "count": 1~5  // 기본값: 3
 }
 ```

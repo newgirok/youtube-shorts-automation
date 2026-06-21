@@ -184,15 +184,19 @@ interface AnalyticsRow {
 - 업로드 설정 카드: 스케줄 레이블 + 카테고리 (`schedulerEnabled` 시에만 카테고리 노출)
 - 채널 등록일 카드: `channel.createdAt!.slice(0, 10).split('-')` 으로 파싱 (`toLocaleDateString` 금지)
 
-**NEWS_CATEGORIES (ChannelClient 내 카테고리 목록):**
+**NEWS_CATEGORIES (ChannelClient · HomeClient 공통 카테고리 목록):**
 ```typescript
 const NEWS_CATEGORIES = [
-  { key: 'top', label: '종합' },
-  { key: 'politics', label: '정치' },
-  { key: 'business', label: '경제' },
-  { key: 'nation', label: '사회' },
+  { key: 'top',        label: '종합' },
+  { key: 'business',   label: '경제' },
+  { key: 'technology', label: '기술' },
+  { key: 'health',     label: '의료' },
+  { key: 'science',    label: '환경' },
+  { key: 'nation',     label: '사회' },
 ];
 ```
+- `politics` 카테고리 제거 — Pexels 소재 부족으로 자동화 파이프라인 부적합
+- Google News RSS: TECHNOLOGY · HEALTH · SCIENCE 카테고리 추가
 
 ### YouTube 인라인 플레이어 (`/dashboard/[id]`)
 
