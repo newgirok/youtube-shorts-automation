@@ -1,11 +1,13 @@
 import { get } from 'node:https';
 
-export type NewsCategory = 'top' | 'politics' | 'business' | 'nation';
+export type NewsCategory = 'top' | 'business' | 'technology' | 'health' | 'science' | 'nation';
 
 const CATEGORY_URLS: Record<NewsCategory, string> = {
   top: 'https://news.google.com/rss?hl=ko&gl=KR&ceid=KR:ko',
-  politics: 'https://news.google.com/rss/headlines/section/topic/POLITICS?hl=ko&gl=KR&ceid=KR:ko',
   business: 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=ko&gl=KR&ceid=KR:ko',
+  technology: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=ko&gl=KR&ceid=KR:ko',
+  health: 'https://news.google.com/rss/headlines/section/topic/HEALTH?hl=ko&gl=KR&ceid=KR:ko',
+  science: 'https://news.google.com/rss/headlines/section/topic/SCIENCE?hl=ko&gl=KR&ceid=KR:ko',
   nation: 'https://news.google.com/rss/headlines/section/topic/NATION?hl=ko&gl=KR&ceid=KR:ko',
 };
 

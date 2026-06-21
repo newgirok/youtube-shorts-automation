@@ -42,7 +42,7 @@ export class SchedulerService {
       log.info({ channelId: ch.id, category: ch.schedulerCategory }, '스케줄 Job 생성');
       await this.jobsService.createFromNews({
         channelId: ch.id,
-        category: ch.schedulerCategory as 'top' | 'politics' | 'business' | 'nation',
+        category: ch.schedulerCategory as 'top' | 'business' | 'technology' | 'health' | 'science' | 'nation',
         count: 1,
       });
     }
