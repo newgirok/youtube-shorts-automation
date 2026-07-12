@@ -29,9 +29,9 @@
   - [x] P2-8. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
   - [x] P2-9. `Job.privacyStatus` 추적 `[BE]`
   - [x] P2-10. API 인-프로세스 자동 스케줄러 `[BE]` — `@Cron('* * * * *')` 1분 폴링, `schedulerEnabled` 채널의 `uploadSchedule` cron 평가 → `createFromNews(count:1, category: schedulerCategory)` 자동 호출 (Asia/Seoul, 중복 방지). Phase 5 EventBridge로 대체 예정.
-- **Phase 3** — DB 이관
-  - [ ] P3-1. Supabase 프로젝트 연결 설정 `[BE][DevOps]`
-  - [ ] P3-2. 마이그레이션 실행 `[BE][DevOps]`
+- **Phase 3** — DB 이관 ✅ 완료
+  - [x] P3-1. Supabase 프로젝트 연결 설정 `[BE][DevOps]`
+  - [x] P3-2. 마이그레이션 실행 `[BE][DevOps]`
 - **Phase 4** — AWS 서버리스 이관
   - [ ] P4-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
   - [ ] P4-2. Lambda 배포 — script / tts / upload worker `[DevOps][BE]`
@@ -254,10 +254,10 @@
     - `prisma.job.findMany({ take: 5 })` 성공
     - Supabase 대시보드 Table Editor에서 테이블 목록 확인
 
-**완료 기준**
-- [ ] Supabase에 마이그레이션 완료 (전체 테이블 + enum 존재)
-- [ ] `prisma.job.findMany({ take: 5 })` 성공
-- [ ] AWS Secrets Manager에 DB 연결 정보 저장 완료
+**완료 기준** ✅
+- [x] Supabase에 마이그레이션 완료 (전체 테이블 + enum 존재)
+- [x] `prisma.job.findMany({ take: 5 })` 성공
+- [ ] AWS Secrets Manager에 DB 연결 정보 저장 완료 → P4-1 진행 시 처리
 
 ---
 
