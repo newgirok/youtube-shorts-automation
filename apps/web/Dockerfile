@@ -15,6 +15,10 @@ COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 RUN pnpm install --frozen-lockfile
 COPY . .
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_API_SECRET
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_SECRET=$NEXT_PUBLIC_API_SECRET
 RUN DOCKER_BUILD=true pnpm --filter web build
 
 FROM node:20-slim AS runner

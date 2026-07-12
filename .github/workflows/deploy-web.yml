@@ -1,15 +1,64 @@
 name: Deploy Web
+
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - apps/web/**
+      - packages/shared/**
+      - .github/workflows/deploy-web.yml
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REGISTRY: 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com
+  ECR_REPOSITORY: web
+  ECS_CLUSTER: prod-shorts
+  ECS_SERVICE: web
+  CONTAINER_NAME: web
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-        with: { version: 9 }
-      - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @shorts/web build
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::682251233572:role/github-actions-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Fetch build secrets from SSM
+        id: ssm
+        run: |
+          echo "NEXT_PUBLIC_API_URL=$(aws ssm get-parameter --name 'shorts.prod.NEXT_PUBLIC_API_URL' --query 'Parameter.Value' --output text)" >> $GITHUB_OUTPUT
+          echo "NEXT_PUBLIC_API_SECRET=$(aws ssm get-parameter --name 'shorts.prod.NEXT_PUBLIC_API_SECRET' --with-decryption --query 'Parameter.Value' --output text)" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        run: |
+          docker build \
+            --build-arg NEXT_PUBLIC_API_URL="${{ steps.ssm.outputs.NEXT_PUBLIC_API_URL }}" \
+            --build-arg NEXT_PUBLIC_API_SECRET="${{ steps.ssm.outputs.NEXT_PUBLIC_API_SECRET }}" \
+            -f apps/web/Dockerfile \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:latest \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }} \
+            .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --force-new-deployment \
+            --region $AWS_REGION
