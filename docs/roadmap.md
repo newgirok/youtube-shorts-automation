@@ -35,8 +35,8 @@
 - **Phase 4** — AWS 서버리스 이관 🔄 진행 중
   - [x] P4-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]` ✅
   - [x] P4-2. Lambda 배포 — script / tts / upload worker `[DevOps][BE]` ✅
-  - [ ] P4-3. Fargate 배포 — subtitle / render worker `[DevOps]`
-  - [ ] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
+  - [x] P4-3. Fargate 배포 — subtitle / render worker `[DevOps]` ✅
+  - [x] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]` ✅
   - [ ] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]`
 - **Phase 5** — 스케줄링 + 운영 안정화
   - [ ] P5-1. EventBridge Scheduler — 채널별 cron `[DevOps][BE]`
@@ -282,12 +282,21 @@
 - **P4-3.** Fargate 배포 — subtitle / render worker `[DevOps]`
   - subtitle-worker: 2 vCPU, 8GB
   - render-worker: 4 vCPU, 16GB (`PEXELS_API_KEY` 환경변수 포함)
+  - ECR 이미지 빌드 및 푸시 완료
+  - ECS task definition revision 2 (SSM 시크릿 적용): `DATABASE_URL`, `PEXELS_API_KEY`
+  - `FargateTaskExecutionRole`에 SSM 인라인 정책 추가
+  - ECS 서비스 desired_count=1, 배포 COMPLETED
   - 검증
-    - SQS Long Polling 시작 확인
+    - SQS Long Polling 시작 확인 ✅
 
 - **P4-4.** API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
+  - `apps/api/src/lambda.ts` — `@fastify/aws-lambda` 핸들러 (NestJS + Fastify 래핑)
+  - `apps/api/serverless.yml` — HTTP API (API Gateway v2), timeout 29s, 512MB
+  - SSM 파라미터 추가: `SQS_SCRIPT_QUEUE_URL`, `API_INTERNAL_SECRET`, `WEB_ORIGIN`
+  - API Gateway URL: `https://wc2kcpa4k3.execute-api.ap-northeast-2.amazonaws.com`
+  - `shorts.prod.YOUTUBE_REDIRECT_URI` SSM 업데이트 완료 (OAuth callback URL 반영)
   - 검증
-    - API Gateway URL로 `POST /jobs` → 3초 이내 응답
+    - `GET /health` → `{ status: 'ok' }` ✅
 
 - **P4-5.** AWS E2E 자동 업로드 검증 `[BE][DevOps]`
   - 검증

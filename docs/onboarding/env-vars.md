@@ -132,6 +132,27 @@ cp apps/web/.env.example apps/web/.env.local
 
 ---
 
+## AWS SSM Parameter Store (프로덕션)
+
+Lambda 및 Fargate는 `.env` 파일 없이 SSM Parameter Store에서 값을 가져온다.
+
+| SSM 파라미터 이름 | 타입 | 값 설명 |
+|---|---|---|
+| `shorts.prod.DATABASE_URL` | SecureString | Supabase Transaction Pooler URL (port 6543) |
+| `shorts.prod.GEMINI_API_KEY` | SecureString | Google Gemini API 키 |
+| `shorts.prod.YOUTUBE_CLIENT_ID` | String | OAuth2 클라이언트 ID |
+| `shorts.prod.YOUTUBE_CLIENT_SECRET` | SecureString | OAuth2 클라이언트 시크릿 |
+| `shorts.prod.ENCRYPTION_KEY` | SecureString | AES-256-GCM 키 (64자리 hex) |
+| `shorts.prod.PEXELS_API_KEY` | SecureString | Pexels API 키 (render-worker) |
+| `shorts.prod.API_INTERNAL_SECRET` | SecureString | Web → API 내부 인증 키 |
+| `shorts.prod.SQS_SCRIPT_QUEUE_URL` | String | prod-script-queue URL |
+| `shorts.prod.YOUTUBE_REDIRECT_URI` | String | OAuth callback URL (`{api-gw-url}/auth/youtube/callback`) |
+| `shorts.prod.WEB_ORIGIN` | String | CORS 허용 오리진 (프로덕션 web URL) |
+
+> **점 구분자 주의**: 파라미터 이름에 슬래시(`/`) 없이 점(`.`)을 사용합니다. SSM 경로 패턴이 아닌 일반 이름 형식입니다.
+
+---
+
 ## 보안 규칙
 
 - **`access_token` 저장 금지**: 어떤 변수명으로도 `.env.local`에 저장하지 않습니다. 런타임에서 `refresh_token`으로 자동 재발급됩니다.

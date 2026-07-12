@@ -112,7 +112,7 @@ cd apps/workers/tts    && serverless deploy --stage prod
 cd apps/workers/upload && serverless deploy --stage prod
 ```
 
-> **P4-2 진행 전**: 각 Worker 디렉토리에 `serverless.yml`이 아직 없습니다. P4-2에서 Serverless Framework v3 설정 파일을 작성한 뒤 위 명령어로 배포합니다.
+> **P4-2 완료**: 각 Worker 디렉토리에 `serverless.yml`이 존재합니다. SSM 파라미터 이름 형식: `shorts.prod.{KEY}` (점 구분자, 슬래시 없음).
 
 ---
 
@@ -122,22 +122,61 @@ subtitle-worker (스크립트 기반 SRT 생성)와 render-worker (FFmpeg)는 Fa
 
 > subtitle-worker는 faster-whisper를 사용하지 않습니다. tts-worker가 생성한 VTT(word-level timing)를 기반으로 SRT를 생성하므로 GPU/모델 의존성이 없습니다.
 
-```bash
-# 1. Docker 이미지 빌드
-docker build -f apps/workers/subtitle/Dockerfile \
-  -t [ECR_URI]/subtitle-worker:latest .
+### ECS 서비스 이름
 
-# 2. ECR 푸시
-docker push [ECR_URI]/subtitle-worker:latest
+| Worker | ECS 서비스 명 | ECR 레포 |
+|--------|--------------|----------|
+| subtitle-worker | `subtitle-worker` | `682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/subtitle-worker` |
+| render-worker | `render-worker` | `682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker` |
 
-# 3. ECS 서비스 업데이트
-aws ecs update-service \
-  --cluster prod-shorts \
-  --service subtitle-worker \
-  --force-new-deployment
+### ECR 로그인 (Windows)
+
+PowerShell에서 파이프 대신 `--password` 플래그 직접 사용:
+
+```powershell
+$token = (aws ecr get-authorization-token --region ap-northeast-2 --query "authorizationData[0].authorizationToken" --output text)
+$decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
+$pass = $decoded.Split(':')[1]
+docker login --username AWS --password $pass 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com
 ```
 
-render-worker도 동일한 절차로 배포한다 (`service: render-worker`).
+### 빌드 및 배포
+
+```bash
+# 1. TypeScript 빌드 (dist/ 갱신)
+pnpm --filter @shorts/shared build
+pnpm --filter @shorts/subtitle-worker build
+pnpm --filter @shorts/render-worker build
+
+# 2. Docker 이미지 빌드 (프로젝트 루트에서 실행)
+docker build -f apps/workers/subtitle/Dockerfile \
+  -t 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/subtitle-worker:latest .
+docker build -f apps/workers/render/Dockerfile \
+  -t 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker:latest .
+
+# 3. ECR 푸시
+docker push 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/subtitle-worker:latest
+docker push 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker:latest
+
+# 4. ECS 서비스 업데이트 (새 이미지 반영)
+aws ecs update-service --cluster prod-shorts --service subtitle-worker --force-new-deployment
+aws ecs update-service --cluster prod-shorts --service render-worker --force-new-deployment
+```
+
+### ECS 환경변수 관리
+
+task definition revision 2부터 SSM 시크릿 사용:
+
+| 변수 | subtitle | render | 방식 |
+|------|----------|--------|------|
+| `DATABASE_URL` | ✅ | ✅ | SSM SecureString |
+| `PEXELS_API_KEY` | - | ✅ | SSM SecureString |
+| `S3_BUCKET_NAME` | ✅ | ✅ | env (평문) |
+| `SQS_*_QUEUE_URL` | ✅ | ✅ | env (평문) |
+
+SSM 파라미터 이름: `shorts.prod.DATABASE_URL`, `shorts.prod.PEXELS_API_KEY`
+
+`FargateTaskExecutionRole`에 `ssm-read-inline` 인라인 정책 추가 필요 (이미 적용됨).
 
 ### Fargate 리소스 스펙
 
@@ -145,6 +184,34 @@ render-worker도 동일한 절차로 배포한다 (`service: render-worker`).
 |--------|------|--------|
 | subtitle-worker | 2 | 8 GB |
 | render-worker | 4 | 16 GB |
+
+---
+
+## API Lambda 배포 (Phase 4+)
+
+`apps/api` NestJS 앱을 `@fastify/aws-lambda`로 래핑하여 API Gateway(HTTP API v2) + Lambda로 배포한다.
+
+### 빌드 및 배포
+
+```bash
+cd apps/api
+npx serverless deploy
+```
+
+### API Gateway URL 확인 및 OAuth 설정
+
+배포 후 터미널 출력 또는 AWS 콘솔에서 API Gateway URL 확인 후:
+
+1. SSM 업데이트:
+   ```bash
+   aws ssm put-parameter --name "shorts.prod.YOUTUBE_REDIRECT_URI" \
+     --value "https://{api-id}.execute-api.ap-northeast-2.amazonaws.com/auth/youtube/callback" \
+     --type String --overwrite
+   aws ssm put-parameter --name "shorts.prod.WEB_ORIGIN" \
+     --value "https://{web-url}" --type String --overwrite
+   ```
+2. Google Cloud Console → OAuth 2.0 클라이언트 → 승인된 리디렉션 URI에 추가
+3. `serverless deploy` 재실행 (YOUTUBE_REDIRECT_URI 적용)
 
 ---
 
@@ -244,7 +311,7 @@ aws ecs list-task-definitions \
 
 # 이전 리비전으로 서비스 업데이트 (예: revision 5)
 aws ecs update-service \
-  --cluster shorts \
+  --cluster prod-shorts \
   --service api \
   --task-definition shorts-api:5
 ```
@@ -290,7 +357,7 @@ serverless rollback --timestamp 2024-01-15T12:00:00.000Z --stage prod
 **확인**:
 ```bash
 aws ecs describe-tasks \
-  --cluster shorts \
+  --cluster prod-shorts \
   --tasks [TASK_ARN] \
   --query 'tasks[0].stoppedReason'
 ```
