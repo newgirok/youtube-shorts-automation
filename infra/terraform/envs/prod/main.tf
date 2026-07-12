@@ -54,9 +54,11 @@ module "upload_queue" {
 
 # ── S3 ────────────────────────────────────────────────────────────────────────
 
+data "aws_caller_identity" "current" {}
+
 module "s3" {
   source      = "../../modules/s3-bucket"
-  bucket_name = "jobs-prod"
+  bucket_name = "jobs-prod-${data.aws_caller_identity.current.account_id}"
 }
 
 # ── IAM ───────────────────────────────────────────────────────────────────────

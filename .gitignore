@@ -58,6 +58,12 @@ out/
 # agentmemory (iii 엔진이 CWD 기준으로 생성하는 런타임 데이터)
 /data/
 
+# Terraform 상태 파일 (민감정보 포함 — S3 remote backend 전환 전까지 로컬 보관)
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+
 # OS
 .DS_Store
 Thumbs.db
