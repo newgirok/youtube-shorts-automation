@@ -10,7 +10,7 @@
 
 - `Channel.schedulerEnabled = true`인 채널에 대해 `uploadSchedule` (cron 형식)에 따라 Job을 자동 생성합니다.
 - Phase 1~2 (로컬): NestJS `@Cron('* * * * *')` 스케줄러가 1분마다 cron 표현식을 평가해 Job 생성.
-- Phase 3+ (AWS): EventBridge Scheduler로 채널별 cron 스케줄 이관 예정.
+- Phase 4+ (AWS): EventBridge Scheduler로 채널별 cron 스케줄 이관 예정 (P5-1).
 - `Channel.isActive = false`인 채널은 스케줄에서 제외됩니다.
 - 스케줄 기본값: `"0 9 * * *"` (UTC 오전 9시, KST 오후 6시)
 - 채널별로 독립적인 스케줄 설정이 가능합니다.
@@ -51,7 +51,7 @@
 - `Job.retryCount`는 Worker 처리 실패마다 1씩 증가합니다.
 - `Job.failReason`에는 마지막 실패 원인(에러 메시지)이 저장됩니다.
 - 대시보드 `/dashboard/[id]`에서 수동 재시도 가능합니다. 수동 재시도 시 `status = PENDING`으로 초기화됩니다.
-- DLQ 적재 시 CloudWatch 알람 → Slack/Discord 알림 (Phase 4 구현).
+- DLQ 적재 시 CloudWatch 알람 → Slack/Discord 알림 (Phase 5 구현).
 
 ### 7. YPP 달성 기준 추적 (2단계)
 

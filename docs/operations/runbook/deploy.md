@@ -5,7 +5,8 @@
 | Phase | 배포 대상 | 방법 |
 |-------|-----------|------|
 | Phase 1~2 | 로컬 | Docker Compose |
-| Phase 3+ | AWS | ECS, Lambda (Serverless Framework), Fargate |
+| Phase 3 | Supabase | prisma migrate deploy |
+| Phase 4+ | AWS | ECS, Lambda (Serverless Framework), Fargate |
 
 ---
 
@@ -42,7 +43,7 @@ docker compose logs -f script-worker
 
 ---
 
-## API 배포 (ECS, Phase 3+)
+## API 배포 (ECS, Phase 4+)
 
 GitHub Actions `deploy-api.yml` 워크플로우 (`workflow_dispatch` 트리거)가 빌드 → ECR 푸시를 자동으로 수행합니다.
 
@@ -82,7 +83,7 @@ aws ecs describe-services \
 
 ---
 
-## Lambda Workers 배포 (Serverless Framework, Phase 3+)
+## Lambda Workers 배포 (Serverless Framework, Phase 4+)
 
 GitHub Actions `_deploy-worker.yml` 워크플로우는 재사용 가능한 워크플로우(reusable workflow)로, 현재 자동 트리거는 비활성화되어 있습니다. 배포는 수동으로 진행합니다.
 
@@ -102,7 +103,7 @@ cd apps/workers/upload && serverless deploy --stage prod
 
 ---
 
-## Fargate Workers 배포 (Phase 3+)
+## Fargate Workers 배포 (Phase 4+)
 
 subtitle-worker (스크립트 기반 SRT 생성)와 render-worker (FFmpeg)는 Fargate로 운영된다.
 
@@ -169,7 +170,7 @@ pnpm --filter @shorts/shared prisma:migrate
 
 ---
 
-## Supabase 연결 (Phase 3)
+## Supabase 연결 (Phase 3, P3-1~P3-2)
 
 ### 1. 연결 문자열 확인
 

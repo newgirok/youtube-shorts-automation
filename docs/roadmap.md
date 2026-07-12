@@ -28,32 +28,34 @@
   - [x] P2-7. `POST /channels/:id/sync` — YouTube Data API + Analytics API 풀 동기화 `[BE]`
   - [x] P2-8. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
   - [x] P2-9. `Job.privacyStatus` 추적 `[BE]`
-  - [x] P2-10. API 인-프로세스 자동 스케줄러 `[BE]` — `@Cron('* * * * *')` 1분 폴링, `schedulerEnabled` 채널의 `uploadSchedule` cron 평가 → `createFromNews(count:1, category: schedulerCategory)` 자동 호출 (Asia/Seoul, 중복 방지). Phase 4 EventBridge로 대체 예정.
-- **Phase 3** — AWS 서버리스 이관
-  - [ ] P3-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
-  - [ ] P3-2. Supabase 연결 + 마이그레이션 `[BE][DevOps]`
-  - [ ] P3-3. Lambda 배포 — script / tts / upload worker `[DevOps][BE]`
-  - [ ] P3-4. Fargate 배포 — subtitle / render worker `[DevOps]`
-  - [ ] P3-5. API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
-  - [ ] P3-6. AWS E2E 자동 업로드 검증 `[BE][DevOps]`
-- **Phase 4** — 스케줄링 + 운영 안정화
-  - [ ] P4-1. EventBridge Scheduler — 채널별 cron `[DevOps][BE]`
-  - [ ] P4-2. DLQ 알림 Lambda `[BE][DevOps]`
-  - [ ] P4-3. CloudWatch 알람 설정 `[DevOps]`
-  - [ ] P4-4. 7일 연속 운영 검증 `[BE][DevOps]`
-- **Phase 5** — Remotion 전환
-  - [ ] P5-1. `render-worker` Remotion 전환 `[FE][BE]`
-  - [ ] P5-2. 고성과 스크립트 패턴 → Gemini 프롬프트 반영 `[AI][BE]`
-- **Phase 6** — 멀티채널 + 스케일링
-  - [ ] P6-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
-  - [ ] P6-2. Fargate 동적 스케일링 `[DevOps]`
-  - [ ] P6-3. 채널 3개 7일 운영 `[BE][DevOps]`
-- **Phase 7** — 프로덕션 준비
-  - [ ] P7-1. GitHub Actions CI/CD `[DevOps]`
-  - [ ] P7-2. Sentry 연동 `[BE]`
-  - [ ] P7-3. Edge-TTS → Clova Voice 교체 `[BE][AI]`
-  - [ ] P7-4. AWS Budget Alert `[DevOps]`
-  - [ ] P7-5. 30일 연속 운영 최종 검증 `[BE][DevOps][FE][AI]`
+  - [x] P2-10. API 인-프로세스 자동 스케줄러 `[BE]` — `@Cron('* * * * *')` 1분 폴링, `schedulerEnabled` 채널의 `uploadSchedule` cron 평가 → `createFromNews(count:1, category: schedulerCategory)` 자동 호출 (Asia/Seoul, 중복 방지). Phase 5 EventBridge로 대체 예정.
+- **Phase 3** — DB 이관
+  - [ ] P3-1. Supabase 프로젝트 연결 설정 `[BE][DevOps]`
+  - [ ] P3-2. 마이그레이션 실행 `[BE][DevOps]`
+- **Phase 4** — AWS 서버리스 이관
+  - [ ] P4-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
+  - [ ] P4-2. Lambda 배포 — script / tts / upload worker `[DevOps][BE]`
+  - [ ] P4-3. Fargate 배포 — subtitle / render worker `[DevOps]`
+  - [ ] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
+  - [ ] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]`
+- **Phase 5** — 스케줄링 + 운영 안정화
+  - [ ] P5-1. EventBridge Scheduler — 채널별 cron `[DevOps][BE]`
+  - [ ] P5-2. DLQ 알림 Lambda `[BE][DevOps]`
+  - [ ] P5-3. CloudWatch 알람 설정 `[DevOps]`
+  - [ ] P5-4. 7일 연속 운영 검증 `[BE][DevOps]`
+- **Phase 6** — Remotion 전환
+  - [ ] P6-1. `render-worker` Remotion 전환 `[FE][BE]`
+  - [ ] P6-2. 고성과 스크립트 패턴 → Gemini 프롬프트 반영 `[AI][BE]`
+- **Phase 7** — 멀티채널 + 스케일링
+  - [ ] P7-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
+  - [ ] P7-2. Fargate 동적 스케일링 `[DevOps]`
+  - [ ] P7-3. 채널 3개 7일 운영 `[BE][DevOps]`
+- **Phase 8** — 프로덕션 준비
+  - [ ] P8-1. GitHub Actions CI/CD `[DevOps]`
+  - [ ] P8-2. Sentry 연동 `[BE]`
+  - [ ] P8-3. Edge-TTS → Clova Voice 교체 `[BE][AI]`
+  - [ ] P8-4. AWS Budget Alert `[DevOps]`
+  - [ ] P8-5. 30일 연속 운영 최종 검증 `[BE][DevOps][FE][AI]`
 
 ---
 
@@ -229,39 +231,65 @@
 
 ---
 
-## Phase 3 — AWS 서버리스 이관
+## Phase 3 — DB 이관
+
+> 로컬 Docker PostgreSQL에서 Supabase(관리형 PostgreSQL)로 DB를 이관하고, AWS Worker들이 사용할 프로덕션 DB 연결을 확보한다.
+
+**전제 조건**
+- Supabase 계정 및 프로젝트 생성 완료
+
+- **P3-1.** Supabase 프로젝트 연결 설정 `[BE][DevOps]`
+  - Supabase 프로젝트 생성 + Connection String 확인
+  - `schema.prisma`에 `directUrl = env("DIRECT_URL")` 추가
+  - `DATABASE_URL`: Transaction mode (pgBouncer, 포트 6543), `connection_limit=1`
+  - `DIRECT_URL`: Session mode (포트 5432), 마이그레이션 전용
+  - AWS Secrets Manager에 `DATABASE_URL`, `DIRECT_URL` 저장
+  - 검증
+    - Prisma가 Supabase에 연결 성공 (`prisma db pull` 또는 `prisma validate`)
+
+- **P3-2.** 마이그레이션 실행 `[BE][DevOps]`
+  - `DIRECT_URL` 기반 `prisma migrate deploy` 실행
+  - 전체 테이블 + enum 존재 확인
+  - 검증
+    - `prisma.job.findMany({ take: 5 })` 성공
+    - Supabase 대시보드 Table Editor에서 테이블 목록 확인
+
+**완료 기준**
+- [ ] Supabase에 마이그레이션 완료 (전체 테이블 + enum 존재)
+- [ ] `prisma.job.findMany({ take: 5 })` 성공
+- [ ] AWS Secrets Manager에 DB 연결 정보 저장 완료
+
+---
+
+## Phase 4 — AWS 서버리스 이관
 
 > 로컬 파이프라인을 Lambda + SQS + Fargate + S3로 이관하고, E2E 자동 업로드를 1회 성공시킨다.
 
 **전제 조건**
 - AWS 계정 및 IAM 관리자 권한 보유
+- Phase 3 완료 (Supabase DB 연결 확보)
 
-- **P3-1.** `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
+- **P4-1.** `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
   - S3 버킷, SQS 5큐+DLQ, IAM 역할, ECR 레포 (`subtitle-worker`, `render-worker`)
   - 검증
     - AWS 콘솔에서 S3 1개, SQS 10개, IAM 2개, ECR 2개 확인
 
-- **P3-2.** Supabase 연결 + 마이그레이션 `[BE][DevOps]`
-  - `schema.prisma` 에 `directUrl = env("DIRECT_URL")` 추가
-  - 검증
-    - `prisma.job.findMany({ take: 5 })` 성공
-
-- **P3-3.** Lambda 배포 — script / tts / upload worker `[DevOps][BE]`
+- **P4-2.** Lambda 배포 — script / tts / upload worker `[DevOps][BE]`
   - 각 Worker `serverless.yml` (Serverless Framework v3)
   - 검증
     - Lambda 콘솔 테스트 이벤트 각 Worker 실행 성공
 
-- **P3-4.** Fargate 배포 — subtitle / render worker `[DevOps]`
+- **P4-3.** Fargate 배포 — subtitle / render worker `[DevOps]`
   - subtitle-worker: 2 vCPU, 8GB
   - render-worker: 4 vCPU, 16GB (`PEXELS_API_KEY` 환경변수 포함)
   - 검증
     - SQS Long Polling 시작 확인
 
-- **P3-5.** API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
+- **P4-4.** API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
   - 검증
     - API Gateway URL로 `POST /jobs` → 3초 이내 응답
 
-- **P3-6.** AWS E2E 자동 업로드 검증 `[BE][DevOps]`
+- **P4-5.** AWS E2E 자동 업로드 검증 `[BE][DevOps]`
   - 검증
     - `POST /jobs` 한 번으로 YouTube 업로드 자동 완료
 
@@ -272,28 +300,28 @@
 
 ---
 
-## Phase 4 — 스케줄링 + 운영 안정화
+## Phase 5 — 스케줄링 + 운영 안정화
 
 > EventBridge로 매일 자동 Job 생성을 활성화하고, 7일 연속 무중단 운영을 검증한다.
 
-- **P4-1.** EventBridge Scheduler — 채널별 cron `[DevOps][BE]`
+- **P5-1.** EventBridge Scheduler — 채널별 cron `[DevOps][BE]`
   - API 인-프로세스 스케줄러(P2-10)를 EventBridge 외부 cron으로 대체
   - 채널 `uploadSchedule` 필드 기반 cron 스케줄 (채널별 EventBridge Rule 생성/삭제)
   - `topic: null` → `auto-news`로 자동 처리
   - 검증
     - 다음 날 지정 시간에 Job 자동 생성
 
-- **P4-2.** DLQ 알림 Lambda `[BE][DevOps]`
+- **P5-2.** DLQ 알림 Lambda `[BE][DevOps]`
   - 5개 DLQ 모두 동일 Lambda에 연결 → Slack/Discord Webhook
   - 검증
     - 3회 재시도 후 DLQ 적재 → 알림 수신 (1분 이내)
 
-- **P4-3.** CloudWatch 알람 설정 `[DevOps]`
+- **P5-3.** CloudWatch 알람 설정 `[DevOps]`
   - Lambda / Fargate 에러율 > 5% → SNS → 이메일 알람
   - 검증
     - CloudWatch 알람 설정 확인
 
-- **P4-4.** 7일 연속 운영 검증 `[BE][DevOps]`
+- **P5-4.** 7일 연속 운영 검증 `[BE][DevOps]`
   - 실패율 = `FAILED / (COMPLETED + FAILED) * 100 ≤ 3%`
   - 검증
     - 7일간 실패율 3% 이하
@@ -305,13 +333,13 @@
 
 ---
 
-## Phase 5 — Remotion 전환
+## Phase 6 — Remotion 전환
 
 > FFmpeg → Remotion으로 렌더러를 교체한다.
 
 **전제 조건**: Remotion이 Fargate(Linux amd64) headless 환경에서 렌더링 가능한지 사전 검증
 
-- **P5-1.** `render-worker` Remotion 전환 `[FE][BE]`
+- **P6-1.** `render-worker` Remotion 전환 `[FE][BE]`
   - `ShortsVideo.tsx`: 루트 컴포넌트 (1080×1920, fps: 30)
   - `SubtitleLayer.tsx`: 현재 frame 기반 단어 하이라이트
   - `renderMedia()`: `codec: 'h264'`, headless
@@ -320,7 +348,7 @@
     - 단어별 자막 강조 동작 확인
     - 모바일 앱에서 기존 FFmpeg 출력과 동등 이상 품질
 
-- **P5-2.** 고성과 스크립트 패턴 → Gemini 프롬프트 반영 `[AI][BE]`
+- **P6-2.** 고성과 스크립트 패턴 → Gemini 프롬프트 반영 `[AI][BE]`
   - `viewCount` 상위 20% Job의 `scriptContent` 분석
   - 고성과 hook 예시 3~5개 few-shot 삽입
   - 검증
@@ -331,29 +359,29 @@
 
 ---
 
-## Phase 6 — 멀티채널 + 스케일링
+## Phase 7 — 멀티채널 + 스케일링
 
 > 채널 10개를 추가 인프라 변경 없이 독립적으로 운영할 수 있다.
 
-- **P6-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
-- **P6-2.** Fargate 동적 스케일링 `[DevOps]`
+- **P7-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
+- **P7-2.** Fargate 동적 스케일링 `[DevOps]`
   - `render-queue` 메시지 수 기반 Auto Scaling
-- **P6-3.** Analytics 다채널 수집 + 채널 3개 7일 운영 `[BE][DevOps]`
+- **P7-3.** Analytics 다채널 수집 + 채널 3개 7일 운영 `[BE][DevOps]`
 
 **완료 기준**
 - [ ] 채널 3개 동시 운영 7일 성공 (실패율 3% 이하)
 
 ---
 
-## Phase 7 — 프로덕션 준비
+## Phase 8 — 프로덕션 준비
 
 > CI/CD, 에러 추적, TTS 업그레이드, 30일 안정성 검증.
 
-- **P7-1.** GitHub Actions CI/CD `[DevOps]`
-- **P7-2.** Sentry 연동 `[BE]`
-- **P7-3.** Edge-TTS → Clova Voice 교체 `[BE][AI]`
-- **P7-4.** AWS Budget Alert `[DevOps]`
-- **P7-5.** 30일 연속 운영 최종 검증 `[BE][DevOps][FE][AI]`
+- **P8-1.** GitHub Actions CI/CD `[DevOps]`
+- **P8-2.** Sentry 연동 `[BE]`
+- **P8-3.** Edge-TTS → Clova Voice 교체 `[BE][AI]`
+- **P8-4.** AWS Budget Alert `[DevOps]`
+- **P8-5.** 30일 연속 운영 최종 검증 `[BE][DevOps][FE][AI]`
 
 **완료 기준 (전체 플랫폼)**
 - [ ] 채널 3개에서 30일 연속 자동 업로드 성공
@@ -370,13 +398,14 @@
 Phase 0 — 핵심 리스크 검증
   └── Phase 1 — 로컬 파이프라인 구현
         └── Phase 2 — 웹 대시보드 (docker-compose 기반 로컬 개발)
-              └── Phase 3 — AWS 서버리스 이관
-                    ├── Phase 4 — 스케줄링 + 운영 안정화
-                    │     └── Phase 5 — Remotion 전환
-                    └── Phase 6 — 멀티채널 + 스케일링
-                                 │
-                    Phase 5 + Phase 6 완료 ▼
-                         Phase 7 — 프로덕션 준비
+              └── Phase 3 — DB 이관 (Supabase)
+                    └── Phase 4 — AWS 서버리스 이관
+                          ├── Phase 5 — 스케줄링 + 운영 안정화
+                          │     └── Phase 6 — Remotion 전환
+                          └── Phase 7 — 멀티채널 + 스케일링
+                                       │
+                          Phase 6 + Phase 7 완료 ▼
+                               Phase 8 — 프로덕션 준비
 ```
 
 **Phase별 시작 조건:**
@@ -386,7 +415,8 @@ Phase 0 — 핵심 리스크 검증
 | Phase 1 | Phase 0 | TTS·FFmpeg·YouTube API 3종 로컬 검증 통과 |
 | Phase 2 | Phase 1 | `docker-compose up` 한 번으로 `POST /jobs` → COMPLETED 자동 완료 |
 | Phase 3 | Phase 2 | 대시보드 전 기능 로컬 동작, 재시도 기능 정상 동작 |
-| Phase 4 | Phase 3 | AWS E2E 자동 업로드 1회 성공 |
-| Phase 5 | Phase 4 | 7일 연속 실패율 3% 이하 |
-| Phase 6 | Phase 3 | AWS E2E 완료 |
-| Phase 7 | Phase 5 + Phase 6 | Remotion 완료 AND 채널 3개 7일 운영 + 실패율 3% 이하 |
+| Phase 4 | Phase 3 | Supabase DB 연결 및 마이그레이션 완료 |
+| Phase 5 | Phase 4 | AWS E2E 자동 업로드 1회 성공 |
+| Phase 6 | Phase 5 | 7일 연속 실패율 3% 이하 |
+| Phase 7 | Phase 4 | AWS E2E 완료 |
+| Phase 8 | Phase 6 + Phase 7 | Remotion 완료 AND 채널 3개 7일 운영 + 실패율 3% 이하 |

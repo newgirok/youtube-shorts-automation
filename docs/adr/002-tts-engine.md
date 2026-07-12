@@ -1,6 +1,6 @@
-# ADR 002: TTS 엔진 — Edge-TTS (→ Phase 7: Clova Voice)
+# ADR 002: TTS 엔진 — Edge-TTS (→ Phase 8: Clova Voice)
 
-**상태:** Accepted (Phase 7에서 재검토)
+**상태:** Accepted (Phase 8에서 재검토)
 
 ## 배경
 
@@ -8,13 +8,13 @@
 
 ## 결정
 
-**Phase 0~6:** Edge-TTS `ko-KR-SunHiNeural --rate +20%` 사용
+**Phase 0~7:** Edge-TTS `ko-KR-SunHiNeural --rate +20%` 사용
 
 - API 키 불필요 — Phase 0 검증 즉시 착수 가능
 - Microsoft Azure 기반으로 음질 양호
 - 무료 — 파이프라인 검증 비용 없음
 
-**Phase 7 이후:** Clova Voice로 전환 검토
+**Phase 8 이후:** Clova Voice로 전환 검토
 
 - 더 자연스러운 한국어 억양
 - 감정 표현 지원 (구독 유도 CTA에 효과적)

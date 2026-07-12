@@ -5,13 +5,14 @@
 | Phase | 구현 항목 |
 |-------|-----------|
 | Phase 1~2 (완료) | 로컬 Docker Compose 로그, `docker compose logs -f` |
-| Phase 3 (진행 예정) | CloudWatch 로그 수집, Lambda/Fargate 에러율 알람, Supabase 대시보드 |
-| Phase 4 | SQS DLQ 알림 (dlq-notifier Lambda, Slack/Discord Webhook) |
-| Phase 7 | Sentry, AWS Budget Alert, CI/CD sourcemaps 업로드 |
+| Phase 3 (진행 예정) | Supabase 대시보드 (DB 상태 확인) |
+| Phase 4 (진행 예정) | CloudWatch 로그 수집, Lambda/Fargate 에러율 알람 |
+| Phase 5 | SQS DLQ 알림 (dlq-notifier Lambda, Slack/Discord Webhook) |
+| Phase 8 | Sentry, AWS Budget Alert, CI/CD sourcemaps 업로드 |
 
 ---
 
-## CloudWatch (Phase 3+)
+## CloudWatch (Phase 4+)
 
 ### 로그 그룹
 
@@ -73,7 +74,7 @@ resource "aws_cloudwatch_metric_alarm" "fargate_task_stopped" {
 
 ---
 
-## SQS DLQ 알림 (Phase 4)
+## SQS DLQ 알림 (Phase 5)
 
 ### dlq-notifier Lambda 동작
 
@@ -176,7 +177,7 @@ API가 `status = PENDING`으로 초기화하고 script-queue에 메시지를 재
 
 ---
 
-## Sentry (Phase 7)
+## Sentry (Phase 8)
 
 ### 초기화
 
@@ -220,7 +221,7 @@ GitHub Actions에서 빌드 후 Sentry CLI로 sourcemaps 업로드 (Phase 7 `_de
 
 ---
 
-## AWS Budget Alert (Phase 7)
+## AWS Budget Alert (Phase 8)
 
 - **월 예산**: $20
 - **80% 도달 시**: 경고 알림 (SNS → 이메일)

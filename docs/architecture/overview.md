@@ -68,7 +68,7 @@ Fargate는 CPU 집약적인 장시간 처리가 필요한 작업에 사용합니
 | **render-worker** | `apps/workers/render` | `audio.mp3`, `subtitle.srt`, scenes[] | Pexels 동영상/이미지 다운로드 → zoompan 클립 → FFmpeg concat + 헤더 오버레이 + ASS 자막 burn-in → FFmpeg `-vframes 1` 썸네일 추출 | `output.mp4`, `thumbnail.jpg` → S3 |
 
 > subtitle-worker는 faster-whisper를 제거하고 Edge-TTS VTT 기반 SRT 생성으로 교체되었습니다(ADR 008 Superseded).  
-> Phase 5부터 render-worker는 FFmpeg에서 Remotion으로 전환됩니다([ADR 004](../adr/004-render-engine.md)).
+> Phase 6부터 render-worker는 FFmpeg에서 Remotion으로 전환됩니다([ADR 004](../adr/004-render-engine.md)).
 
 ---
 
@@ -88,10 +88,10 @@ Fargate는 CPU 집약적인 장시간 처리가 필요한 작업에 사용합니
 | **Queue** | AWS SQS Standard Queue + DLQ | FIFO 불사용([ADR 003](../adr/003-sqs-standard-queue.md)) |
 | **스토리지** | AWS S3 | 모든 중간 산출물 저장 |
 | **AI (스크립트)** | Google Gemini 2.5 Flash | 무료 티어 사용([ADR 005](../adr/005-gemini-flash.md)) |
-| **TTS** | Edge-TTS `ko-KR-SunHiNeural` | Phase 7~: Clova Voice([ADR 002](../adr/002-tts-engine.md)) |
+| **TTS** | Edge-TTS `ko-KR-SunHiNeural` | Phase 8~: Clova Voice([ADR 002](../adr/002-tts-engine.md)) |
 | **자막** | Edge-TTS VTT 기반 SRT 생성 | faster-whisper 제거됨 — Edge-TTS word-level VTT → SRT 변환 (vtt 없으면 ffprobe 길이 측정 후 글자 비례 fallback) |
 | **이미지** | Pexels API | scenes[].keyword 기반 배경 이미지 다운로드 |
-| **렌더링** | FFmpeg (zoompan 효과, Phase 1~4) → Remotion (Phase 5~) | [ADR 004](../adr/004-render-engine.md) |
+| **렌더링** | FFmpeg (zoompan 효과, Phase 1~5) → Remotion (Phase 6~) | [ADR 004](../adr/004-render-engine.md) |
 | **뉴스 수집** | Google News RSS | `POST /jobs/auto-news` 엔드포인트 |
 | **IaC** | Terraform + Serverless Framework | [ADR 006](../adr/006-iac-terraform-serverless.md) |
 | **모니터링** | CloudWatch, Sentry (Phase 7) | |
@@ -162,7 +162,7 @@ packages/shared/
 > `Channel.schedulerEnabled = true`이고 `uploadSchedule` cron이 직전 1분 이내에 해당하면,
 > 진행 중인 Job이 없는 채널에 한해 `createFromNews(count: 1)`를 자동 호출한다.
 > 뉴스 카테고리는 `Channel.schedulerCategory` 값 사용 (`'top' | 'politics' | 'business' | 'nation'`).
-> 타임존: `Asia/Seoul`. Phase 3+ AWS 이관 후 EventBridge Scheduler로 대체 예정(P4-1).
+> 타임존: `Asia/Seoul`. Phase 4+ AWS 이관 후 EventBridge Scheduler로 대체 예정(P5-1).
 
 ---
 

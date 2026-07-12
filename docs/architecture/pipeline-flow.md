@@ -287,7 +287,7 @@ interface UploadMessage {
 2. `Job.status = 'FAILED'`, `Job.failReason` = 오류 메시지 저장
 3. SQS 메시지를 `deleteMessage` 하지 않으면 Visibility Timeout 후 자동 재배달
 4. `Max Receive Count = 3` 초과 시 DLQ(Dead Letter Queue)로 이동
-5. DLQ 적재 → CloudWatch 알람 → Slack/Discord 알림 (Phase 4에서 구현)
+5. DLQ 적재 → CloudWatch 알람 → Slack/Discord 알림 (Phase 5에서 구현)
 
 ### 재시도 카운트
 

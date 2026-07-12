@@ -47,9 +47,9 @@ Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라
 | 단계 | 기능 | 구현 방식 |
 |---|---|---|
 | 스크립트 생성 | 뉴스·시사 주제 기반 쇼츠 스크립트 자동 작성 | Google Gemini 2.5 Flash |
-| TTS | 스크립트 → MP3 오디오 변환 | Edge-TTS → Phase 7: Clova Voice |
+| TTS | 스크립트 → MP3 오디오 변환 | Edge-TTS → Phase 8: Clova Voice |
 | 자막 | 스크립트 텍스트 → SRT 자막 파일 생성 (시사 키워드 하이라이트) | 스크립트 기반 직접 생성 (faster-whisper 제거) |
-| 영상 합성 | Pexels 이미지 + zoompan 효과 + 오디오 + 자막 합성, 1080×1920 포맷 | FFmpeg → Phase 5: Remotion |
+| 영상 합성 | Pexels 이미지 + zoompan 효과 + 오디오 + 자막 합성, 1080×1920 포맷 | FFmpeg → Phase 6: Remotion |
 | 업로드 | YouTube Data API로 영상 업로드, 생성된 설명문·뉴스 카테고리 설정 (`containsSyntheticMedia: true`) | YouTube Data API v3 |
 
 **스크립트 출력 형식 (`ScriptOutput`):**
@@ -153,9 +153,9 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 | Queue | AWS SQS (Standard Queue + DLQ) |
 | Database | PostgreSQL (Supabase → RDS), Prisma v5 |
 | Infra | AWS Lambda (Node.js 20), API Gateway, ECS Fargate, EventBridge, S3, CloudWatch, ECR, IAM, GitHub Actions |
-| Rendering | FFmpeg (zoompan, Phase 1~4) → Remotion (Phase 5~) |
+| Rendering | FFmpeg (zoompan, Phase 1~5) → Remotion (Phase 6~) |
 | AI | Google Gemini 2.5 Flash |
-| TTS | Edge-TTS (초기) → Clova Voice (Phase 7) |
+| TTS | Edge-TTS (초기) → Clova Voice (Phase 8) |
 | 자막 생성 | 스크립트 기반 SRT + 시사 키워드 하이라이트 (faster-whisper 제거) |
 | 이미지 | Pexels API (scenes[].keyword 기반) |
 | 뉴스 수집 | Google News RSS |
@@ -327,11 +327,12 @@ enum JobStatus {
 | **0** | 3가지 핵심 리스크 단독 검증 | 완료 |
 | **1** | Monorepo 구성, 로컬 파이프라인 구현, 수동 유튜브 업로드 1회 성공 | 완료 |
 | **2** | 웹 대시보드 (NextAuth, 채널 연결, Job 모니터링, Analytics, auto-news, sync) | 완료 |
-| **3** | AWS 서버리스 이관 (Lambda + SQS + Fargate + S3), E2E 자동 업로드 | 예정 |
-| **4** | EventBridge 스케줄링, DLQ 모니터링, 7일 무중단 운영 | 예정 |
-| **5** | Remotion 전환, 고성과 패턴 반영 | 예정 |
-| **6** | 멀티채널 독립 스케줄, Fargate 동적 스케일링 | 예정 |
-| **7** | GitHub Actions CI/CD, Sentry, Clova Voice 교체, 30일 안정성 검증 | 예정 |
+| **3** | Supabase DB 이관 (연결 설정 + 마이그레이션) | 예정 |
+| **4** | AWS 서버리스 이관 (Lambda + SQS + Fargate + S3), E2E 자동 업로드 | 예정 |
+| **5** | EventBridge 스케줄링, DLQ 모니터링, 7일 무중단 운영 | 예정 |
+| **6** | Remotion 전환, 고성과 패턴 반영 | 예정 |
+| **7** | 멀티채널 독립 스케줄, Fargate 동적 스케일링 | 예정 |
+| **8** | GitHub Actions CI/CD, Sentry, Clova Voice 교체, 30일 안정성 검증 | 예정 |
 
 ---
 

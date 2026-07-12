@@ -160,7 +160,7 @@ pnpm --filter @shorts/tts-worker dev
 
 ---
 
-## Phase 3+: Supabase 사용 시 설정 차이
+## Phase 3: Supabase 사용 시 설정 차이
 
 로컬 Docker PostgreSQL 대신 Supabase를 사용하는 경우:
 
@@ -189,7 +189,7 @@ Lambda/Fargate 환경에서는 연결 풀 고갈 방지를 위해 `connection_li
 DATABASE_URL=postgresql://...?pgbouncer=true&connection_limit=1
 ```
 
-자세한 내용은 `docs/runbook/database-setup.md` 및 `docs/adr/007-database-strategy.md`를 참고하세요.
+자세한 내용은 `docs/operations/runbook/deploy.md` 및 `docs/adr/007-database-strategy.md`를 참고하세요.
 
 ---
 
@@ -210,9 +210,9 @@ pnpm --filter web dev
 
 ---
 
-## Phase 3+ 추가 사전 요구사항
+## Phase 4+ 추가 사전 요구사항
 
-AWS 이관(Phase 3~)부터는 아래 도구도 필요합니다.
+AWS 이관(Phase 4~)부터는 아래 도구도 필요합니다.
 
 | 도구 | 버전 | 용도 |
 |------|------|------|
