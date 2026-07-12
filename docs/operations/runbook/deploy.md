@@ -43,6 +43,19 @@ docker compose logs -f script-worker
 
 ---
 
+## Web 앱 빌드 주의사항
+
+`apps/web`의 `next.config.ts`는 `DOCKER_BUILD=true` 환경변수가 있을 때만 `output: 'standalone'`을 활성화합니다.
+
+| 환경 | 명령어 | standalone |
+|------|--------|------------|
+| 로컬 개발/빌드 | `pnpm build` | 비활성 (Windows symlink 권한 오류 방지) |
+| Docker 이미지 빌드 | `DOCKER_BUILD=true pnpm build` | 활성 (`.next/standalone` 생성) |
+
+Dockerfile(`apps/web/Dockerfile`) builder 스테이지에 `DOCKER_BUILD=true`가 이미 설정되어 있습니다.
+
+---
+
 ## API 배포 (ECS, Phase 4+)
 
 GitHub Actions `deploy-api.yml` 워크플로우 (`workflow_dispatch` 트리거)가 빌드 → ECR 푸시를 자동으로 수행합니다.

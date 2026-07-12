@@ -9,7 +9,8 @@ Next.js 15 App Router 기반 관리 대시보드.
 
 ## 주요 명령
 - `pnpm dev` — Next.js 개발 서버 (포트 3001)
-- `pnpm build` — Next.js 빌드
+- `pnpm build` — Next.js 빌드 (로컬, standalone 비활성)
+- `DOCKER_BUILD=true pnpm build` — Docker 이미지용 빌드 (standalone 활성, `.next/standalone` 생성)
 
 ## 주요 페이지 및 담당 컴포넌트
 
