@@ -15,7 +15,7 @@ COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 RUN pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter web build
+RUN DOCKER_BUILD=true pnpm --filter web build
 
 FROM node:20-slim AS runner
 WORKDIR /app
