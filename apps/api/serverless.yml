@@ -17,6 +17,7 @@ provider:
     SQS_SCRIPT_QUEUE_URL: ${ssm:shorts.prod.SQS_SCRIPT_QUEUE_URL}
     API_INTERNAL_SECRET: ${ssm:shorts.prod.API_INTERNAL_SECRET}
     WEB_ORIGIN: ${ssm:shorts.prod.WEB_ORIGIN}
+    PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
 
 functions:
   api:
@@ -36,6 +37,8 @@ plugins:
 
 package:
   individually: true
+  patterns:
+    - 'libquery_engine-rhel-openssl-3.0.x.so.node'
 
 custom:
   esbuild:

@@ -12,6 +12,7 @@ provider:
     S3_BUCKET_NAME: jobs-prod-682251233572
     GEMINI_API_KEY: ${ssm:shorts.prod.GEMINI_API_KEY}
     SQS_TTS_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-tts-queue
+    PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
 
 functions:
   handler:
@@ -29,6 +30,8 @@ plugins:
 
 package:
   individually: true
+  patterns:
+    - 'libquery_engine-rhel-openssl-3.0.x.so.node'
 
 custom:
   esbuild:

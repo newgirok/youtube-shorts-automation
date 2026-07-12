@@ -15,6 +15,7 @@ provider:
     ENCRYPTION_KEY: ${ssm:shorts.prod.ENCRYPTION_KEY}
     # FFPROBE_PATH — Lambda Layer의 ffprobe 바이너리 경로
     FFPROBE_PATH: /opt/bin/ffprobe
+    PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
 
 functions:
   handler:
@@ -35,6 +36,8 @@ plugins:
 
 package:
   individually: true
+  patterns:
+    - 'libquery_engine-rhel-openssl-3.0.x.so.node'
 
 custom:
   esbuild:
