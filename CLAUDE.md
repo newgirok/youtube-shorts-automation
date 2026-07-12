@@ -6,8 +6,8 @@
 
 - **한국 뉴스·시사 쇼츠 특화**, 35~45초, 강한 구어체, `comment_bait` 마무리
 - AI 모델: `gemini-2.5-flash` (**변경 금지**)
-- TTS: Edge-TTS `ko-KR-SunHiNeural --rate +20%` (60초 제한 대응)
-- 자막: `script.json`의 `script` 필드 → 직접 SRT 생성 (faster-whisper 없음)
+- TTS: `msedge-tts` npm 패키지, `ko-KR-SunHiNeural +20%` (Lambda Layer 불필요, VTT 미생성)
+- 자막: `script.json`의 `script` 필드 + 오디오 길이 기반 글자 비례 SRT 생성 (faster-whisper 없음, VTT fallback)
 - 렌더링: Pexels + zoompan (FontSize=76, ASS 자막, affiliate CTA 없음)
 - 썸네일: render-worker가 FFmpeg으로 첫 프레임 추출 (헤더·푸터 오버레이 적용, `-vframes 1`) → S3 저장 → upload-worker 완료 시 `https://i.ytimg.com/vi/{videoId}/hqdefault.jpg` DB 저장 (S3 URL은 web의 `/api/thumbnail/[id]` 프록시 경유)
 - YouTube: `categoryId: '25'`, `containsSyntheticMedia: true`
