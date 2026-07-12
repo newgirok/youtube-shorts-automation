@@ -1,0 +1,43 @@
+service: shorts-script-worker
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ap-northeast-2
+  role: arn:aws:iam::682251233572:role/prod-LambdaWorkerRole
+  environment:
+    DATABASE_URL: ${ssm:shorts.prod.DATABASE_URL}
+    S3_BUCKET_NAME: jobs-prod-682251233572
+    GEMINI_API_KEY: ${ssm:shorts.prod.GEMINI_API_KEY}
+    SQS_TTS_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-tts-queue
+
+functions:
+  handler:
+    handler: src/handler.handler
+    timeout: 60
+    memorySize: 512
+    events:
+      - sqs:
+          arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-script-queue
+          batchSize: 1
+          functionResponseType: ReportBatchItemFailures
+
+plugins:
+  - serverless-esbuild
+
+package:
+  individually: true
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    format: cjs
+    target: node22
+    sourcemap: false
+    exclude:
+      - '@aws-sdk/*'
+    nativeZip: true
+    packager: pnpm

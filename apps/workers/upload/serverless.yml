@@ -1,0 +1,49 @@
+service: shorts-upload-worker
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ap-northeast-2
+  role: arn:aws:iam::682251233572:role/prod-LambdaWorkerRole
+  environment:
+    DATABASE_URL: ${ssm:shorts.prod.DATABASE_URL}
+    S3_BUCKET_NAME: jobs-prod-682251233572
+    YOUTUBE_CLIENT_ID: ${ssm:shorts.prod.YOUTUBE_CLIENT_ID}
+    YOUTUBE_CLIENT_SECRET: ${ssm:shorts.prod.YOUTUBE_CLIENT_SECRET}
+    ENCRYPTION_KEY: ${ssm:shorts.prod.ENCRYPTION_KEY}
+    # FFPROBE_PATH — Lambda Layer의 ffprobe 바이너리 경로
+    FFPROBE_PATH: /opt/bin/ffprobe
+
+functions:
+  handler:
+    handler: src/handler.handler
+    timeout: 300
+    memorySize: 256
+    # layers 항목: infra/lambda-layers/build-layers.ps1 실행 후 ARN으로 교체
+    layers:
+      - arn:aws:lambda:ap-northeast-2:682251233572:layer:prod-ffprobe:1
+    events:
+      - sqs:
+          arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-upload-queue
+          batchSize: 1
+          functionResponseType: ReportBatchItemFailures
+
+plugins:
+  - serverless-esbuild
+
+package:
+  individually: true
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    format: cjs
+    target: node22
+    sourcemap: false
+    exclude:
+      - '@aws-sdk/*'
+    nativeZip: true
+    packager: pnpm

@@ -1,0 +1,17 @@
+FROM python:3.12-slim
+
+WORKDIR /build
+
+# edge-tts 패키지를 /build/deps/에 설치
+RUN pip install edge-tts -t /build/deps --no-compile && \
+    find /build/deps -name "*.pyc" -delete && \
+    find /build/deps -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+
+# Lambda에서 사용할 wrapper script 생성
+# /usr/bin/python3는 Amazon Linux 2023(Node.js 22 Lambda)에서 사용 가능
+RUN mkdir -p /build/bin && \
+    printf '#!/bin/bash\nexport PYTHONPATH=/opt/edge-tts-deps:${PYTHONPATH:-}\nexec /usr/bin/python3 -m edge_tts "$@"\n' \
+    > /build/bin/edge-tts && \
+    chmod +x /build/bin/edge-tts
+
+CMD ["ls", "-la", "/build"]

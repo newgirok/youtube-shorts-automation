@@ -67,3 +67,11 @@ out/
 # OS
 .DS_Store
 Thumbs.db
+
+# Serverless Framework 배포 아티팩트
+**/.serverless/
+
+# Lambda Layer 빌드 아티팩트
+infra/lambda-layers/edge-tts-build/
+infra/lambda-layers/ffprobe-build/
+infra/lambda-layers/*.zip
