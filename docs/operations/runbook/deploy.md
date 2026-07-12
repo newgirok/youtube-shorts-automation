@@ -184,9 +184,11 @@ Supabase 대시보드 → Settings → Database → Connection string
 Lambda는 연결을 재사용할 수 없으므로 Transaction mode(pgBouncer)를 사용하고, URL에 `connection_limit=1`을 추가한다.
 
 ```
-DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres?connection_limit=1
-DIRECT_URL=postgresql://postgres.[ref]:[password]@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres
+DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?connection_limit=1
+DIRECT_URL=postgresql://postgres.[ref]:[password]@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres
 ```
+
+> 실제 호스트는 Supabase 대시보드 → Connect → Transaction pooler/Session pooler에서 확인한다. 리전에 따라 `aws-0`/`aws-1` 등이 다를 수 있다.
 
 ### 2. schema.prisma 설정
 

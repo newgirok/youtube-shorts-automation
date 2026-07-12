@@ -160,20 +160,25 @@ pnpm --filter @shorts/tts-worker dev
 
 ---
 
-## Phase 3: Supabase 사용 시 설정 차이
+## Phase 3: Supabase 사용 시 설정 차이 (완료 — 현재 적용됨)
 
-로컬 Docker PostgreSQL 대신 Supabase를 사용하는 경우:
+루트 `.env.local`이 이미 Supabase로 설정되어 있습니다 (`DATABASE_URL`, `DIRECT_URL`).
+
+신규 환경에서 세팅할 경우:
 
 ```bash
 # .env.local
-# Transaction mode (포트 6543) — 일반 쿼리용
-DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-0-ap-northeast-2.pooler.supabase.com:6543/postgres?pgbouncer=true
+# Transaction pooler (포트 6543) — 런타임 쿼리용, connection_limit=1 필수
+DATABASE_URL=postgresql://postgres.[project-ref]:[password]@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?connection_limit=1
 
-# Session mode (포트 5432) — 마이그레이션 전용
-DIRECT_URL=postgresql://postgres.[project-ref]:[password]@aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres
+# Session pooler (포트 5432) — 마이그레이션 전용
+DIRECT_URL=postgresql://postgres.[project-ref]:[password]@aws-1-ap-northeast-2.pooler.supabase.com:5432/postgres
 ```
 
-`schema.prisma`에 `directUrl` 설정이 필요합니다:
+> 실제 호스트는 Supabase 대시보드 → Connect 버튼 → Transaction pooler/Session pooler에서 확인.  
+> `pgbouncer=true` 파라미터는 구형 포맷이므로 사용하지 않는다.
+
+`schema.prisma` 설정 (이미 적용됨):
 
 ```prisma
 datasource db {
@@ -181,12 +186,6 @@ datasource db {
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
-```
-
-Lambda/Fargate 환경에서는 연결 풀 고갈 방지를 위해 `connection_limit=1` 추가:
-
-```bash
-DATABASE_URL=postgresql://...?pgbouncer=true&connection_limit=1
 ```
 
 자세한 내용은 `docs/operations/runbook/deploy.md` 및 `docs/adr/007-database-strategy.md`를 참고하세요.
