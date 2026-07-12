@@ -34,7 +34,7 @@
   - [x] P3-2. 마이그레이션 실행 `[BE][DevOps]`
 - **Phase 4** — AWS 서버리스 이관 🔄 진행 중
   - [x] P4-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]` ✅
-  - [ ] P4-2. Lambda 배포 — script / tts / upload worker `[DevOps][BE]`
+  - [x] P4-2. Lambda 배포 — script / tts / upload worker `[DevOps][BE]` ✅
   - [ ] P4-3. Fargate 배포 — subtitle / render worker `[DevOps]`
   - [ ] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
   - [ ] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]`
