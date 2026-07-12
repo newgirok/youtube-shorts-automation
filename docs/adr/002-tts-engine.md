@@ -1,6 +1,14 @@
-# ADR 002: TTS 엔진 — Edge-TTS (→ Phase 8: Clova Voice)
+# ADR 002: TTS 엔진 — msedge-tts (→ Phase 8: Clova Voice)
 
-**상태:** Accepted (Phase 8에서 재검토)
+**상태:** Accepted (부분 업데이트: 2026-07-12)
+
+## 현황 업데이트 (2026-07-12)
+
+Python CLI `edge-tts`에서 Node.js npm 패키지 `msedge-tts`로 교체됐다.
+
+- **교체 이유:** Lambda nodejs22.x(Amazon Linux 2023)에 python3가 없어 `edge-tts` 실행 시 exit code 127 발생. `msedge-tts`는 순수 Node.js WebSocket 클라이언트로 Lambda Layer 불필요.
+- **VTT 미생성:** `msedge-tts`는 word-level 타임스탬프 VTT를 생성하지 않는다. subtitle-worker는 항상 `script.json`의 `script` 필드 + 오디오 길이 기반 글자 비례 fallback으로 SRT를 생성한다.
+- 음성(`ko-KR-SunHiNeural`), 속도(`+20%`), TTS 인터페이스 추상화는 그대로 유지.
 
 ## 배경
 
@@ -8,11 +16,12 @@
 
 ## 결정
 
-**Phase 0~7:** Edge-TTS `ko-KR-SunHiNeural --rate +20%` 사용
+**Phase 0~7:** `msedge-tts` npm 패키지 `ko-KR-SunHiNeural +20%` 사용
 
 - API 키 불필요 — Phase 0 검증 즉시 착수 가능
 - Microsoft Azure 기반으로 음질 양호
 - 무료 — 파이프라인 검증 비용 없음
+- Lambda Layer 불필요 — 순수 Node.js 패키지
 
 **Phase 8 이후:** Clova Voice로 전환 검토
 
@@ -23,6 +32,6 @@
 ## 결과
 
 - tts-worker 내부 구현을 인터페이스로 추상화해두면 엔진 교체 시 worker 외부 변경 없음
-- Edge-TTS는 비공식 API 의존 — Microsoft 정책 변경 시 중단 가능성 있음 (수용)
+- `msedge-tts`는 비공식 API 의존 — Microsoft 정책 변경 시 중단 가능성 있음 (수용)
 - `ko-KR-SunHiNeural` 외 다른 음성 사용 시 품질 재검증 필요
-- `--rate +20%` 적용으로 기본 속도 대비 재생시간 ~17% 단축 → YouTube Shorts 60초 제한 내 수용 가능
+- `+20%` 적용으로 기본 속도 대비 재생시간 ~17% 단축 → YouTube Shorts 60초 제한 내 수용 가능

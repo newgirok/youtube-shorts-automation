@@ -37,7 +37,7 @@ docker compose logs -f script-worker
 | web | 3001 | Next.js 웹 |
 | script-worker | - | Gemini 스크립트 생성 |
 | tts-worker | - | TTS 음성 합성 |
-| subtitle-worker | - | VTT 기반 SRT 자막 생성 |
+| subtitle-worker | - | 글자 비례 SRT 자막 생성 |
 | render-worker | - | FFmpeg 영상 렌더링 |
 | upload-worker | - | YouTube 업로드 |
 
@@ -120,7 +120,7 @@ cd apps/workers/upload && serverless deploy --stage prod
 
 subtitle-worker (스크립트 기반 SRT 생성)와 render-worker (FFmpeg)는 Fargate로 운영된다.
 
-> subtitle-worker는 faster-whisper를 사용하지 않습니다. tts-worker가 생성한 VTT(word-level timing)를 기반으로 SRT를 생성하므로 GPU/모델 의존성이 없습니다.
+> subtitle-worker는 faster-whisper/STT를 사용하지 않습니다. `script.json`의 `script` 필드 + 오디오 길이 기반 글자 비례로 SRT를 생성하므로 GPU/모델 의존성이 없습니다. (2026-07-12: tts-worker가 msedge-tts로 교체되어 VTT 미생성 → 항상 글자 비례 방식 사용)
 
 ### ECS 서비스 이름
 

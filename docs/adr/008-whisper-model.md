@@ -2,13 +2,13 @@
 
 **상태:** Superseded
 
-## 현황 업데이트 (2026-05-20)
+## 현황 업데이트 (2026-07-12 최종)
 
 faster-whisper는 subtitle-worker에서 **완전히 제거**되었다.
 
-현재 subtitle-worker는 Whisper 없이 Edge-TTS가 생성한 `subtitle.vtt`의 word-level 타임스탬프를 기반으로 SRT를 생성한다 (`processor.ts`의 `buildSrtFromVtt()` 함수). vtt가 없을 경우 ffprobe로 오디오 길이를 측정해 `script.json`의 `script` 필드를 글자 비례로 배분하는 fallback을 사용한다. 별도 ML 모델을 사용하지 않는다.
+2026-07-12: tts-worker가 Python CLI `edge-tts`에서 Node.js `msedge-tts` npm 패키지로 교체됨에 따라 VTT 파일이 더 이상 생성되지 않는다. subtitle-worker는 VTT 없이 항상 ffprobe로 오디오 길이를 측정해 `script.json`의 `script` 필드를 **글자 비례**로 배분하는 방식만 사용한다 (`processor.ts`의 `buildSrtFromScript()` 함수). 별도 ML 모델을 사용하지 않는다.
 
-**교체 이유:** TTS로 생성한 음성은 스크립트 텍스트와 완전히 일치하고, Edge-TTS가 word-level 타임스탬프를 VTT로 제공하므로 음성 인식(STT) 단계가 불필요하다. VTT 기반 SRT 생성이 더 정확하고, Fargate 메모리 및 콜드 스타트 부담을 줄인다.
+**교체 이유:** TTS로 생성한 음성은 스크립트 텍스트와 완전히 일치하므로 음성 인식(STT) 단계가 불필요하다. `msedge-tts`(Node.js)로 교체 후 Lambda Layer가 불필요해졌으며, VTT 미생성 문제는 글자 비례 fallback이 충분히 대체한다.
 
 이 ADR은 결정 배경과 기술 검토 내용을 보존하기 위해 그대로 유지한다.
 
