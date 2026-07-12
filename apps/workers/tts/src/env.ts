@@ -3,7 +3,6 @@ import { BaseEnvSchema } from '@shorts/shared';
 
 export const EnvSchema = BaseEnvSchema.extend({
   SQS_SUBTITLE_QUEUE_URL: z.string().url(),
-  EDGE_TTS_PATH: z.string().default('edge-tts'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

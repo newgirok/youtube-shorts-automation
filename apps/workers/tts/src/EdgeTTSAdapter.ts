@@ -1,12 +1,11 @@
-import { execSync } from 'node:child_process';
-import { writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 import type { TTSAdapter } from './TTSAdapter.js';
 
 export class EdgeTTSAdapter implements TTSAdapter {
-  constructor(private readonly edgeTtsPath: string) {}
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  constructor(_edgeTtsPath: string) {}
 
-  // VTT 경로: audioPath의 .mp3를 .vtt로 치환
   vttPath(audioPath: string): string {
     return audioPath.replace(/\.mp3$/, '.vtt');
   }
@@ -15,13 +14,20 @@ export class EdgeTTSAdapter implements TTSAdapter {
     const tmpDir = '/tmp';
     if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
 
-    const textFile = join(tmpDir, `tts-input-${Date.now()}.txt`);
-    writeFileSync(textFile, text, 'utf-8');
-
-    const vttOut = this.vttPath(outputPath);
-    execSync(
-      `"${this.edgeTtsPath}" --voice ko-KR-SunHiNeural --rate +20% --file "${textFile}" --write-media "${outputPath}" --write-subtitles "${vttOut}"`,
-      { stdio: 'inherit', timeout: 120_000 }
+    const tts = new MsEdgeTTS();
+    await tts.setMetadata(
+      'ko-KR-SunHiNeural',
+      OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3,
     );
+
+    const { audioStream } = await tts.toStream(text, { rate: '+20%' });
+
+    const chunks: Buffer[] = [];
+    for await (const chunk of audioStream) {
+      chunks.push(chunk as Buffer);
+    }
+
+    writeFileSync(outputPath, Buffer.concat(chunks));
+    tts.close();
   }
 }

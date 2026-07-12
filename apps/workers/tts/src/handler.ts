@@ -62,7 +62,7 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
         }
       }
 
-      const tts = new EdgeTTSAdapter(env.EDGE_TTS_PATH);
+      const tts = new EdgeTTSAdapter('');
       const audioPath = `/tmp/${jobId}-audio.mp3`;
       // 문장마다 단락 분리 → edge-tts가 문장별 VTT 엔트리 생성, 타이밍 정확도 향상
       const ttsInput = `${title}.\n\n${normalizeNumberUnits(processedScript).replace(/([.!?])\s+(?=[가-힣A-Z])/g, '$1\n\n')}`;

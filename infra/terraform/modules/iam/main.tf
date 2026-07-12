@@ -31,6 +31,7 @@ resource "aws_iam_role_policy" "lambda_inline" {
           "sqs:ReceiveMessage",
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes",
+          "sqs:SendMessage",
         ]
         Resource = "*"
       },
@@ -100,6 +101,7 @@ resource "aws_iam_role_policy" "fargate_task_inline" {
           "sqs:DeleteMessage",
           "sqs:GetQueueAttributes",
           "sqs:ChangeMessageVisibility",
+          "sqs:SendMessage",
         ]
         Resource = "*"
       },

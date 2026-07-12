@@ -11,8 +11,6 @@ provider:
     DATABASE_URL: ${ssm:shorts.prod.DATABASE_URL}
     S3_BUCKET_NAME: jobs-prod-682251233572
     SQS_SUBTITLE_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-subtitle-queue
-    # EDGE_TTS_PATH — Lambda Layer의 wrapper script 경로
-    EDGE_TTS_PATH: /opt/bin/edge-tts
     PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
 
 functions:
@@ -20,9 +18,6 @@ functions:
     handler: src/handler.handler
     timeout: 120
     memorySize: 512
-    # layers 항목: infra/lambda-layers/build-layers.ps1 실행 후 ARN으로 교체
-    layers:
-      - arn:aws:lambda:ap-northeast-2:682251233572:layer:prod-edge-tts:1
     events:
       - sqs:
           arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-tts-queue
