@@ -213,7 +213,8 @@ function formatSrtTime(ms: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms_part).padStart(3, '0')}`;
 }
 
-function buildSrt(script: string, totalMs: number): string {
+// startOffsetMs: 제목 발화 + 브레이크 구간 (자막 표시 시작 전 무음 구간)
+function buildSrt(script: string, totalMs: number, startOffsetMs = 0): string {
   const chunks = script
     .split(/(?<=[^0-9])\.\s+|[?!]\s+|—+\s*/)
     .map((s) => cleanSubtitleText(s))
@@ -227,10 +228,12 @@ function buildSrt(script: string, totalMs: number): string {
       .map((text, i) => {
         const ratio = cleanLen(text) / totalChars;
         const duration = Math.round(ratio * totalMs);
-        const start = cursor;
-        // 마지막 청크는 정확히 totalMs까지 — 반올림 오차로 인한 후행 공백 방지
-        const end = i === chunks.length - 1 ? totalMs : Math.min(cursor + duration, totalMs);
-        cursor = end;
+        const start = startOffsetMs + cursor;
+        // 마지막 청크는 정확히 startOffsetMs + totalMs까지
+        const end = i === chunks.length - 1
+          ? startOffsetMs + totalMs
+          : startOffsetMs + Math.min(cursor + duration, totalMs);
+        cursor = Math.min(cursor + duration, totalMs);
         return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${text}`;
       })
       .join('\n\n') + '\n'
@@ -291,6 +294,20 @@ export async function processMessage(
     const scriptBuf = await downloadFromS3(jobKey(jobId, 'script.json'));
     const { title, script } = JSON.parse(scriptBuf.toString()) as ScriptContent;
 
+    // TTS 입력 구조: "${title}.\n\n${script_paragraphs}"
+    // → 제목 발화 후 edge-tts가 1s 브레이크 삽입, 스크립트 각 문장 끝에도 1s 브레이크
+    // fallback buildSrt는 이 오프셋을 반영해 제목+브레이크 이후부터 자막 표시
+    const TTS_CHARS_PER_SEC = 7.2; // ko-KR-SunHiNeural +20% 기준 (한국어 글자/초)
+    const titleSpeechMs = Math.round(title.replace(/\s/g, '').length / TTS_CHARS_PER_SEC * 1000);
+    const titleOffsetMs = titleSpeechMs + 1000; // 제목 발화 + \n\n 브레이크 1s
+
+    // tts-worker와 동일한 \n\n 삽입 로직으로 스크립트 내 브레이크 수 계산
+    const scriptBreakCount = (script.replace(/([.!?])\s+(?=[가-힣A-Z])/g, '$1\n\n').match(/\n\n/g) ?? []).length;
+    const scriptBreaksMs = scriptBreakCount * 1000;
+
+    // 실제 스크립트 발화 구간 = 전체 오디오 − 제목 구간 − 스크립트 내 브레이크
+    const effectiveScriptMs = Math.max(0, totalMs - titleOffsetMs - scriptBreaksMs);
+
     if (subtitleVttS3Key) {
       // VTT 기반: edge-tts word-level timing → 정확한 싱크
       log.info({ subtitleVttS3Key }, 'VTT 기반 SRT 생성');
@@ -303,15 +320,14 @@ export async function processMessage(
         srtContent = vttSrt;
         log.info({ total: allEntries.length, skipped: allEntries.length - entries.length }, 'VTT → SRT 변환 완료 (제목 제외)');
       } else {
-        // edge-tts가 SSML 원문을 VTT로 출력하는 경우 등 VTT 파싱 결과가 비어있으면 문자 비례로 fallback
-        log.warn({ total: allEntries.length }, 'VTT 파싱 결과 비어있음 — 문자 비례 타이밍으로 fallback');
-        srtContent = buildSrt(script, totalMs);
+        // edge-tts가 SSML 원문을 VTT로 출력하는 경우 → 타이밍 오프셋 보정 후 문자 비례 fallback
+        log.warn({ total: allEntries.length, titleOffsetMs, effectiveScriptMs }, 'VTT 파싱 결과 비어있음 — 타이밍 보정 fallback');
+        srtContent = buildSrt(script, effectiveScriptMs, titleOffsetMs);
       }
     } else {
-      // fallback: 문자 수 비례 타이밍
-      log.info('VTT 없음, 문자 수 비례 타이밍 사용');
-      srtContent = buildSrt(script, totalMs);
-      log.info('문자 비례 SRT 생성 완료');
+      // fallback: 문자 수 비례 타이밍 (타이밍 오프셋 보정)
+      log.info({ titleOffsetMs, effectiveScriptMs }, 'VTT 없음, 타이밍 보정 문자 비례 타이밍 사용');
+      srtContent = buildSrt(script, effectiveScriptMs, titleOffsetMs);
     }
 
     writeFileSync(srtPath, srtContent, 'utf-8');
