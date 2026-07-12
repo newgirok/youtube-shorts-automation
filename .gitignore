@@ -75,3 +75,12 @@ Thumbs.db
 infra/lambda-layers/edge-tts-build/
 infra/lambda-layers/ffprobe-build/
 infra/lambda-layers/*.zip
+
+# esbuild 캐시
+**/.esbuild/
+
+# 인프라 임시 파일
+infra/temp-*.json
+
+# 루트 임시 파일 (확장자 없는 스크린샷 등)
+/supabase-signup
