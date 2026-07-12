@@ -1,0 +1,59 @@
+service: shorts-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ap-northeast-2
+  role: arn:aws:iam::682251233572:role/prod-LambdaWorkerRole
+  environment:
+    DATABASE_URL: ${ssm:shorts.prod.DATABASE_URL}
+    S3_BUCKET_NAME: jobs-prod-682251233572
+    YOUTUBE_CLIENT_ID: ${ssm:shorts.prod.YOUTUBE_CLIENT_ID}
+    YOUTUBE_CLIENT_SECRET: ${ssm:shorts.prod.YOUTUBE_CLIENT_SECRET}
+    YOUTUBE_REDIRECT_URI: ${ssm:shorts.prod.YOUTUBE_REDIRECT_URI}
+    ENCRYPTION_KEY: ${ssm:shorts.prod.ENCRYPTION_KEY}
+    SQS_SCRIPT_QUEUE_URL: ${ssm:shorts.prod.SQS_SCRIPT_QUEUE_URL}
+    API_INTERNAL_SECRET: ${ssm:shorts.prod.API_INTERNAL_SECRET}
+    WEB_ORIGIN: ${ssm:shorts.prod.WEB_ORIGIN}
+
+functions:
+  api:
+    handler: src/lambda.handler
+    timeout: 29
+    memorySize: 512
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: ANY
+      - httpApi:
+          path: /
+          method: ANY
+
+plugins:
+  - serverless-esbuild
+
+package:
+  individually: true
+
+custom:
+  esbuild:
+    bundle: true
+    minify: false
+    format: cjs
+    target: node22
+    sourcemap: false
+    exclude:
+      - '@aws-sdk/*'
+    nativeZip: true
+    packager: pnpm
+    external:
+      - '@nestjs/microservices'
+      - '@nestjs/websockets'
+      - '@nestjs/platform-express'
+      - '@fastify/static'
+      - '@fastify/view'
+      - 'cache-manager'
+      - 'class-transformer'
+      - 'class-validator'

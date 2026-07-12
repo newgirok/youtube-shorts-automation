@@ -33,6 +33,9 @@ importers:
       '@aws-sdk/client-sqs':
         specifier: ^3.0.0
         version: 3.1045.0
+      '@fastify/aws-lambda':
+        specifier: ^6.4.0
+        version: 6.4.0
       '@nestjs/common':
         specifier: ^11.0.0
         version: 11.1.19(reflect-metadata@0.2.2)(rxjs@7.8.2)
@@ -76,6 +79,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.18
+      serverless-esbuild:
+        specifier: ^1.57.2
+        version: 1.57.2(esbuild@0.27.7)
       ts-node:
         specifier: ^10.9.2
         version: 10.9.2(@swc/core@1.15.40)(@types/node@22.19.18)(typescript@5.9.3)
@@ -696,6 +702,9 @@ packages:
 
   '@fastify/ajv-compiler@4.0.5':
     resolution: {integrity: sha512-KoWKW+MhvfTRWL4qrhUwAAZoaChluo0m0vbiJlGMt2GXvL4LVPQEjt8kSpHI3IBq5Rez8fg+XeH3cneztq+C7A==}
+
+  '@fastify/aws-lambda@6.4.0':
+    resolution: {integrity: sha512-7iCx4Bl+SoeeRP0ALv1Rg4AR63yBW8XxgQiQ4OrTJApUObMzMtN1VPFtnoAqGhtpruAeVUTxgGpsW1hasYxU8Q==}
 
   '@fastify/cors@11.2.0':
     resolution: {integrity: sha512-LbLHBuSAdGdSFZYTLVA3+Ch2t+sA6nq3Ejc6XLAKiQ6ViS2qFnvicpj0htsx03FyYeLs04HfRNBsz/a8SvbcUw==}
@@ -3979,6 +3988,8 @@ snapshots:
       ajv: 8.20.0
       ajv-formats: 3.0.1(ajv@8.20.0)
       fast-uri: 3.1.2
+
+  '@fastify/aws-lambda@6.4.0': {}
 
   '@fastify/cors@11.2.0':
     dependencies:

@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.0.0",
+    "@fastify/aws-lambda": "^6.4.0",
     "@nestjs/common": "^11.0.0",
     "@nestjs/core": "^11.0.0",
     "@nestjs/platform-fastify": "^11.0.0",
@@ -28,6 +29,7 @@
     "@swc-node/register": "^1.11.1",
     "@swc/core": "^1.15.40",
     "@types/node": "^22.0.0",
+    "serverless-esbuild": "^1.57.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.0.0",
     "typescript": "^5.7.0"
