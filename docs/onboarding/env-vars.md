@@ -52,7 +52,8 @@ cp apps/web/.env.example apps/web/.env.local
 | 변수명 | 필수 | 기본값 | 설명 |
 |--------|------|--------|------|
 | `NODE_ENV` |  | `development` | 실행 환경 (`development` \| `test` \| `production`) |
-| `DATABASE_URL` |  | - | PostgreSQL 연결 문자열 (로컬: `localhost:5432`) |
+| `DATABASE_URL` |  | - | PostgreSQL 연결 문자열 — Transaction Pooler (포트 6543), 런타임 전용 |
+| `DIRECT_URL` |  | - | PostgreSQL 직접 연결 — Session Pooler (포트 5432), 마이그레이션 전용 |
 | `AWS_REGION` |  | `ap-northeast-2` | AWS 리전 |
 | `S3_BUCKET_NAME` |  | - | S3 버킷명 |
 | `LOG_LEVEL` | - | `info` | Pino 로그 레벨 (`trace` \| `debug` \| `info` \| `warn` \| `error` \| `fatal`) |

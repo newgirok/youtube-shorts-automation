@@ -32,8 +32,8 @@
 - **Phase 3** — DB 이관 ✅ 완료
   - [x] P3-1. Supabase 프로젝트 연결 설정 `[BE][DevOps]`
   - [x] P3-2. 마이그레이션 실행 `[BE][DevOps]`
-- **Phase 4** — AWS 서버리스 이관
-  - [ ] P4-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
+- **Phase 4** — AWS 서버리스 이관 🔄 진행 중
+  - [x] P4-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]` ✅
   - [ ] P4-2. Lambda 배포 — script / tts / upload worker `[DevOps][BE]`
   - [ ] P4-3. Fargate 배포 — subtitle / render worker `[DevOps]`
   - [ ] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
@@ -170,7 +170,7 @@
 - **P2-2.** `/` — 홈 (토픽 입력·Auto-News·Job 갤러리) `[FE][BE]`
   - 홈 마운트 시 자동 sync (`POST /channels/:id/sync`) 실행
   - Job 카드 갤러리: 상태 Badge, 제목, 조회수 실시간 표시 (2초 폴링)
-  - 카테고리 버튼 (종합·정치·경제·사회) → `POST /jobs/auto-news` 호출
+  - 카테고리 버튼 (종합·경제·기술·의료·환경·사회) → `POST /jobs/auto-news` 호출
   - 검증
     - Job 상태 변경이 2초 이내 반영
     - 채널 미연결 시 입력 폼 disabled
@@ -198,7 +198,7 @@
 
 - **P2-6.** `POST /jobs/auto-news` — Google News RSS 수집 + Job 일괄 생성 `[BE]`
   - Google News RSS (`news.google.com/rss`, 한국어/KR) 파싱
-  - 카테고리: top / politics / business / nation
+  - 카테고리: top / business / technology / health / science / nation (politics 제거)
   - count 1~5개 Job 일괄 생성
   - 검증
     - 뉴스 제목이 topic으로 설정된 Job N개 생성 확인

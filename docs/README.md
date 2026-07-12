@@ -103,7 +103,7 @@ pnpm test
 | Phase 1 | Monorepo 구성, 로컬 파이프라인 구현 (Docker Compose) | **완료** |
 | Phase 2 | Next.js 대시보드 (NextAuth, 채널 연결, Job 모니터링, Analytics, sync) | **완료** |
 | Phase 3 | Supabase DB 이관 (연결 설정 + 마이그레이션) | **완료** |
-| Phase 4 | AWS 서버리스 이관 (Lambda + SQS + Fargate + S3) | 예정 |
+| Phase 4 | AWS 서버리스 이관 (Lambda + SQS + Fargate + S3) | **진행 중** (P4-1 Terraform 완료) |
 | Phase 5 | EventBridge 스케줄링, DLQ 모니터링, 7일 무중단 운영 | 예정 |
 | Phase 6 | Remotion 전환 | 예정 |
 | Phase 7 | 멀티채널 독립 스케줄, Fargate 동적 스케일링 | 예정 |

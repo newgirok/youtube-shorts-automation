@@ -76,7 +76,7 @@ docker push [ECR_URI]:latest
 
 # 4. ECS 서비스 업데이트
 aws ecs update-service \
-  --cluster shorts \
+  --cluster prod-shorts \
   --service api \
   --force-new-deployment
 ```
@@ -87,7 +87,7 @@ aws ecs update-service \
 
 ```bash
 aws ecs describe-services \
-  --cluster shorts \
+  --cluster prod-shorts \
   --services api \
   --query 'services[0].deployments'
 ```
@@ -112,7 +112,7 @@ cd apps/workers/tts    && serverless deploy --stage prod
 cd apps/workers/upload && serverless deploy --stage prod
 ```
 
-각 Worker 디렉토리에 `serverless.yml`이 있으며, SQS 트리거 및 IAM 권한이 정의되어 있다.
+> **P4-2 진행 전**: 각 Worker 디렉토리에 `serverless.yml`이 아직 없습니다. P4-2에서 Serverless Framework v3 설정 파일을 작성한 뒤 위 명령어로 배포합니다.
 
 ---
 
@@ -132,7 +132,7 @@ docker push [ECR_URI]/subtitle-worker:latest
 
 # 3. ECS 서비스 업데이트
 aws ecs update-service \
-  --cluster shorts \
+  --cluster prod-shorts \
   --service subtitle-worker \
   --force-new-deployment
 ```
