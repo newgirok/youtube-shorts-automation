@@ -77,8 +77,9 @@ module "ecr_subtitle" {
 }
 
 module "ecr_render" {
-  source = "../../modules/ecr-repo"
-  name   = "render-worker"
+  source               = "../../modules/ecr-repo"
+  name                 = "render-worker"
+  image_tag_mutability = "MUTABLE"
 }
 
 module "ecr_web" {
@@ -137,22 +138,6 @@ resource "aws_security_group" "fargate_worker" {
 # ── ECS Workers ───────────────────────────────────────────────────────────────
 
 
-module "render_worker" {
-  source = "../../modules/ecs-worker"
-
-  worker_name              = "render"
-  image_uri                = "${module.ecr_render.repository_url}:latest"
-  queue_url                = module.render_queue.url
-  queue_name               = "prod-render-queue"
-  cpu                      = 4096
-  memory                   = 16384
-  cluster_arn              = module.ecs_cluster.cluster_arn
-  cluster_name             = module.ecs_cluster.cluster_name
-  subnet_ids               = data.aws_subnets.default.ids
-  security_group_id        = aws_security_group.fargate_worker.id
-  task_execution_role_arn  = module.iam.fargate_task_execution_role_arn
-  task_role_arn            = module.iam.fargate_task_role_arn
-}
 
 # ── EC2 Web Service ───────────────────────────────────────────────────────────
 

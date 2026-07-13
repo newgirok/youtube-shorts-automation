@@ -18,5 +18,4 @@ output "fargate_task_role_arn"          { value = module.iam.fargate_task_role_a
 output "ecr_render_url" { value = module.ecr_render.repository_url }
 
 # ECS
-output "ecs_cluster_arn"       { value = module.ecs_cluster.cluster_arn }
-output "render_worker_service" { value = module.render_worker.service_name }
+output "ecs_cluster_arn" { value = module.ecs_cluster.cluster_arn }

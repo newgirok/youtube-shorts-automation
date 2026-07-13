@@ -1,6 +1,6 @@
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { SQSClient, SendMessageCommand, ChangeMessageVisibilityCommand } from '@aws-sdk/client-sqs';
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { prisma, downloadFromS3, uploadToS3, jobKey, createLogger } from '@shorts/shared';
 import type { ScriptContent, ScriptScene } from '@shorts/shared';
 import { renderSceneClip, renderSceneFromVideo, concatClipsWithAudio, measureDuration } from './renderer.js';
@@ -19,24 +19,11 @@ interface Message {
 
 export async function processMessage(
   body: string,
-  receiptHandle: string,
   sqs: SQSClient,
   env: Env
 ): Promise<void> {
   const { jobId, channelId, audioS3Key, subtitleS3Key } = JSON.parse(body) as Message;
   const log = createLogger({ jobId, channelId });
-
-  const heartbeat = setInterval(async () => {
-    try {
-      await sqs.send(
-        new ChangeMessageVisibilityCommand({
-          QueueUrl: env.SQS_RENDER_QUEUE_URL,
-          ReceiptHandle: receiptHandle,
-          VisibilityTimeout: 1200,
-        })
-      );
-    } catch { /* 무시 */ }
-  }, 30_000);
 
   try {
     await prisma.job.update({
@@ -164,7 +151,5 @@ export async function processMessage(
       },
     });
     throw err;
-  } finally {
-    clearInterval(heartbeat);
   }
 }

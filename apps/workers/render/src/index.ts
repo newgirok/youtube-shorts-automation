@@ -3,6 +3,7 @@ import { createLogger } from '@shorts/shared';
 import { parseEnv } from './env.js';
 import { processMessage } from './processor.js';
 
+// Docker Compose 로컬 환경용 Long Polling runner
 const env = parseEnv();
 const log = createLogger({});
 const sqs = new SQSClient({ region: env.AWS_REGION });
@@ -24,7 +25,7 @@ async function poll(): Promise<void> {
       for (const msg of messages) {
         if (!msg.Body || !msg.ReceiptHandle) continue;
         try {
-          await processMessage(msg.Body, msg.ReceiptHandle, sqs, env);
+          await processMessage(msg.Body, sqs, env);
           await sqs.send(
             new DeleteMessageCommand({
               QueueUrl: env.SQS_RENDER_QUEUE_URL,

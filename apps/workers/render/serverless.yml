@@ -1,0 +1,28 @@
+service: shorts-render-worker
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  region: ap-northeast-2
+  role: arn:aws:iam::682251233572:role/prod-LambdaWorkerRole
+
+functions:
+  handler:
+    image: 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker:latest
+    timeout: 600
+    memorySize: 3008
+    environment:
+      DATABASE_URL: ${ssm:shorts.prod.DATABASE_URL}
+      S3_BUCKET_NAME: jobs-prod-682251233572
+      PEXELS_API_KEY: ${ssm:shorts.prod.PEXELS_API_KEY}
+      SQS_RENDER_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-render-queue
+      SQS_UPLOAD_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-upload-queue
+      FFMPEG_PATH: ffmpeg
+      FFPROBE_PATH: ffprobe
+      FONTS_DIR: /app/fonts
+    events:
+      - sqs:
+          arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-render-queue
+          batchSize: 1
+          functionResponseType: ReportBatchItemFailures
