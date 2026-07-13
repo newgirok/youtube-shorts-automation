@@ -1,4 +1,4 @@
-# web 앱 빌드 및 ECR 배포 스크립트 (EC2 + SSM 방식)
+# web 앱 빌드 및 ECR 배포 스크립트 (EC2 + Docker Compose 방식)
 # 실행: ! .\infra\scripts\deploy-web.ps1
 #
 # 사전 조건: Docker 실행 중, AWS CLI 로그인 완료, EC2 인스턴스(tag:Name=prod-web) 실행 중
@@ -21,7 +21,7 @@ $decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64St
 $pass = $decoded.Split(':')[1]
 docker login --username AWS --password $pass $ECR_REGISTRY
 
-Write-Host "[3/4] Docker 이미지 빌드 중..."
+Write-Host "[3/4] Docker 이미지 빌드 및 ECR 푸시 중..."
 docker build `
   --build-arg NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" `
   --build-arg NEXT_PUBLIC_API_SECRET="$NEXT_PUBLIC_API_SECRET" `
@@ -29,9 +29,9 @@ docker build `
   -t "${ECR_REGISTRY}/${ECR_REPO}:latest" `
   .
 
-Write-Host "[4/4] ECR 푸시 및 EC2 재시작..."
 docker push "${ECR_REGISTRY}/${ECR_REPO}:latest"
 
+Write-Host "[4/4] EC2에서 Docker Compose 재시작 중..."
 $INSTANCE_ID = (aws ec2 describe-instances `
   --filters "Name=tag:Name,Values=prod-web" "Name=instance-state-name,Values=running" `
   --query "Reservations[0].Instances[0].InstanceId" `
@@ -44,33 +44,20 @@ if (-not $INSTANCE_ID -or $INSTANCE_ID -eq "None") {
 }
 
 Write-Host "  → 인스턴스: $INSTANCE_ID"
-$CMD_ID = (aws ssm send-command `
-  --instance-ids $INSTANCE_ID `
-  --document-name "AWS-RunShellScript" `
-  --parameters 'commands=["systemctl restart web"]' `
-  --region $REGION `
-  --query "Command.CommandId" `
-  --output text)
 
-Write-Host "  → SSM 명령 실행 중 ($CMD_ID)..."
-aws ssm wait command-executed --command-id $CMD_ID --instance-id $INSTANCE_ID --region $REGION
-
-$STATUS = (aws ssm get-command-invocation `
-  --command-id $CMD_ID `
-  --instance-id $INSTANCE_ID `
-  --region $REGION `
-  --query "Status" `
-  --output text)
-Write-Host "  → 결과: $STATUS"
-
-$EIP = (aws ec2 describe-instances `
+# SSH로 docker compose pull + up (새 이미지 반영)
+$KEY = "$HOME\prod-ssh\prod-web.pem"
+$PUBLIC_IP = (aws ec2 describe-instances `
   --instance-ids $INSTANCE_ID `
   --query "Reservations[0].Instances[0].PublicIpAddress" `
   --output text `
   --region $REGION)
 
+ssh -i $KEY -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP `
+  "cd /home/ec2-user/app && sudo docker compose pull && sudo docker compose up -d"
+
 Write-Host ""
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 Write-Host "배포 완료."
-Write-Host "Web URL: http://${EIP}:3001"
+Write-Host "Web URL: https://shorts-kit.com"
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

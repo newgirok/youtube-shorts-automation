@@ -249,6 +249,11 @@ resource "aws_instance" "web" {
 
   user_data = base64encode(file("${path.module}/ec2-web-init.sh"))
 
+  root_block_device {
+    volume_size = 20
+    volume_type = "gp3"
+  }
+
   tags = { Name = "prod-web" }
 }
 
