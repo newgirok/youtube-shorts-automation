@@ -69,70 +69,8 @@ module "iam" {
 
 # ── ECR ───────────────────────────────────────────────────────────────────────
 
-module "ecr_subtitle" {
-  source = "../../modules/ecr-repo"
-  name   = "dev-subtitle-worker"
-}
-
 module "ecr_render" {
-  source = "../../modules/ecr-repo"
-  name   = "dev-render-worker"
-}
-
-# ── ECS Cluster ───────────────────────────────────────────────────────────────
-
-module "ecs_cluster" {
-  source       = "../../modules/ecs-cluster"
-  cluster_name = "dev-shorts"
-}
-
-# ── Security Group (Fargate egress only) ─────────────────────────────────────
-
-resource "aws_security_group" "fargate_worker" {
-  name        = "dev-fargate-worker-sg"
-  description = "Fargate worker outbound only"
-  vpc_id      = data.aws_vpc.default.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# ── ECS Workers ───────────────────────────────────────────────────────────────
-
-module "subtitle_worker" {
-  source = "../../modules/ecs-worker"
-
-  worker_name              = "subtitle"
-  image_uri                = "${module.ecr_subtitle.repository_url}:latest"
-  queue_url                = module.subtitle_queue.url
-  queue_name               = "dev-subtitle-queue"
-  cpu                      = 2048
-  memory                   = 8192
-  cluster_arn              = module.ecs_cluster.cluster_arn
-  cluster_name             = module.ecs_cluster.cluster_name
-  subnet_ids               = data.aws_subnets.default.ids
-  security_group_id        = aws_security_group.fargate_worker.id
-  task_execution_role_arn  = module.iam.fargate_task_execution_role_arn
-  task_role_arn            = module.iam.fargate_task_role_arn
-}
-
-module "render_worker" {
-  source = "../../modules/ecs-worker"
-
-  worker_name              = "render"
-  image_uri                = "${module.ecr_render.repository_url}:latest"
-  queue_url                = module.render_queue.url
-  queue_name               = "dev-render-queue"
-  cpu                      = 4096
-  memory                   = 16384
-  cluster_arn              = module.ecs_cluster.cluster_arn
-  cluster_name             = module.ecs_cluster.cluster_name
-  subnet_ids               = data.aws_subnets.default.ids
-  security_group_id        = aws_security_group.fargate_worker.id
-  task_execution_role_arn  = module.iam.fargate_task_execution_role_arn
-  task_role_arn            = module.iam.fargate_task_role_arn
+  source               = "../../modules/ecr-repo"
+  name                 = "dev-render-worker"
+  image_tag_mutability = "MUTABLE"
 }
