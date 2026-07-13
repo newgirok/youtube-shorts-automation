@@ -28,7 +28,7 @@ export default function LoginPage() {
         muted
         playsInline
         className="absolute inset-0 h-full w-full object-cover"
-        src="/bg.mp4"
+        src="https://shorts-static-682251233572.s3.ap-northeast-2.amazonaws.com/bg.mp4"
       />
       {/* 왼쪽 패널 */}
       <div className="relative hidden lg:flex flex-col bg-black/60 backdrop-blur-sm p-10">
