@@ -1,21 +1,7 @@
-import { execSync } from 'node:child_process';
-import { createRequire } from 'node:module';
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { parseBuffer } from 'music-metadata';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { prisma, downloadFromS3, uploadToS3, jobKey, createLogger } from '@shorts/shared';
 import type { Env } from './env.js';
-
-const require = createRequire(import.meta.url);
-// 우선순위: FFPROBE_PATH env → @ffprobe-installer/ffprobe 패키지 → 시스템 ffprobe
-const ffprobeBin: string = (() => {
-  if (process.env.FFPROBE_PATH) return process.env.FFPROBE_PATH;
-  try {
-    return (require('@ffprobe-installer/ffprobe') as { path: string }).path;
-  } catch {
-    return 'ffprobe';
-  }
-})();
 
 interface Message {
   jobId: string;
@@ -266,26 +252,14 @@ export async function processMessage(
       data: { status: 'SUBTITLE_PROCESSING' },
     });
 
-    const tmpDir = '/tmp';
-    if (!existsSync(tmpDir)) mkdirSync(tmpDir, { recursive: true });
-
-    const audioPath = join(tmpDir, `${jobId}-audio.mp3`);
-    const srtPath = join(tmpDir, `${jobId}-subtitle.srt`);
-
     log.info({ audioS3Key }, 'S3에서 오디오 다운로드');
     const audioBuf = await downloadFromS3(audioS3Key);
-    writeFileSync(audioPath, audioBuf);
 
     let srtContent: string;
 
-    // 오디오 전체 길이 — VTT/fallback 양쪽에서 모두 사용
-    const audioDurationStr = execSync(
-      `"${ffprobeBin}" -v quiet -show_entries format=duration -of csv=p=0 "${audioPath}"`,
-      { stdio: 'pipe' }
-    )
-      .toString()
-      .trim();
-    const totalMs = Math.round(parseFloat(audioDurationStr) * 1000);
+    // 오디오 전체 길이 — music-metadata로 측정 (ffprobe 불필요)
+    const audioMeta = await parseBuffer(new Uint8Array(audioBuf), { mimeType: 'audio/mpeg' });
+    const totalMs = Math.round((audioMeta.format.duration ?? 0) * 1000);
 
     // script.json은 양쪽 경로에서 모두 필요 (title 추출 + fallback script)
     const scriptBuf = await downloadFromS3(jobKey(jobId, 'script.json'));
@@ -327,11 +301,8 @@ export async function processMessage(
       srtContent = buildSrt(script, effectiveScriptMs, titleOffsetMs);
     }
 
-    writeFileSync(srtPath, srtContent, 'utf-8');
-
-    const srtBuf = readFileSync(srtPath);
     const subtitleS3Key = jobKey(jobId, 'subtitle.srt');
-    await uploadToS3(subtitleS3Key, srtBuf);
+    await uploadToS3(subtitleS3Key, Buffer.from(srtContent, 'utf-8'));
 
     await prisma.job.update({
       where: { id: jobId },

@@ -13,7 +13,6 @@ provider:
     SQS_SUBTITLE_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-subtitle-queue
     SQS_RENDER_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-render-queue
     PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
-    # @ffprobe-installer/ffprobe 패키지가 배포 패키지에 포함됨 (FFPROBE_PATH 불필요)
 
 functions:
   handler:
@@ -43,6 +42,5 @@ custom:
     sourcemap: false
     exclude:
       - '@aws-sdk/*'
-      - '@ffprobe-installer/ffprobe'
     nativeZip: true
     packager: pnpm

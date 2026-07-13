@@ -52,7 +52,6 @@ function skipTitleEntries(entries: VttEntry[], title: string): VttEntry[] {
 |---|---|---|
 | `SQS_SUBTITLE_QUEUE_URL` | (필수) | 수신 큐 URL |
 | `SQS_RENDER_QUEUE_URL` | (필수) | 발행 큐 URL |
-| `FFPROBE_PATH` | 자동 감지 | ffprobe 바이너리 경로 (@ffprobe-installer/ffprobe → 시스템 순서로 fallback) |
 
 ## 핵심 상수
 
