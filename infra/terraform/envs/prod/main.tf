@@ -82,8 +82,9 @@ module "ecr_render" {
 }
 
 module "ecr_web" {
-  source = "../../modules/ecr-repo"
-  name   = "web"
+  source               = "../../modules/ecr-repo"
+  name                 = "web"
+  image_tag_mutability = "MUTABLE"
 }
 
 # ── ECS Cluster ───────────────────────────────────────────────────────────────
