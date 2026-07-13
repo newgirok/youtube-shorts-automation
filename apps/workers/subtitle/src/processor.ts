@@ -1,9 +1,21 @@
 import { execSync } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { SQSClient, SendMessageCommand, ChangeMessageVisibilityCommand } from '@aws-sdk/client-sqs';
+import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { prisma, downloadFromS3, uploadToS3, jobKey, createLogger } from '@shorts/shared';
 import type { Env } from './env.js';
+
+const require = createRequire(import.meta.url);
+// 우선순위: FFPROBE_PATH env → @ffprobe-installer/ffprobe 패키지 → 시스템 ffprobe
+const ffprobeBin: string = (() => {
+  if (process.env.FFPROBE_PATH) return process.env.FFPROBE_PATH;
+  try {
+    return (require('@ffprobe-installer/ffprobe') as { path: string }).path;
+  } catch {
+    return 'ffprobe';
+  }
+})();
 
 interface Message {
   jobId: string;
@@ -242,26 +254,11 @@ function buildSrt(script: string, totalMs: number, startOffsetMs = 0): string {
 
 export async function processMessage(
   body: string,
-  receiptHandle: string,
   sqs: SQSClient,
   env: Env
 ): Promise<void> {
   const { jobId, channelId, audioS3Key, subtitleVttS3Key } = JSON.parse(body) as Message;
   const log = createLogger({ jobId, channelId });
-
-  const heartbeat = setInterval(async () => {
-    try {
-      await sqs.send(
-        new ChangeMessageVisibilityCommand({
-          QueueUrl: env.SQS_SUBTITLE_QUEUE_URL,
-          ReceiptHandle: receiptHandle,
-          VisibilityTimeout: 600,
-        })
-      );
-    } catch {
-      // 무시
-    }
-  }, 30_000);
 
   try {
     await prisma.job.update({
@@ -283,7 +280,7 @@ export async function processMessage(
 
     // 오디오 전체 길이 — VTT/fallback 양쪽에서 모두 사용
     const audioDurationStr = execSync(
-      `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${audioPath}"`,
+      `"${ffprobeBin}" -v quiet -show_entries format=duration -of csv=p=0 "${audioPath}"`,
       { stdio: 'pipe' }
     )
       .toString()
@@ -359,7 +356,5 @@ export async function processMessage(
       },
     });
     throw err;
-  } finally {
-    clearInterval(heartbeat);
   }
 }

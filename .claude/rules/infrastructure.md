@@ -16,7 +16,7 @@ Terraform과 Serverless Framework를 CDK로 통일하지 말 것.
 | script-worker | Lambda | 512MB | 60s |
 | tts-worker | Lambda | 512MB | 120s |
 | upload-worker | Lambda | 256MB | 300s |
-| subtitle-worker | ECS Fargate | 2vCPU / 8GB | 300s |
+| subtitle-worker | Lambda | 512MB | 120s |
 | render-worker | ECS Fargate | 4vCPU / 16GB | 600s |
 
 **subtitle/render를 Lambda로 이전 금지** — SQS Long Polling 상시 실행 필요 (ADR 009).

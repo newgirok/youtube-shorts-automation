@@ -4,7 +4,6 @@ import { BaseEnvSchema } from '@shorts/shared';
 export const EnvSchema = BaseEnvSchema.extend({
   SQS_SUBTITLE_QUEUE_URL: z.string().url(),
   SQS_RENDER_QUEUE_URL: z.string().url(),
-  PYTHON_PATH: z.string().default('python'),
 });
 
 export type Env = z.infer<typeof EnvSchema>;

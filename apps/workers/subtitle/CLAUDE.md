@@ -7,7 +7,8 @@ SQS subtitle-queue를 폴링해 VTT(또는 스크립트)를 기반으로 SRT 자
 ## 주요 모듈
 
 - `processor.ts` — 핵심 처리 로직 (VTT 파싱, SRT 생성)
-- `index.ts` — SQS Long Polling 진입점 (Fargate 상시 실행)
+- `handler.ts` — Lambda SQS 이벤트 핸들러
+- `index.ts` — Docker Compose 로컬 환경용 SQS Long Polling runner
 - `env.ts` — 환경변수 파싱
 
 ## SRT 생성 방식
@@ -51,7 +52,7 @@ function skipTitleEntries(entries: VttEntry[], title: string): VttEntry[] {
 |---|---|---|
 | `SQS_SUBTITLE_QUEUE_URL` | (필수) | 수신 큐 URL |
 | `SQS_RENDER_QUEUE_URL` | (필수) | 발행 큐 URL |
-| `PYTHON_PATH` | `python` | Python 실행 경로 (미사용, 향후 확장 대비) |
+| `FFPROBE_PATH` | 자동 감지 | ffprobe 바이너리 경로 (@ffprobe-installer/ffprobe → 시스템 순서로 fallback) |
 
 ## 핵심 상수
 
@@ -94,10 +95,6 @@ const text = raw
 ```
 
 파싱 후 유효 엔트리가 0개이면 (`vttSrt.trim()` 빈 문자열) `buildSrt(script, totalMs)` 문자 비례 fallback을 사용한다.
-
-## Heartbeat
-
-`processMessage` 진입 직후 30초 간격으로 `ChangeMessageVisibility`를 호출해 `VisibilityTimeout: 600`(10분)으로 연장한다. `finally` 블록에서 반드시 `clearInterval`로 정리한다.
 
 ## SQS 메시지 구조
 

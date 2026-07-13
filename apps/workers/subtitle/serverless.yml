@@ -1,0 +1,48 @@
+service: shorts-subtitle-worker
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ap-northeast-2
+  role: arn:aws:iam::682251233572:role/prod-LambdaWorkerRole
+  environment:
+    DATABASE_URL: ${ssm:shorts.prod.DATABASE_URL}
+    S3_BUCKET_NAME: jobs-prod-682251233572
+    SQS_SUBTITLE_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-subtitle-queue
+    SQS_RENDER_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-render-queue
+    PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
+    # @ffprobe-installer/ffprobe 패키지가 배포 패키지에 포함됨 (FFPROBE_PATH 불필요)
+
+functions:
+  handler:
+    handler: src/handler.handler
+    timeout: 120
+    memorySize: 512
+    events:
+      - sqs:
+          arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-subtitle-queue
+          batchSize: 1
+          functionResponseType: ReportBatchItemFailures
+
+plugins:
+  - serverless-esbuild
+
+package:
+  individually: true
+  patterns:
+    - 'libquery_engine-rhel-openssl-3.0.x.so.node'
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    format: cjs
+    target: node22
+    sourcemap: false
+    exclude:
+      - '@aws-sdk/*'
+      - '@ffprobe-installer/ffprobe'
+    nativeZip: true
+    packager: pnpm

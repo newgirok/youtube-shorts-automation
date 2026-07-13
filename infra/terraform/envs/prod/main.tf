@@ -135,22 +135,6 @@ resource "aws_security_group" "fargate_worker" {
 
 # ── ECS Workers ───────────────────────────────────────────────────────────────
 
-module "subtitle_worker" {
-  source = "../../modules/ecs-worker"
-
-  worker_name              = "subtitle"
-  image_uri                = "${module.ecr_subtitle.repository_url}:latest"
-  queue_url                = module.subtitle_queue.url
-  queue_name               = "prod-subtitle-queue"
-  cpu                      = 2048
-  memory                   = 8192
-  cluster_arn              = module.ecs_cluster.cluster_arn
-  cluster_name             = module.ecs_cluster.cluster_name
-  subnet_ids               = data.aws_subnets.default.ids
-  security_group_id        = aws_security_group.fargate_worker.id
-  task_execution_role_arn  = module.iam.fargate_task_execution_role_arn
-  task_role_arn            = module.iam.fargate_task_role_arn
-}
 
 module "render_worker" {
   source = "../../modules/ecs-worker"
