@@ -88,13 +88,13 @@ export default function LoginPage() {
 
             <p className="text-center text-xs text-white/30">
               계속하면{' '}
-              <span className="underline underline-offset-4 cursor-pointer hover:text-white/60">
+              <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-white/60">
                 이용약관
-              </span>{' '}
+              </a>{' '}
               및{' '}
-              <span className="underline underline-offset-4 cursor-pointer hover:text-white/60">
+              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-white/60">
                 개인정보 처리방침
-              </span>
+              </a>
               에 동의하는 것으로 간주합니다.
             </p>
           </div>
