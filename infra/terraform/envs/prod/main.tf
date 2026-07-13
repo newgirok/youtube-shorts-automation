@@ -95,7 +95,7 @@ module "ecs_cluster" {
 
 # ── Security Groups ───────────────────────────────────────────────────────────
 
-# web 앱 인바운드 허용 (포트 3001)
+# web 앱 인바운드 허용 (80/443은 CLI로 추가, Terraform은 3001만 관리)
 resource "aws_security_group" "web" {
   name        = "prod-web-sg"
   description = "Web app inbound 3001"
@@ -113,6 +113,10 @@ resource "aws_security_group" "web" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  lifecycle {
+    ignore_changes = [ingress]
   }
 }
 
