@@ -42,7 +42,7 @@ function skipTitleEntries(entries: VttEntry[], title: string): VttEntry[] {
 
 `subtitleVttS3Key` 없을 때:
 
-1. `ffprobe`로 audio.mp3 길이 측정 (ms)
+1. `music-metadata` (`parseBuffer`)로 audio.mp3 길이 측정 (ms) — 플랫폼 바이너리 의존성 없는 순수 JS
 2. S3에서 `jobs/{jobId}/script.json` → `script` 필드 추출
 3. `buildSrt()`: 전체 길이 대비 글자 수 비례로 타임스탬프 계산
 

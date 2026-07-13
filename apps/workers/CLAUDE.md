@@ -1,7 +1,7 @@
 # apps/workers — Worker 파이프라인 개발 가이드
 
 ## 적용 Rules
-- `.claude/rules/worker-pipeline.md` — Job 상태 전이, S3 키, SQS 설정, Fargate heartbeat
+- `.claude/rules/worker-pipeline.md` — Job 상태 전이, S3 키, SQS 설정
 - `.claude/rules/database.md` — Prisma 싱글턴, findMany select
 - `.claude/rules/security.md` — 토큰, 환경변수
 - `.claude/rules/typescript.md` — strict, ESM .js
@@ -16,9 +16,8 @@
 | `render/` | audio.mp3 + subtitle.srt | output.mp4 | Lambda 3008MB | 600s |
 | `upload/` | output.mp4 | YouTube 업로드 | Lambda 256MB | 300s |
 
-## 공통 Worker 패턴
+## 공통 Worker 패턴 (모든 Worker Lambda)
 
-### Lambda Worker
 ```typescript
 export const handler = async (event: SQSEvent): Promise<void> => {
   const body = JSON.parse(event.Records[0].body);
@@ -34,17 +33,7 @@ export const handler = async (event: SQSEvent): Promise<void> => {
 };
 ```
 
-### Fargate Worker (heartbeat 필수)
-```typescript
-// SQS Long Polling + heartbeat 패턴 (worker-pipeline.md 참조)
-while (true) {
-  const msg = await sqs.receiveMessage({ WaitTimeSeconds: 20, MaxNumberOfMessages: 1 });
-  if (!msg.Messages?.length) continue;
-  const heartbeat = setInterval(() => extendVisibility(msg), 30_000);
-  try { await process(msg); await deleteMessage(msg); }
-  finally { clearInterval(heartbeat); }
-}
-```
+render-worker는 Lambda Container Image 방식 — Docker build + ECR push 후 `serverless deploy`.
 
 ## 수정 시 체크리스트
 Worker 코드 변경 시 `.claude/rules/worker-pipeline.md`의 파이프라인 수정 연동 규칙 참조.

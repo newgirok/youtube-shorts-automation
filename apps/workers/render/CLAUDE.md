@@ -4,12 +4,18 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
 
 파이프라인: render-queue → [Pexels 동영상/이미지 다운로드 + zoompan 클립 생성 + FFmpeg 합성] → S3 저장 → upload-queue 발행
 
+## 배포 환경
+
+Lambda Container Image (`node:20-slim` + `aws-lambda-ric`), 3008MB / 600s.
+Dockerfile → Docker build (`--platform linux/amd64 --provenance=false`) → ECR push → `serverless deploy`
+
 ## 주요 모듈
 
-- `processor.ts` — S3 파일 다운로드, scenes 기반 클립 생성, FFmpeg 최종 합성, upload-queue 발행 (heartbeat `VisibilityTimeout: 1200`)
+- `handler.ts` — Lambda SQS 이벤트 핸들러 진입점
+- `processor.ts` — S3 파일 다운로드, scenes 기반 클립 생성, FFmpeg 최종 합성, upload-queue 발행
 - `renderer.ts` — FFmpeg zoompan 클립 렌더링 (`renderSceneClip`, `renderSceneFromVideo`), 클립 concat + 헤더 + 자막 burn-in (`concatClipsWithAudio`)
 - `image-generator.ts` — Pexels API로 scene keyword 기반 배경 동영상/이미지 검색·다운로드 (`PEXELS_API_KEY` 필요)
-- `index.ts` — SQS Long Polling 진입점 (Fargate 상시 실행)
+- `index.ts` — Docker Compose 로컬 환경용 SQS Long Polling runner
 - `env.ts` — 환경변수 파싱 (`PEXELS_API_KEY`, `FFMPEG_PATH`, `FFPROBE_PATH`, `FONTS_DIR` 등)
 
 ## 에러 메시지 인코딩 처리
