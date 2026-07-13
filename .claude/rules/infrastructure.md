@@ -30,14 +30,6 @@ Terraform과 Serverless Framework를 CDK로 통일하지 말 것.
 - [ ] `JobStatus` enum에 새 상태 추가
 - [ ] Visibility Timeout = Worker 타임아웃 × 2 적용
 
-## 새 Fargate Worker 추가 체크리스트
-- [ ] `docker/{worker}/Dockerfile` 작성 및 빌드
-- [ ] ECR 푸시
-- [ ] `infra/terraform/modules/ecs-worker/` Task Definition 작성
-  - `SQS_QUEUE_URL` 환경변수 포함
-  - `FargateTaskRole`에 `sqs:ChangeMessageVisibility` 권한 확인
-- [ ] `aws ecs update-service --force-new-deployment`
-
 ## LocalStack 로컬 환경
 - `docker-compose.yml`: LocalStack + PostgreSQL + 전체 Worker
 - 환경변수: 루트 `.env.local` (`env_file: .env.local`)
@@ -48,4 +40,4 @@ Terraform과 Serverless Framework를 CDK로 통일하지 말 것.
 - `docs/adr/001-lambda-vs-fargate.md` — 환경 결정 근거
 - `docs/adr/003-sqs-standard-queue.md` — SQS 설정 근거
 - `docs/adr/006-iac-terraform-serverless.md` — IaC 분리 근거
-- `docs/adr/009-fargate-sqs-long-polling.md` — Fargate Long Polling 패턴
+- `docs/adr/009-fargate-sqs-long-polling.md` — Fargate Long Polling (Superseded, Lambda 전환 경위 기록)
