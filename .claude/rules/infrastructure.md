@@ -17,9 +17,9 @@ Terraform과 Serverless Framework를 CDK로 통일하지 말 것.
 | tts-worker | Lambda | 512MB | 120s |
 | upload-worker | Lambda | 256MB | 300s |
 | subtitle-worker | Lambda | 512MB | 120s |
-| render-worker | ECS Fargate | 4vCPU / 16GB | 600s |
+| render-worker | Lambda Container Image | 3008MB | 600s |
 
-**subtitle/render를 Lambda로 이전 금지** — SQS Long Polling 상시 실행 필요 (ADR 009).
+**모든 Worker가 Lambda로 운영 중** (subtitle, render 포함) — Fargate ECS Worker 없음.
 기준: 실행시간 > 15분 또는 메모리 > 3GB → Fargate, 그 외 → Lambda.
 
 ## 새 Lambda Worker 추가 체크리스트
