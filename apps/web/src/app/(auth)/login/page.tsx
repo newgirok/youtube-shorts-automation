@@ -86,16 +86,8 @@ export default function LoginPage() {
               Google로 계속하기
             </Button>
 
-            <p className="text-center text-xs text-white/30">
-              계속하면{' '}
-              <a href="/terms" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-white/60">
-                이용약관
-              </a>{' '}
-              및{' '}
-              <a href="/privacy" target="_blank" rel="noopener noreferrer" className="underline underline-offset-4 hover:text-white/60">
-                개인정보 처리방침
-              </a>
-              에 동의하는 것으로 간주합니다.
+            <p className="text-center text-xs text-white/40">
+              승인된 Google 계정만 접근할 수 있습니다.
             </p>
           </div>
         </div>
