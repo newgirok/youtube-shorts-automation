@@ -50,9 +50,9 @@ resource "aws_ecs_service" "worker" {
     assign_public_ip = true
   }
 
-  # Auto Scaling이 desired_count를 조정하므로 Terraform drift 무시
+  # Auto Scaling이 desired_count를, 배포가 task_definition을 외부에서 관리
   lifecycle {
-    ignore_changes = [desired_count]
+    ignore_changes = [desired_count, task_definition]
   }
 }
 
