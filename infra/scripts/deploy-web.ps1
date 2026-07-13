@@ -1,8 +1,7 @@
-# web 앱 빌드 및 ECR 배포 스크립트
+# web 앱 빌드 및 ECR 배포 스크립트 (EC2 + SSM 방식)
 # 실행: ! .\infra\scripts\deploy-web.ps1
 #
-# 주의: 프로젝트 루트에서 실행해야 합니다.
-# 사전 조건: Docker 실행 중, AWS CLI 로그인 완료
+# 사전 조건: Docker 실행 중, AWS CLI 로그인 완료, EC2 인스턴스(tag:Name=prod-web) 실행 중
 
 $ErrorActionPreference = "Stop"
 
@@ -10,8 +9,6 @@ $REGION = "ap-northeast-2"
 $ACCOUNT_ID = "682251233572"
 $ECR_REGISTRY = "$ACCOUNT_ID.dkr.ecr.$REGION.amazonaws.com"
 $ECR_REPO = "web"
-$ECS_CLUSTER = "prod-shorts"
-$ECS_SERVICE = "web"
 
 Write-Host "[1/4] SSM에서 빌드 파라미터 로드 중..."
 $NEXT_PUBLIC_API_URL = (aws ssm get-parameter --name "shorts.prod.NEXT_PUBLIC_API_URL" --query "Parameter.Value" --output text --region $REGION)
@@ -32,18 +29,48 @@ docker build `
   -t "${ECR_REGISTRY}/${ECR_REPO}:latest" `
   .
 
-Write-Host "[4/4] ECR 푸시 및 ECS 업데이트..."
+Write-Host "[4/4] ECR 푸시 및 EC2 재시작..."
 docker push "${ECR_REGISTRY}/${ECR_REPO}:latest"
-aws ecs update-service --cluster $ECS_CLUSTER --service $ECS_SERVICE --force-new-deployment --region $REGION | Out-Null
-Write-Host "  → ECS 서비스 업데이트 완료"
+
+$INSTANCE_ID = (aws ec2 describe-instances `
+  --filters "Name=tag:Name,Values=prod-web" "Name=instance-state-name,Values=running" `
+  --query "Reservations[0].Instances[0].InstanceId" `
+  --output text `
+  --region $REGION)
+
+if (-not $INSTANCE_ID -or $INSTANCE_ID -eq "None") {
+  Write-Host "  [경고] EC2 인스턴스(prod-web)를 찾을 수 없습니다. 이미지만 푸시됐습니다."
+  exit 0
+}
+
+Write-Host "  → 인스턴스: $INSTANCE_ID"
+$CMD_ID = (aws ssm send-command `
+  --instance-ids $INSTANCE_ID `
+  --document-name "AWS-RunShellScript" `
+  --parameters 'commands=["systemctl restart web"]' `
+  --region $REGION `
+  --query "Command.CommandId" `
+  --output text)
+
+Write-Host "  → SSM 명령 실행 중 ($CMD_ID)..."
+aws ssm wait command-executed --command-id $CMD_ID --instance-id $INSTANCE_ID --region $REGION
+
+$STATUS = (aws ssm get-command-invocation `
+  --command-id $CMD_ID `
+  --instance-id $INSTANCE_ID `
+  --region $REGION `
+  --query "Status" `
+  --output text)
+Write-Host "  → 결과: $STATUS"
+
+$EIP = (aws ec2 describe-instances `
+  --instance-ids $INSTANCE_ID `
+  --query "Reservations[0].Instances[0].PublicIpAddress" `
+  --output text `
+  --region $REGION)
 
 Write-Host ""
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-Write-Host "배포 완료. ECS 태스크 시작 후 Public IP 확인:"
-Write-Host ""
-Write-Host "aws ecs list-tasks --cluster $ECS_CLUSTER --service-name $ECS_SERVICE --region $REGION"
-Write-Host "aws ecs describe-tasks --cluster $ECS_CLUSTER --tasks <TASK_ARN> --region $REGION --query 'tasks[0].attachments[0].details'"
-Write-Host ""
-Write-Host "Public IP 확인 후 NEXTAUTH_URL을 SSM에 업데이트하세요:"
-Write-Host "aws ssm put-parameter --name 'shorts.prod.NEXTAUTH_URL' --value 'http://<PUBLIC_IP>:3001' --type String --overwrite --region $REGION"
+Write-Host "배포 완료."
+Write-Host "Web URL: http://${EIP}:3001"
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

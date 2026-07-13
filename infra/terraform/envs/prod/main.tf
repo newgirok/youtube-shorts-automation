@@ -165,64 +165,99 @@ module "render_worker" {
   task_role_arn            = module.iam.fargate_task_role_arn
 }
 
-# ── ECS Web Service ───────────────────────────────────────────────────────────
+# ── EC2 Web Service ───────────────────────────────────────────────────────────
 
-resource "aws_cloudwatch_log_group" "web" {
-  name              = "/ecs/web"
-  retention_in_days = 14
+data "aws_ami" "amazon_linux_2023" {
+  most_recent = true
+  owners      = ["amazon"]
+
+  filter {
+    name   = "name"
+    values = ["al2023-ami-*-kernel-*-x86_64"]
+  }
 }
 
-resource "aws_ecs_task_definition" "web" {
-  family                   = "web"
-  requires_compatibilities = ["FARGATE"]
-  network_mode             = "awsvpc"
-  cpu                      = 512
-  memory                   = 1024
-  execution_role_arn       = module.iam.fargate_task_execution_role_arn
-  task_role_arn            = module.iam.fargate_task_role_arn
+resource "aws_iam_role" "ec2_web" {
+  name = "prod-ec2-web-role"
 
-  container_definitions = jsonencode([{
-    name  = "web"
-    image = "${module.ecr_web.repository_url}:latest"
-    portMappings = [{ containerPort = 3001, protocol = "tcp" }]
-    environment = [
-      { name = "NODE_ENV", value = "production" },
-      { name = "PORT",     value = "3001" },
-    ]
-    secrets = [
-      { name = "AUTH_SECRET",        valueFrom = "arn:aws:ssm:ap-northeast-2:682251233572:parameter/shorts.prod.AUTH_SECRET" },
-      { name = "NEXTAUTH_SECRET",    valueFrom = "arn:aws:ssm:ap-northeast-2:682251233572:parameter/shorts.prod.AUTH_SECRET" },
-      { name = "NEXTAUTH_URL",       valueFrom = "arn:aws:ssm:ap-northeast-2:682251233572:parameter/shorts.prod.NEXTAUTH_URL" },
-      { name = "AUTH_URL",           valueFrom = "arn:aws:ssm:ap-northeast-2:682251233572:parameter/shorts.prod.NEXTAUTH_URL" },
-      { name = "GOOGLE_CLIENT_ID",   valueFrom = "arn:aws:ssm:ap-northeast-2:682251233572:parameter/shorts.prod.YOUTUBE_CLIENT_ID" },
-      { name = "GOOGLE_CLIENT_SECRET", valueFrom = "arn:aws:ssm:ap-northeast-2:682251233572:parameter/shorts.prod.YOUTUBE_CLIENT_SECRET" },
-    ]
-    logConfiguration = {
-      logDriver = "awslogs"
-      options = {
-        "awslogs-group"         = "/ecs/web"
-        "awslogs-region"        = "ap-northeast-2"
-        "awslogs-stream-prefix" = "ecs"
-      }
-    }
-    essential = true
-  }])
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
 }
 
-resource "aws_ecs_service" "web" {
-  name            = "web"
-  cluster         = module.ecs_cluster.cluster_arn
-  task_definition = aws_ecs_task_definition.web.arn
-  desired_count   = 1
-  launch_type     = "FARGATE"
+resource "aws_iam_role_policy_attachment" "ec2_web_ssm_core" {
+  role       = aws_iam_role.ec2_web.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
 
-  network_configuration {
-    subnets          = data.aws_subnets.default.ids
-    security_groups  = [aws_security_group.web.id]
-    assign_public_ip = true
-  }
+resource "aws_iam_role_policy" "ec2_web_custom" {
+  name = "ec2-web-custom"
+  role = aws_iam_role.ec2_web.id
 
-  lifecycle {
-    ignore_changes = [task_definition]
-  }
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchGetImage",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchCheckLayerAvailability",
+        ]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["ssm:GetParameter", "ssm:GetParameters"]
+        Resource = "arn:aws:ssm:ap-northeast-2:${data.aws_caller_identity.current.account_id}:parameter/shorts.prod.*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+        ]
+        Resource = "*"
+      },
+    ]
+  })
+}
+
+resource "aws_iam_instance_profile" "ec2_web" {
+  name = "prod-ec2-web-profile"
+  role = aws_iam_role.ec2_web.name
+}
+
+resource "aws_instance" "web" {
+  ami                    = data.aws_ami.amazon_linux_2023.id
+  instance_type          = "t3.micro"
+  iam_instance_profile   = aws_iam_instance_profile.ec2_web.name
+  vpc_security_group_ids = [aws_security_group.web.id]
+  subnet_id              = tolist(data.aws_subnets.default.ids)[0]
+
+  user_data = base64encode(file("${path.module}/ec2-web-init.sh"))
+
+  tags = { Name = "prod-web" }
+}
+
+resource "aws_eip" "web" {
+  domain = "vpc"
+  tags   = { Name = "prod-web-eip" }
+}
+
+resource "aws_eip_association" "web" {
+  instance_id   = aws_instance.web.id
+  allocation_id = aws_eip.web.id
+}
+
+output "web_public_ip" {
+  value       = aws_eip.web.public_ip
+  description = "Web 앱 고정 IP — NEXTAUTH_URL SSM 파라미터 업데이트 후 Google OAuth URI 등록 필요"
 }

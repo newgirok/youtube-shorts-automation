@@ -13,9 +13,6 @@ env:
   AWS_REGION: ap-northeast-2
   ECR_REGISTRY: 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com
   ECR_REPOSITORY: web
-  ECS_CLUSTER: prod-shorts
-  ECS_SERVICE: web
-  CONTAINER_NAME: web
 
 jobs:
   deploy:
@@ -34,7 +31,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Login to ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Fetch build secrets from SSM
@@ -55,10 +51,41 @@ jobs:
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
 
-      - name: Deploy to ECS
+      - name: Deploy to EC2 via SSM
         run: |
-          aws ecs update-service \
-            --cluster $ECS_CLUSTER \
-            --service $ECS_SERVICE \
-            --force-new-deployment \
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters \
+              "Name=tag:Name,Values=prod-web" \
+              "Name=instance-state-name,Values=running" \
+            --query "Reservations[0].Instances[0].InstanceId" \
+            --output text \
+            --region $AWS_REGION)
+
+          if [ -z "$INSTANCE_ID" ] || [ "$INSTANCE_ID" = "None" ]; then
+            echo "EC2 인스턴스를 찾을 수 없습니다 (tag:Name=prod-web)"
+            exit 1
+          fi
+          echo "인스턴스 ID: $INSTANCE_ID"
+
+          COMMAND_ID=$(aws ssm send-command \
+            --instance-ids "$INSTANCE_ID" \
+            --document-name "AWS-RunShellScript" \
+            --parameters 'commands=["systemctl restart web"]' \
+            --region $AWS_REGION \
+            --query "Command.CommandId" \
+            --output text)
+          echo "SSM 명령 ID: $COMMAND_ID"
+
+          aws ssm wait command-executed \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
             --region $AWS_REGION
+
+          STATUS=$(aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "$INSTANCE_ID" \
+            --region $AWS_REGION \
+            --query "Status" \
+            --output text)
+          echo "배포 결과: $STATUS"
+          [ "$STATUS" = "Success" ] || exit 1
