@@ -212,28 +212,69 @@ function formatSrtTime(ms: number): string {
 }
 
 // startOffsetMs: 제목 발화 + 브레이크 구간 (자막 표시 시작 전 무음 구간)
-function buildSrt(script: string, totalMs: number, startOffsetMs = 0): string {
-  const chunks = script
-    .split(/(?<=[^0-9])\.\s+|[?!]\s+|—+\s*/)
-    .map((s) => cleanSubtitleText(s))
-    .filter(Boolean)
-    .flatMap((s) => splitIntoDisplayChunks(s));
+// effectiveMs: 브레이크를 제외한 순수 스크립트 발화 시간
+// tts-worker가 문장 사이에 삽입하는 1초 브레이크를 자막에도 반영:
+//   문장 분리 → 각 문장에 effectiveMs 비례 배분 → 문장 사이에 BREAK_MS 갭 삽입
+function buildSrt(script: string, effectiveMs: number, startOffsetMs = 0): string {
+  const BREAK_MS = 1000;
 
-  const totalChars = chunks.reduce((sum, s) => sum + cleanLen(s), 0);
-  let cursor = 0;
+  // tts-worker와 동일한 문장 분리 패턴: [.!?] 뒤 공백 + 한국어/대문자 시작
+  const sentences = script
+    .split(/(?<=[.!?])\s+(?=[가-힣A-Z])/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  if (sentences.length === 0) return '';
+
+  // 문장별 공백제거 글자 수 (비례 계산용)
+  const sentenceChars = sentences.map((s) => cleanLen(s));
+  const totalChars = sentenceChars.reduce((a, b) => a + b, 0);
+  if (totalChars === 0) return '';
+
+  const allChunks: { start: number; end: number; text: string }[] = [];
+  let effectiveCursor = 0;   // effectiveMs 내 커서 (브레이크 제외)
+  let absoluteCursor = startOffsetMs; // 실제 타임스탬프 커서
+
+  for (let si = 0; si < sentences.length; si++) {
+    const isLastSentence = si === sentences.length - 1;
+
+    // 이 문장의 발화 시간 (글자 비례, effectiveMs 범위 내)
+    const ratio = sentenceChars[si]! / totalChars;
+    const sentMs = isLastSentence
+      ? effectiveMs - effectiveCursor
+      : Math.round(ratio * effectiveMs);
+    effectiveCursor += sentMs;
+
+    // 문장 내 청크 분리 + 타임스탬프 배분
+    const chunks = splitIntoDisplayChunks(cleanSubtitleText(sentences[si]!));
+    if (chunks.length === 0) {
+      absoluteCursor += sentMs;
+      if (!isLastSentence) absoluteCursor += BREAK_MS;
+      continue;
+    }
+
+    const chunkTotalChars = chunks.reduce((s, c) => s + cleanLen(c), 0);
+    let chunkCursor = absoluteCursor;
+
+    for (let ci = 0; ci < chunks.length; ci++) {
+      const isLastChunk = ci === chunks.length - 1;
+      const chunkRatio = chunkTotalChars > 0 ? cleanLen(chunks[ci]!) / chunkTotalChars : 1 / chunks.length;
+      const chunkEnd = isLastChunk
+        ? absoluteCursor + sentMs
+        : chunkCursor + Math.round(chunkRatio * sentMs);
+      allChunks.push({ start: chunkCursor, end: chunkEnd, text: chunks[ci]! });
+      chunkCursor = chunkEnd;
+    }
+
+    absoluteCursor += sentMs;
+
+    // 문장 사이 브레이크 갭 (tts-worker가 삽입하는 \n\n 구간, 마지막 문장 제외)
+    if (!isLastSentence) absoluteCursor += BREAK_MS;
+  }
+
   return (
-    chunks
-      .map((text, i) => {
-        const ratio = cleanLen(text) / totalChars;
-        const duration = Math.round(ratio * totalMs);
-        const start = startOffsetMs + cursor;
-        // 마지막 청크는 정확히 startOffsetMs + totalMs까지
-        const end = i === chunks.length - 1
-          ? startOffsetMs + totalMs
-          : startOffsetMs + Math.min(cursor + duration, totalMs);
-        cursor = Math.min(cursor + duration, totalMs);
-        return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${text}`;
-      })
+    allChunks
+      .map((c, i) => `${i + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n${c.text}`)
       .join('\n\n') + '\n'
   );
 }
