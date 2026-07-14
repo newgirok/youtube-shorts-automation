@@ -38,13 +38,26 @@ function skipTitleEntries(entries: VttEntry[], title: string): VttEntry[] {
 }
 ```
 
-### 2차: 문자 비례 fallback
+### 2차: 문장 단위 타이밍 보정 fallback
 
-`subtitleVttS3Key` 없을 때:
+`subtitleVttS3Key` 없을 때 (또는 VTT 파싱 결과 빈 문자열일 때):
 
 1. `music-metadata` (`parseBuffer`)로 audio.mp3 길이 측정 (ms) — 플랫폼 바이너리 의존성 없는 순수 JS
-2. S3에서 `jobs/{jobId}/script.json` → `script` 필드 추출
-3. `buildSrt()`: 전체 길이 대비 글자 수 비례로 타임스탬프 계산
+2. S3에서 `jobs/{jobId}/script.json` → `title`, `script` 필드 추출
+3. 타이밍 보정값 계산:
+   - `titleSpeechMs` = `title` 공백제거 글자 수 / 7.2(글자/초) × 1000 (ko-KR-SunHiNeural +20% 기준)
+   - `titleOffsetMs` = titleSpeechMs + 1000 (제목 후 `\n\n` 브레이크 1초)
+   - `scriptBreakCount` = script 내 문장 경계(`[.!?]` + 한국어 시작) 수 → `scriptBreaksMs` = count × 1000
+   - `effectiveScriptMs` = totalMs − titleOffsetMs − scriptBreaksMs (순수 스크립트 발화 구간)
+4. `buildSrt(script, effectiveScriptMs, titleOffsetMs)`: 문장 단위 분리 + 브레이크 갭 반영 SRT 생성
+
+#### buildSrt 타이밍 로직
+TTS 오디오 구조 `[제목] + [1s 브레이크] + [문장1] + [1s 브레이크] + [문장2] + ... + [문장N]`을 자막에 정확히 반영한다:
+
+- `[.!?]` + 한국어/대문자 시작 패턴으로 script를 문장 단위로 분리
+- 각 문장에 `effectiveScriptMs` 비례(글자 수 기준) 발화 시간 배분
+- 문장 사이마다 1000ms 갭 삽입 (`absoluteCursor += 1000`) — 마지막 문장 제외
+- 결과: 마지막 자막 종료 = `titleOffsetMs + effectiveScriptMs + scriptBreaksMs` = 오디오 총 길이
 
 ## 환경변수
 
@@ -93,7 +106,7 @@ const text = raw
   .trim();
 ```
 
-파싱 후 유효 엔트리가 0개이면 (`vttSrt.trim()` 빈 문자열) `buildSrt(script, totalMs)` 문자 비례 fallback을 사용한다.
+파싱 후 유효 엔트리가 0개이면 (`vttSrt.trim()` 빈 문자열) 타이밍 보정 값을 계산한 뒤 `buildSrt(script, effectiveScriptMs, titleOffsetMs)` 문장 단위 fallback을 사용한다.
 
 ## 배포 주의사항
 
