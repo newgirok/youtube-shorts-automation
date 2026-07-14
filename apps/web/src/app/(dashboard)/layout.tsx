@@ -10,7 +10,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         muted
         playsInline
         className="absolute inset-0 h-full w-full object-cover"
-        src="/bg.mp4"
+        src="https://shorts-static-682251233572.s3.ap-northeast-2.amazonaws.com/bg.mp4"
       />
       <div className="absolute inset-0 bg-black/20" />
       <div className="relative z-10 flex min-h-screen">
