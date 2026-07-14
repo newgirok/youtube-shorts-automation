@@ -56,6 +56,65 @@ Dockerfile(`apps/web/Dockerfile`) builder 스테이지에 `DOCKER_BUILD=true`가
 
 ---
 
+## EC2 SSL 인증서 발급 (최초 1회 / 도메인 변경 시)
+
+EC2에 직접 nginx를 띄우는 구조라 ACM 대신 Let's Encrypt(certbot)를 사용합니다.
+
+### 사전 조건
+
+- GoDaddy DNS A 레코드가 EC2 EIP(`15.165.242.67`)를 가리키고 있어야 합니다.
+- DNS 전파 확인: `nslookup shortsautomation.com`
+
+### 인증서 발급
+
+```bash
+# EC2 SSH 접속 후
+
+# 1. certbot 설치
+sudo dnf install -y python3-certbot
+
+# 2. nginx 컨테이너 잠깐 중지 (80포트 standalone 방식)
+cd /home/ec2-user/app
+sudo docker compose stop nginx
+
+# 3. 인증서 발급
+sudo certbot certonly --standalone \
+  -d shortsautomation.com \
+  -d www.shortsautomation.com \
+  --non-interactive --agree-tos \
+  --email fingercloud5900@gmail.com
+
+# 4. nginx 재시작
+sudo docker compose start nginx
+```
+
+인증서 발급 위치: `/etc/letsencrypt/live/shortsautomation.com/`
+
+### 자동 갱신 확인
+
+`ec2-web-init.sh`에 아래 cron이 이미 등록되어 있습니다:
+
+```
+0 0,12 * * * root certbot renew --quiet && docker compose -f /home/ec2-user/app/docker-compose.yml exec nginx nginx -s reload
+```
+
+### SSM 파라미터 업데이트 (도메인 변경 시)
+
+```bash
+aws ssm put-parameter --name "shorts.prod.NEXTAUTH_URL" \
+  --value "https://shortsautomation.com" --type String --overwrite --region ap-northeast-2
+
+aws ssm put-parameter --name "shorts.prod.WEB_ORIGIN" \
+  --value "https://shortsautomation.com" --type String --overwrite --region ap-northeast-2
+```
+
+Google Cloud Console → OAuth 2.0 클라이언트 → 승인된 리디렉션 URI에도 추가:
+```
+https://shortsautomation.com/api/auth/callback/google
+```
+
+---
+
 ## API 배포 (ECS, Phase 4+)
 
 GitHub Actions `deploy-api.yml` 워크플로우 (`workflow_dispatch` 트리거)가 빌드 → ECR 푸시를 자동으로 수행합니다.
