@@ -30,6 +30,17 @@ Terraform과 Serverless Framework를 CDK로 통일하지 말 것.
 - [ ] `JobStatus` enum에 새 상태 추가
 - [ ] Visibility Timeout = Worker 타임아웃 × 2 적용
 
+## Serverless Framework SSM 참조 주의사항
+`serverless.yml`의 `${ssm:...}` 값은 `sls deploy` 시점에 해결되어 Lambda 환경변수에 직접 저장됨.
+SSM 파라미터 값을 업데이트해도 재배포 전까지 Lambda에 반영되지 않음.
+즉시 반영이 필요한 경우 `aws lambda update-function-configuration`으로 직접 수정:
+```bash
+aws lambda update-function-configuration \
+  --function-name <function-name> \
+  --environment "Variables={API_BASE_URL=<new-value>, ...}"
+```
+단, 이 방법은 다음 `sls deploy` 시 덮어씌워지므로 근본 해결은 재배포가 원칙.
+
 ## LocalStack 로컬 환경
 - `docker-compose.yml`: LocalStack + PostgreSQL + 전체 Worker
 - 환경변수: 루트 `.env.local` (`env_file: .env.local`)

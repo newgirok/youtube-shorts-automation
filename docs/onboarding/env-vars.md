@@ -70,9 +70,9 @@ cp apps/web/.env.example apps/web/.env.local
 | `YOUTUBE_CLIENT_SECRET` |  | Google Cloud OAuth2 클라이언트 시크릿 |
 | `YOUTUBE_REDIRECT_URI` |  | OAuth2 리다이렉트 URI |
 | `ENCRYPTION_KEY` |  | AES-256-GCM 암호화 키 (64자리 hex = 32 bytes) |
-| `WEB_ORIGIN` | - | CORS 허용 오리진 |
+| `WEB_ORIGIN` | - | CORS 허용 오리진 (프로덕션: `https://shortsautomation.com`) |
 | `API_INTERNAL_SECRET` | - | Web → API 내부 통신 인증 키 (openssl rand -hex 32 로 생성) |
-| `API_BASE_URL` | - | 썸네일 URL 절대 경로 생성용 (기본값: `http://localhost:3000`) |
+| `API_BASE_URL` | - | thumbnailUrl 절대 URL 생성용 (프로덕션: API Gateway URL, 기본값: `http://localhost:3000`) |
 
 ### apps/workers/script
 
@@ -147,7 +147,8 @@ Lambda는 `.env` 파일 없이 SSM Parameter Store에서 값을 가져온다.
 | `shorts.prod.API_INTERNAL_SECRET` | SecureString | Web → API 내부 인증 키 |
 | `shorts.prod.SQS_SCRIPT_QUEUE_URL` | String | prod-script-queue URL |
 | `shorts.prod.YOUTUBE_REDIRECT_URI` | String | OAuth callback URL (`{api-gw-url}/auth/youtube/callback`) |
-| `shorts.prod.WEB_ORIGIN` | String | CORS 허용 오리진 (프로덕션 web URL) |
+| `shorts.prod.WEB_ORIGIN` | String | CORS 허용 오리진 (`https://shortsautomation.com`) — API Lambda |
+| `shorts.prod.API_BASE_URL` | String | thumbnailUrl 절대 URL 생성 (API Gateway URL) — API Lambda |
 
 > **점 구분자 주의**: 파라미터 이름에 슬래시(`/`) 없이 점(`.`)을 사용합니다. SSM 경로 패턴이 아닌 일반 이름 형식입니다.
 

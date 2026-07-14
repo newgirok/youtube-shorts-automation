@@ -116,5 +116,18 @@ YOUTUBE_REDIRECT_URI
 ENCRYPTION_KEY
 SQS_SCRIPT_QUEUE_URL
 API_INTERNAL_SECRET
+WEB_ORIGIN     - CORS 허용 오리진 (https://shortsautomation.com)
+API_BASE_URL   - thumbnailUrl 절대 URL 생성용 API Gateway URL
 ```
 `main.ts` 시작 시 누락 여부를 직접 체크 후 즉시 종료. `@shorts/shared`의 `parseBaseEnv()`도 추가로 호출.
+
+## Serverless Framework 배포 주의사항
+`serverless.yml`의 `${ssm:...}` 참조는 **배포 시 해결**되어 Lambda 환경변수에 직접 저장된다.
+SSM 값을 변경해도 Lambda를 재배포하지 않으면 이전 값이 그대로 남는다.
+
+배포 없이 즉시 적용이 필요한 경우:
+```bash
+aws lambda update-function-configuration \
+  --function-name <function-name> \
+  --environment "file://env.json"
+```

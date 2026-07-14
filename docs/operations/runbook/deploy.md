@@ -139,9 +139,21 @@ npx serverless deploy
      --type String --overwrite
    aws ssm put-parameter --name "shorts.prod.WEB_ORIGIN" \
      --value "https://{web-url}" --type String --overwrite
+   aws ssm put-parameter --name "shorts.prod.API_BASE_URL" \
+     --value "https://{api-id}.execute-api.ap-northeast-2.amazonaws.com" \
+     --type String --overwrite
    ```
 2. Google Cloud Console → OAuth 2.0 클라이언트 → 승인된 리디렉션 URI에 추가
-3. `serverless deploy` 재실행 (YOUTUBE_REDIRECT_URI 적용)
+3. `serverless deploy` 재실행 (YOUTUBE_REDIRECT_URI, API_BASE_URL 적용)
+
+> **SSM 업데이트 즉시 반영 주의**: Serverless Framework는 배포 시 SSM 값을 Lambda 환경변수에 직접 복사한다. SSM 업데이트 후 Lambda 재배포 없이 즉시 반영하려면 `aws lambda update-function-configuration`으로 직접 수정해야 한다.
+> ```bash
+> aws lambda update-function-configuration \
+>   --function-name shorts-api-prod-api \
+>   --environment "Variables={WEB_ORIGIN=https://shortsautomation.com,API_BASE_URL=https://{api-id}.execute-api.ap-northeast-2.amazonaws.com,...}" \
+>   --region ap-northeast-2
+> ```
+> 단, 이 방법은 임시 패치용이며 다음 `serverless deploy` 시 SSM 값으로 덮어씌워진다.
 
 ---
 
