@@ -32,7 +32,6 @@ model Channel {
   isActive         Boolean   @default(true)
   subscriberCount  Int       @default(0)
   totalViews       BigInt    @default(0)
-  isYPPQualified   Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

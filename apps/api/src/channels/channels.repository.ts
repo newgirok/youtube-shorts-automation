@@ -24,7 +24,6 @@ export class ChannelsRepository {
         isActive: true,
         subscriberCount: true,
         totalViews: true,
-        isYPPQualified: true,
         createdAt: true,
         updatedAt: true,
       },

@@ -59,7 +59,6 @@ export class AuthService {
         isActive: true,
         subscriberCount: parseInt(ytChannel.statistics?.subscriberCount ?? '0', 10),
         totalViews: parseInt(ytChannel.statistics?.viewCount ?? '0', 10),
-        isYPPQualified: false,
         createdAt: new Date(ytChannel.snippet?.publishedAt ?? Date.now()),
       },
       update: {

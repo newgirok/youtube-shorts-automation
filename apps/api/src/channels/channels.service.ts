@@ -22,7 +22,11 @@ export class ChannelsService {
       this.repo.getYPPStats(id),
     ]);
     if (!channel) throw new NotFoundException('채널을 찾을 수 없습니다.');
-    return { ...channel, ...yppStats };
+    const isYPPQualified =
+      (channel.subscriberCount ?? 0) >= 500 &&
+      yppStats.uploadCount90d >= 3 &&
+      yppStats.shortsViews90d >= 3_000_000;
+    return { ...channel, ...yppStats, isYPPQualified };
   }
 
   async getAnalytics(id: string) {
