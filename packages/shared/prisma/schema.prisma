@@ -39,6 +39,8 @@ model Channel {
 
   jobs             Job[]
   analytics        ChannelAnalytics[]
+
+  @@index([isActive])
 }
 
 model Job {
@@ -63,6 +65,10 @@ model Job {
   updatedAt        DateTime  @updatedAt
 
   channel          Channel   @relation(fields: [channelId], references: [id])
+
+  @@index([channelId])
+  @@index([channelId, status])
+  @@index([youtubeVideoId])
 }
 
 model ChannelAnalytics {
