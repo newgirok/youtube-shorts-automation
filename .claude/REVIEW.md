@@ -18,12 +18,11 @@ PR 리뷰 및 코드 검토 시 이 기준을 적용한다.
 
 ### 인프라 안전성
 - SQS Visibility Timeout 미준수 (Worker 타임아웃 × 2 규칙)
-- subtitle/render Worker를 Lambda로 이전 시도 (ADR 009 위반)
+- subtitle/render Worker를 Fargate로 이전 시도 (ADR 001 위반)
 - Terraform과 Serverless Framework 역할 혼용 (ADR 006 위반)
 
 ### 데이터 안전성
 - `findMany()` select 없이 호출 (N+1, 데이터 과다 조회)
-- Fargate Worker에 heartbeat 미구현 (메시지 중복 처리 위험)
 
 ---
 
@@ -38,7 +37,7 @@ PR 리뷰 및 코드 검토 시 이 기준을 적용한다.
 ### 환경변수
 - [ ] 새 환경변수 추가 시: `packages/shared/src/env.ts` Zod 스키마 업데이트
 - [ ] `.env.example`에 키 이름 추가 (값 없이)
-- [ ] Lambda/Fargate Task Definition 환경변수 섹션 업데이트
+- [ ] Lambda 환경변수 섹션 업데이트 (serverless.yml environment)
 
 ### 파이프라인 연동
 - [ ] Worker 수정 시 연동 Worker 함께 수정 여부 (.claude/rules/worker-pipeline.md 참조)

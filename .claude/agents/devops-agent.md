@@ -1,6 +1,6 @@
 ---
 name: devops-agent
-description: 인프라 및 배포 태스크 담당. Terraform AWS 리소스, Docker Compose 로컬 환경, LocalStack, Serverless Framework Lambda 배포, ECS Fargate 배포, GitHub Actions CI/CD, CloudWatch 알람 구성 시 사용. [DevOps] 태그가 붙은 ROADMAP 태스크 전담.
+description: 인프라 및 배포 태스크 담당. Terraform AWS 리소스, Docker Compose 로컬 환경, LocalStack, Serverless Framework Lambda 배포, GitHub Actions CI/CD, CloudWatch 알람 구성 시 사용. [DevOps] 태그가 붙은 ROADMAP 태스크 전담.
 model: claude-sonnet-4-6
 disallowedTools:
   - mcp__playwright__*
@@ -18,8 +18,7 @@ disallowedTools:
 
 ## 담당 범위
 
-- `infra/` — Terraform AWS 리소스 (S3, SQS, IAM, ECS, ECR, EventBridge, Budget)
-- `docker/` — Fargate 컨테이너 Dockerfile (subtitle-worker, render-worker 등)
+- `infra/` — Terraform AWS 리소스 (S3, SQS, IAM, ECR, EventBridge, Budget)
 - `docker-compose.yml` — 로컬 통합 환경 (LocalStack + PostgreSQL + 전체 Worker)
 - 각 Worker `serverless.yml` — Lambda 배포 (Serverless Framework v3)
 - `.github/workflows/` — CI/CD 파이프라인
@@ -28,7 +27,6 @@ disallowedTools:
 
 | 용도 | 위치 |
 |---|---|
-| Docker Compose 실행용 Dockerfile | `docker/` (docker-compose.yml 참조) |
 | 앱 소스 코드 | `apps/api`, `apps/workers/*`, `apps/web` |
 | 공통 패키지 | `packages/shared` |
 | Terraform | `infra/terraform/` |
@@ -39,5 +37,4 @@ disallowedTools:
 - `docs/adr/003-sqs-standard-queue.md` — SQS 설정 근거
 - `docs/adr/006-iac-terraform-serverless.md` — IaC 도구 분리 근거
 - `docs/adr/007-database-strategy.md` — DB 연결 전략
-- `docs/adr/009-fargate-sqs-long-polling.md` — Fargate Long Polling 패턴
 - `docs/onboarding/env-vars.md` — 환경변수 레퍼런스

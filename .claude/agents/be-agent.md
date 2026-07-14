@@ -14,7 +14,7 @@ disallowedTools:
 ## 적용 Rules
 - `.claude/rules/nestjs-api.md` — 3계층 패턴, Pino 로깅, Zod 환경변수
 - `.claude/rules/database.md` — Prisma findMany select, 싱글턴, BigInt
-- `.claude/rules/worker-pipeline.md` — Job 상태, SQS, S3 키, Fargate heartbeat
+- `.claude/rules/worker-pipeline.md` — Job 상태, SQS, S3 키
 - `.claude/rules/security.md` — 토큰 암호화, OAuth, .env 커밋 금지
 - `.claude/rules/typescript.md` — strict, any 금지, ESM
 
@@ -25,8 +25,8 @@ disallowedTools:
 - `apps/workers/script` — Gemini API → script.json
 - `apps/workers/tts` — Edge-TTS → audio.mp3
 - `apps/workers/upload` — YouTube Data API → COMPLETED
-- `apps/workers/subtitle` — Fargate: SQS 폴링 루프 + heartbeat + 스크립트 기반 SRT 생성 (비즈니스 로직)
-- `apps/workers/render` — Fargate: SQS 폴링 루프 + heartbeat + FFmpeg 호출 (비즈니스 로직)
+- `apps/workers/subtitle` — Lambda: 스크립트 기반 SRT 생성 (비즈니스 로직)
+- `apps/workers/render` — Lambda Container Image: FFmpeg 호출 (비즈니스 로직)
 
 ## 핵심 API 엔드포인트 구현 명세
 
@@ -42,7 +42,7 @@ disallowedTools:
 ## 환경변수 추가 시 체크리스트
 1. `packages/shared/src/env.ts` Zod 스키마에 추가
 2. `.env.example`에 키 이름 추가 (값 없이)
-3. Lambda Task Definition 환경변수 섹션에 추가
+3. Lambda 환경변수 섹션에 추가 (serverless.yml environment)
 4. AWS Secrets Manager에 실제 값 저장
 
 ## 참고 문서

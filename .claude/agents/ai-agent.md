@@ -20,7 +20,7 @@ disallowedTools:
 ## 담당 범위
 
 - `apps/workers/script/src/` — Gemini 시스템 프롬프트 및 스크립트 생성
-- `apps/workers/subtitle/` — 스크립트 기반 SRT 생성 (Fargate)
+- `apps/workers/subtitle/` — 스크립트 기반 SRT 생성 (Lambda)
 - `apps/workers/render/src/remotion/` — Remotion React 영상 템플릿 (Phase 4)
 - `apps/workers/tts/src/` — TTS 엔진 어댑터 (Phase 7)
 
@@ -44,7 +44,7 @@ apps/workers/render/src/remotion/
 └── subtitle-parser.ts   # SRT → Array<{ word, startFrame, endFrame }>
 ```
 
-Fargate headless 환경 사전 검증 필수 — Phase 4 시작 전 Linux amd64 headless 렌더링 확인.
+Lambda Container Image 환경 사전 검증 필수 — Phase 4 시작 전 Linux amd64 headless 렌더링 확인.
 
 ## TTS 엔진 (Phase 7 교체)
 
