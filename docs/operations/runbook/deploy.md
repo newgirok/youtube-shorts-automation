@@ -6,7 +6,7 @@
 |-------|-----------|------|
 | Phase 1~2 | 로컬 | Docker Compose |
 | Phase 3 | Supabase | prisma migrate deploy |
-| Phase 4+ | AWS | ECS, Lambda (Serverless Framework), Fargate |
+| Phase 4+ | AWS | Lambda (Serverless Framework), API Gateway |
 
 ---
 
@@ -115,147 +115,18 @@ https://shortsautomation.com/api/auth/callback/google
 
 ---
 
-## API 배포 (ECS, Phase 4+)
+## API 배포 (Lambda, Phase 4+)
 
-GitHub Actions `deploy-api.yml` 워크플로우 (`workflow_dispatch` 트리거)가 빌드 → ECR 푸시를 자동으로 수행합니다.
-
-수동 배포가 필요한 경우:
-
-```bash
-# 1. 빌드 (ESM 모듈, tsc 컴파일 후 dist/ 생성)
-pnpm --filter @shorts/api build
-
-# 2. Docker 이미지 빌드
-docker build -f apps/api/Dockerfile -t [ECR_URI]:latest .
-
-# 3. ECR 푸시
-aws ecr get-login-password --region ap-northeast-2 | \
-  docker login --username AWS --password-stdin [ECR_URI]
-docker push [ECR_URI]:latest
-
-# 4. ECS 서비스 업데이트
-aws ecs update-service \
-  --cluster prod-shorts \
-  --service api \
-  --force-new-deployment
-```
-
-> **ESM 주의**: `@shorts/api`, `@shorts/shared`를 포함한 모든 패키지가 `"type": "module"` (ESM)로 전환되어 있습니다. `require()` 또는 CommonJS 전용 라이브러리 추가 시 호환성을 확인하세요. `tsconfig.base.json`의 `module`은 `NodeNext`로 고정합니다.
-
-### 배포 확인
-
-```bash
-aws ecs describe-services \
-  --cluster prod-shorts \
-  --services api \
-  --query 'services[0].deployments'
-```
-
-`PRIMARY` deployment의 `runningCount`가 `desiredCount`와 같아지면 완료.
-
----
-
-## Lambda Workers 배포 (Serverless Framework, Phase 4+)
-
-GitHub Actions `_deploy-worker.yml` 워크플로우는 재사용 가능한 워크플로우(reusable workflow)로, 현재 자동 트리거는 비활성화되어 있습니다. 배포는 수동으로 진행합니다.
+GitHub Actions `deploy-api.yml` 워크플로우 (`workflow_dispatch` 트리거)가 배포를 자동으로 수행합니다.
 
 수동 배포가 필요한 경우:
-
-```bash
-# 특정 Worker 배포 (apps/workers/script/ 에서 실행)
-cd apps/workers/script
-serverless deploy --stage prod
-
-# 다른 Worker들
-cd apps/workers/tts    && serverless deploy --stage prod
-cd apps/workers/upload && serverless deploy --stage prod
-```
-
-> **P4-2 완료**: 각 Worker 디렉토리에 `serverless.yml`이 존재합니다. SSM 파라미터 이름 형식: `shorts.prod.{KEY}` (점 구분자, 슬래시 없음).
-
----
-
-## Fargate Workers 배포 (Phase 4+)
-
-subtitle-worker (스크립트 기반 SRT 생성)와 render-worker (FFmpeg)는 Fargate로 운영된다.
-
-> subtitle-worker는 faster-whisper/STT를 사용하지 않습니다. `script.json`의 `script` 필드 + 오디오 길이 기반 글자 비례로 SRT를 생성하므로 GPU/모델 의존성이 없습니다. (2026-07-12: tts-worker가 msedge-tts로 교체되어 VTT 미생성 → 항상 글자 비례 방식 사용)
-
-### ECS 서비스 이름
-
-| Worker | ECS 서비스 명 | ECR 레포 |
-|--------|--------------|----------|
-| subtitle-worker | `subtitle-worker` | `682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/subtitle-worker` |
-| render-worker | `render-worker` | `682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker` |
-
-### ECR 로그인 (Windows)
-
-PowerShell에서 파이프 대신 `--password` 플래그 직접 사용:
-
-```powershell
-$token = (aws ecr get-authorization-token --region ap-northeast-2 --query "authorizationData[0].authorizationToken" --output text)
-$decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
-$pass = $decoded.Split(':')[1]
-docker login --username AWS --password $pass 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com
-```
-
-### 빌드 및 배포
-
-```bash
-# 1. TypeScript 빌드 (dist/ 갱신)
-pnpm --filter @shorts/shared build
-pnpm --filter @shorts/subtitle-worker build
-pnpm --filter @shorts/render-worker build
-
-# 2. Docker 이미지 빌드 (프로젝트 루트에서 실행)
-docker build -f apps/workers/subtitle/Dockerfile \
-  -t 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/subtitle-worker:latest .
-docker build -f apps/workers/render/Dockerfile \
-  -t 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker:latest .
-
-# 3. ECR 푸시
-docker push 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/subtitle-worker:latest
-docker push 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker:latest
-
-# 4. ECS 서비스 업데이트 (새 이미지 반영)
-aws ecs update-service --cluster prod-shorts --service subtitle-worker --force-new-deployment
-aws ecs update-service --cluster prod-shorts --service render-worker --force-new-deployment
-```
-
-### ECS 환경변수 관리
-
-task definition revision 2부터 SSM 시크릿 사용:
-
-| 변수 | subtitle | render | 방식 |
-|------|----------|--------|------|
-| `DATABASE_URL` | ✅ | ✅ | SSM SecureString |
-| `PEXELS_API_KEY` | - | ✅ | SSM SecureString |
-| `S3_BUCKET_NAME` | ✅ | ✅ | env (평문) |
-| `SQS_*_QUEUE_URL` | ✅ | ✅ | env (평문) |
-
-SSM 파라미터 이름: `shorts.prod.DATABASE_URL`, `shorts.prod.PEXELS_API_KEY`
-
-`FargateTaskExecutionRole`에 `ssm-read-inline` 인라인 정책 추가 필요 (이미 적용됨).
-
-### Fargate 리소스 스펙
-
-| Worker | vCPU | 메모리 |
-|--------|------|--------|
-| subtitle-worker | 2 | 8 GB |
-| render-worker | 4 | 16 GB |
-
----
-
-## API Lambda 배포 (Phase 4+)
-
-`apps/api` NestJS 앱을 `@fastify/aws-lambda`로 래핑하여 API Gateway(HTTP API v2) + Lambda로 배포한다.
-
-### 빌드 및 배포
 
 ```bash
 cd apps/api
 npx serverless deploy
 ```
+
+> **ESM 주의**: `@shorts/api`, `@shorts/shared`를 포함한 모든 패키지가 `"type": "module"` (ESM)로 전환되어 있습니다. `require()` 또는 CommonJS 전용 라이브러리 추가 시 호환성을 확인하세요. `tsconfig.base.json`의 `module`은 `NodeNext`로 고정합니다.
 
 ### API Gateway URL 확인 및 OAuth 설정
 
@@ -271,6 +142,41 @@ npx serverless deploy
    ```
 2. Google Cloud Console → OAuth 2.0 클라이언트 → 승인된 리디렉션 URI에 추가
 3. `serverless deploy` 재실행 (YOUTUBE_REDIRECT_URI 적용)
+
+---
+
+## Lambda Workers 배포 (Serverless Framework, Phase 4+)
+
+GitHub Actions `deploy-workers.yml` 워크플로우가 Workers를 배포합니다. matrix 전략으로 script/tts/subtitle/upload는 `npx serverless deploy`, render는 Docker build → ECR push → serverless deploy 순으로 실행됩니다.
+
+수동 배포가 필요한 경우:
+
+```bash
+# script, tts, subtitle, upload Worker (esbuild)
+cd apps/workers/script   && npx serverless deploy --stage prod
+cd apps/workers/tts      && npx serverless deploy --stage prod
+cd apps/workers/subtitle && npx serverless deploy --stage prod
+cd apps/workers/upload   && npx serverless deploy --stage prod
+
+# render-worker (Lambda Container Image — Docker 빌드 후 배포)
+docker build -f apps/workers/render/Dockerfile \
+  -t 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker:latest .
+docker push 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker:latest
+cd apps/workers/render && npx serverless deploy --stage prod
+```
+
+### ECR 로그인 (Windows)
+
+PowerShell에서 파이프 대신 `--password` 플래그 직접 사용:
+
+```powershell
+$token = (aws ecr get-authorization-token --region ap-northeast-2 --query "authorizationData[0].authorizationToken" --output text)
+$decoded = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($token))
+$pass = $decoded.Split(':')[1]
+docker login --username AWS --password $pass 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com
+```
+
+> **P4-2 완료**: 각 Worker 디렉토리에 `serverless.yml`이 존재합니다. SSM 파라미터 이름 형식: `shorts.prod.{KEY}` (점 구분자, 슬래시 없음).
 
 ---
 
@@ -358,23 +264,6 @@ aws secretsmanager create-secret \
 
 ## 롤백
 
-### ECS 롤백 (API / Fargate Workers)
-
-ECS는 이전 태스크 정의(Task Definition) 리비전으로 되돌린다.
-
-```bash
-# 태스크 정의 리비전 목록 확인
-aws ecs list-task-definitions \
-  --family-prefix shorts-api \
-  --sort DESC
-
-# 이전 리비전으로 서비스 업데이트 (예: revision 5)
-aws ecs update-service \
-  --cluster prod-shorts \
-  --service api \
-  --task-definition shorts-api:5
-```
-
 ### Lambda 롤백 (Serverless Framework)
 
 ```bash
@@ -408,25 +297,6 @@ serverless rollback --timestamp 2024-01-15T12:00:00.000Z --stage prod
 - Provisioned Concurrency 설정 (비용 증가 주의)
 - 또는 SQS Visibility Timeout을 Lambda 타임아웃의 2배로 설정 (현재 표준 적용됨)
 - Bundle 사이즈 최소화 (`esbuild` 번들링, `devDependencies` 제외)
-
-### ECS 태스크 시작 실패
-
-**증상**: ECS 콘솔에서 태스크가 즉시 STOPPED 상태
-
-**확인**:
-```bash
-aws ecs describe-tasks \
-  --cluster prod-shorts \
-  --tasks [TASK_ARN] \
-  --query 'tasks[0].stoppedReason'
-```
-
-**주요 원인**:
-- ECR 이미지 미존재 → `docker push` 완료 여부 확인
-- Secrets Manager 접근 권한 없음 → FargateTaskRole IAM 정책 확인
-- 메모리 초과 → CloudWatch 로그에서 OOM 메시지 확인
-
----
 
 ## pnpm 스크립트를 통한 Lambda Worker 배포
 

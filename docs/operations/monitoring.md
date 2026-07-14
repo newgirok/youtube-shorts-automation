@@ -6,7 +6,7 @@
 |-------|-----------|
 | Phase 1~2 (완료) | 로컬 Docker Compose 로그, `docker compose logs -f` |
 | Phase 3 (진행 예정) | Supabase 대시보드 (DB 상태 확인) |
-| Phase 4 (진행 예정) | CloudWatch 로그 수집, Lambda/Fargate 에러율 알람 |
+| Phase 4 (진행 예정) | CloudWatch 로그 수집, Lambda 에러율 알람 |
 | Phase 5 | SQS DLQ 알림 (dlq-notifier Lambda, Slack/Discord Webhook) |
 | Phase 8 | Sentry, AWS Budget Alert, CI/CD sourcemaps 업로드 |
 
@@ -18,9 +18,9 @@
 
 | 서비스 | 로그 그룹 |
 |--------|-----------|
-| API (ECS) | `/ecs/api` |
-| subtitle-worker (Fargate) | `/ecs/subtitle-worker` |
-| render-worker (Fargate) | `/ecs/render-worker` |
+| API (Lambda) | `/aws/lambda/shorts-api-prod-api` |
+| subtitle-worker (Lambda) | `/aws/lambda/shorts-prod-subtitle-worker` |
+| render-worker (Lambda) | `/aws/lambda/shorts-prod-render-worker` |
 | script-worker (Lambda) | `/aws/lambda/script-worker-prod` |
 | tts-worker (Lambda) | `/aws/lambda/tts-worker-prod` |
 | upload-worker (Lambda) | `/aws/lambda/upload-worker-prod` |
@@ -28,13 +28,11 @@
 ### 핵심 메트릭
 
 - **Lambda**: `Errors`, `Duration`, `Throttles`
-- **Fargate**: `EssentialContainerExited` (태스크 강제 종료)
 - **SQS**: `NumberOfMessagesSent`, `ApproximateNumberOfMessagesNotVisible`, `NumberOfMessagesDeleted`
-- **API (ECS)**: 5xx 응답률
 
 ### 알람 설정
 
-**Lambda/Fargate 에러율 5% 초과 알람**
+**Lambda 에러율 5% 초과 알람**
 
 ```hcl
 # Terraform 예시
@@ -51,22 +49,6 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_rate" {
   }
 
   alarm_actions = [aws_sns_topic.alerts.arn]
-}
-```
-
-**Fargate 태스크 실패 알람**
-
-```hcl
-resource "aws_cloudwatch_metric_alarm" "fargate_task_stopped" {
-  alarm_name          = "fargate-essential-container-exited"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  threshold           = 0
-  metric_name         = "EssentialContainerExited"
-  namespace           = "ECS/ContainerInsights"
-  statistic           = "Sum"
-  period              = 60
-  alarm_actions       = [aws_sns_topic.alerts.arn]
 }
 ```
 
@@ -217,7 +199,7 @@ try {
 
 ### CI/CD sourcemaps 업로드
 
-GitHub Actions에서 빌드 후 Sentry CLI로 sourcemaps 업로드 (Phase 7 `_deploy-worker.yml` 참고).
+GitHub Actions에서 빌드 후 Sentry CLI로 sourcemaps 업로드 (Phase 7 `deploy-workers.yml` 참고).
 
 ---
 
