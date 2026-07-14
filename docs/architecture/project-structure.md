@@ -6,13 +6,13 @@ youtube-shorts-automation/
 │   ├── agents/                       # 전문화된 Claude AI 에이전트 설정
 │   │   ├── ai-agent.md               # AI/ML 태스크 담당 (Gemini·Remotion)
 │   │   ├── be-agent.md               # 백엔드 담당 (NestJS·Prisma·SQS)
-│   │   ├── devops-agent.md           # 인프라 담당 (Terraform·ECS·GitHub Actions)
+│   │   ├── devops-agent.md           # 인프라 담당 (Terraform·Lambda·GitHub Actions)
 │   │   └── fe-agent.md               # 프론트엔드 담당 (Next.js·shadcn/ui)
 │   ├── rules/                        # 도메인별 코딩 규칙 (Claude 자동 참조)
 │   │   ├── typescript.md             # strict, any 금지, ESM .js 확장자
 │   │   ├── nestjs-api.md             # 3계층 패턴, Pino 로깅, Zod 환경변수
 │   │   ├── database.md               # Prisma findMany select, 싱글턴, BigInt
-│   │   ├── worker-pipeline.md        # Job 상태, SQS 고정값, S3 키, Fargate heartbeat
+│   │   ├── worker-pipeline.md        # Job 상태, SQS 고정값, S3 키, Lambda 배포 기준
 │   │   ├── security.md               # AES-256-GCM, OAuth, .env 커밋 금지
 │   │   ├── frontend.md               # 서버 컴포넌트, TanStack Query, useEffect 금지
 │   │   └── infrastructure.md         # IaC 분리 원칙, Worker 배포 기준, 체크리스트
@@ -57,10 +57,10 @@ youtube-shorts-automation/
 │       │   └── src/
 │       │       └── script-generator.ts  # ScriptOutput(8필드): title,hook,script,description,scenes[],hashtags,thumbnail_text,comment_bait
 │       ├── tts/                      # SQS → Edge-TTS → audio.mp3
-│       ├── subtitle/                 # ECS Fargate: Edge-TTS VTT 기반 SRT 생성 (faster-whisper 제거됨)
+│       ├── subtitle/                 # Lambda: Edge-TTS VTT 기반 SRT 생성 (faster-whisper 제거됨)
 │       │   └── src/
 │       │       └── processor.ts      # VTT 기반 SRT 생성 (vtt 없으면 ffprobe 길이 측정 후 글자 비례 fallback)
-│       ├── render/                   # ECS Fargate: Pexels 동영상/이미지 + zoompan + FFmpeg → output.mp4 + thumbnail.jpg
+│       ├── render/                   # Lambda Container Image: Pexels 동영상/이미지 + zoompan + FFmpeg → output.mp4 + thumbnail.jpg
 │       │   └── src/
 │       │       ├── processor.ts      # scenes 배열 기반 동영상/이미지 다운로드 + 클립 생성 + thumbnail.jpg 추출
 │       │       ├── renderer.ts       # zoompan 효과 (zoom-in/out, pan-left/right), FontSize=76 ASS 자막 (BorderStyle=3), 헤더 오버레이
@@ -74,7 +74,7 @@ youtube-shorts-automation/
 │           └── schema.prisma         # Channel·Job·ChannelAnalytics 모델 (privacyStatus, watchTimeMinutes 포함)
 ├── infra/
 │   ├── localstack/init/init-aws.sh   # LocalStack: SQS 5큐+DLQ·S3 초기화
-│   └── terraform/                   # Terraform 모듈 (ECR, ECS, SQS, IAM, S3)
+│   └── terraform/                   # Terraform 모듈 (ECR, SQS, IAM, S3)
 ├── docs/
 │   ├── README.md                     # 문서 허브
 │   ├── prd.md                        # 제품 요구사항 문서
