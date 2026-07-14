@@ -29,7 +29,6 @@ model Channel {
   uploadSchedule     String?
   schedulerEnabled   Boolean  @default(false)
   schedulerCategory  String   @default("top")
-  affiliateUrl     String?
   isActive         Boolean   @default(true)
   subscriberCount  Int       @default(0)
   totalViews       BigInt    @default(0)
