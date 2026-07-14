@@ -55,10 +55,10 @@ mkdir -p $APP_DIR/nginx/conf.d
 cat > $APP_DIR/nginx/conf.d/web.conf << 'NGINX'
 server {
     listen 443 ssl;
-    server_name shorts-kit.com www.shorts-kit.com;
+    server_name shortsautomation.com www.shortsautomation.com;
 
-    ssl_certificate /etc/letsencrypt/live/shorts-kit.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/shorts-kit.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/shortsautomation.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/shortsautomation.com/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 
@@ -77,7 +77,7 @@ server {
 
 server {
     listen 80;
-    server_name shorts-kit.com www.shorts-kit.com;
+    server_name shortsautomation.com www.shortsautomation.com;
     return 301 https://$host$request_uri;
 }
 NGINX

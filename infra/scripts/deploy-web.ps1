@@ -59,5 +59,5 @@ ssh -i $KEY -o StrictHostKeyChecking=no ec2-user@$PUBLIC_IP `
 Write-Host ""
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 Write-Host "배포 완료."
-Write-Host "Web URL: https://shorts-kit.com"
+Write-Host "Web URL: https://shortsautomation.com"
 Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

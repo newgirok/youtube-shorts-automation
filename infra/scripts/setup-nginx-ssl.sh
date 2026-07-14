@@ -11,7 +11,7 @@
 
 set -e
 
-DOMAIN="shorts-kit.com"
+DOMAIN="shortsautomation.com"
 EMAIL="fingercloud5900@gmail.com"
 
 echo "[1/4] Nginx 설치..."
