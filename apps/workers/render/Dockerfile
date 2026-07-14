@@ -25,5 +25,5 @@ ENV FFPROBE_PATH=ffprobe
 ENV FONTS_DIR=/app/fonts
 ENV NODE_ENV=production
 
-ENTRYPOINT ["node", "/usr/local/lib/node_modules/aws-lambda-ric/bin/index.js"]
+ENTRYPOINT ["/usr/local/bin/aws-lambda-ric"]
 CMD ["dist/handler.handler"]
