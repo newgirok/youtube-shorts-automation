@@ -1,7 +1,7 @@
 # 백엔드 개발 컨벤션
 
 > 이 문서는 PRD 14절의 개발 규칙을 구체적인 실천 지침으로 풀어낸 것이다.  
-> 관련 문서: [보안/암호화](security/encryption.md) · [파이프라인 흐름](../architecture/pipeline-flow.md) · [ADR 009 Fargate Long Polling](../adr/009-fargate-sqs-long-polling.md)
+> 관련 문서: [보안/암호화](security/encryption.md) · [파이프라인 흐름](../architecture/pipeline-flow.md)
 
 ---
 
@@ -189,9 +189,9 @@ logger.error({ err: error, jobId }, 'TTS 처리 실패');
 
 ## 5. SQS Worker 설계 원칙
 
-### 5-1. Lambda Worker (script / tts / upload)
+### 5-1. Lambda Worker (script / tts / subtitle / render / upload)
 
-AWS SQS 트리거가 핸들러를 자동으로 호출하는 방식이다. 핸들러 함수 형태로 작성한다.
+AWS SQS Event Source Mapping이 핸들러를 자동으로 호출하는 방식이다. 핸들러 함수 형태로 작성한다.
 
 ```typescript
 export const handler = async (event: SQSEvent): Promise<void> => {
@@ -202,23 +202,7 @@ export const handler = async (event: SQSEvent): Promise<void> => {
 };
 ```
 
-### 5-2. Fargate Worker (subtitle / render)
-
-Lambda SQS 트리거를 Fargate에 붙이면 메시지마다 새 태스크가 시작되어 모델 Cold Start 문제가 발생한다.  
-Fargate Worker는 SQS Long Polling 루프를 직접 구현한다 ([ADR 009](../adr/009-fargate-sqs-long-polling.md) 참고).
-
-```typescript
-while (true) {
-  const { Messages } = await sqs.receiveMessage({
-    QueueUrl: process.env.SQS_QUEUE_URL,
-    WaitTimeSeconds: 20,   // Long Polling — 메시지 없으면 20초 대기 후 반환
-    MaxNumberOfMessages: 1,
-  });
-  if (Messages?.length) await processMessage(Messages[0]);
-}
-```
-
-### 5-3. 멱등성(idempotent) 보장
+### 5-2. 멱등성(idempotent) 보장
 
 모든 Worker는 같은 메시지를 여러 번 처리해도 결과가 동일해야 한다.  
 S3에 같은 키로 덮어쓰기(put)하는 방식이 기본 전략이다.
@@ -228,28 +212,7 @@ S3에 같은 키로 덮어쓰기(put)하는 방식이 기본 전략이다.
 await uploadToS3(`jobs/${jobId}/audio.mp3`, audioBuffer);
 ```
 
-### 5-4. Fargate Heartbeat
-
-Fargate Worker는 처리 중인 메시지의 Visibility Timeout이 만료되지 않도록  
-30초마다 `ChangeMessageVisibility`로 타임아웃을 연장한다.
-
-```typescript
-const heartbeat = setInterval(async () => {
-  await sqs.changeMessageVisibility({
-    QueueUrl: process.env.SQS_QUEUE_URL,
-    ReceiptHandle: message.ReceiptHandle,
-    VisibilityTimeout: 600, // Worker 타임아웃 × 2 (subtitle: 600, render: 1200)
-  });
-}, 30_000);
-
-try {
-  await processMessage(message);
-} finally {
-  clearInterval(heartbeat);
-}
-```
-
-### 5-5. 실패 처리
+### 5-3. 실패 처리
 
 처리 실패 시 Job 상태를 `FAILED`로 업데이트하고 `failReason`을 기록한다.  
 SQS `maxReceiveCount: 3` 도달 시 메시지는 자동으로 DLQ로 이동한다.

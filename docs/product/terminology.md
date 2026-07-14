@@ -32,7 +32,7 @@
 script-worker → tts-worker → subtitle-worker → render-worker → upload-worker
 ```
 
-각 단계는 SQS 메시지로 연결되며, AWS Lambda 또는 ECS Fargate에서 실행됩니다. 상세 흐름은 [파이프라인 흐름](../architecture/pipeline-flow.md)을 참고하세요.
+각 단계는 SQS 메시지로 연결되며, 모두 AWS Lambda에서 실행됩니다 (render-worker는 Lambda Container Image). 상세 흐름은 [파이프라인 흐름](../architecture/pipeline-flow.md)을 참고하세요.
 
 ---
 
@@ -197,9 +197,9 @@ AWS EventBridge의 스케줄러 기능으로, 채널별 지정 시간에 Job을 
 
 ## SQS Long Polling
 
-SQS 메시지를 효율적으로 수신하기 위해 최대 20초간 연결을 유지하는 방식입니다. Fargate Worker는 AWS Lambda와 달리 SQS 트리거를 사용할 수 없어 자체 Long Polling 루프를 구현합니다.
+SQS 메시지를 효율적으로 수신하기 위해 최대 20초간 연결을 유지하는 방식입니다. 이 프로젝트의 모든 Worker는 Lambda SQS Event Source Mapping을 사용하며, AWS가 Long Polling을 관리합니다.
 
 - `WaitTimeSeconds: 20` 설정 시 메시지가 없으면 최대 20초 대기 후 반환
 - 메시지 도착 즉시 반환 (20초를 기다리지 않음)
 - Short Polling 대비 API 호출 횟수 약 1/400 절감
-- 관련 ADR: [ADR 009 — Fargate SQS Long Polling](../adr/009-fargate-sqs-long-polling.md)
+- 관련 ADR: [ADR 009 — Fargate SQS Long Polling](../adr/009-fargate-sqs-long-polling.md) (Superseded)

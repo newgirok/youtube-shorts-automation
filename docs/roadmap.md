@@ -14,8 +14,8 @@
   - [x] P1-3. `apps/api` — POST /jobs `[BE]`
   - [x] P1-4. `apps/workers/script` — Gemini 2.5 Flash, ScriptOutput(8필드) `[BE][AI]`
   - [x] P1-5. `apps/workers/tts` `[BE]`
-  - [x] P1-6. `apps/workers/subtitle` _(Fargate)_ — VTT 기반 SRT 생성 (색상 하이라이트 미구현) `[BE][DevOps]`
-  - [x] P1-7. `apps/workers/render` _(Fargate)_ — Pexels + zoompan + FFmpeg `[BE][DevOps]`
+  - [x] P1-6. `apps/workers/subtitle` _(Lambda)_ — VTT 기반 SRT 생성 (색상 하이라이트 미구현) `[BE][DevOps]`
+  - [x] P1-7. `apps/workers/render` _(Lambda)_ — Pexels + zoompan + FFmpeg `[BE][DevOps]`
   - [x] P1-8. `apps/workers/upload` + 수동 E2E `[BE]`
   - [x] P1-9. Docker Compose 통합 로컬 환경 `[DevOps]`
 - **Phase 2** — 웹 대시보드 ✅ 완료
@@ -35,7 +35,7 @@
 - **Phase 4** — AWS 서버리스 이관 🔄 진행 중
   - [x] P4-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]` ✅
   - [x] P4-2. Lambda 배포 — script / tts / upload worker `[DevOps][BE]` ✅
-  - [x] P4-3. Fargate 배포 — subtitle / render worker `[DevOps]` ✅
+  - [x] P4-3. Lambda 배포 — subtitle / render worker `[DevOps]` ✅ (subtitle: 2026-07-12, render: 2026-07-14 Lambda 전환 완료)
   - [x] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]` ✅
   - [ ] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]`
 - **Phase 5** — 스케줄링 + 운영 안정화
@@ -48,7 +48,7 @@
   - [ ] P6-2. 고성과 스크립트 패턴 → Gemini 프롬프트 반영 `[AI][BE]`
 - **Phase 7** — 멀티채널 + 스케일링
   - [ ] P7-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
-  - [ ] P7-2. Fargate 동적 스케일링 `[DevOps]`
+  - [x] P7-2. ~~Fargate 동적 스케일링~~ — Lambda 전환으로 Auto Scaling 자동 적용됨 `[DevOps]`
   - [ ] P7-3. 채널 3개 7일 운영 `[BE][DevOps]`
 - **Phase 8** — 프로덕션 준비
   - [ ] P8-1. GitHub Actions CI/CD `[DevOps]`
@@ -117,7 +117,7 @@
     - S3에 `audio.mp3` 생성, `ffprobe` 길이 35~45초
     - `subtitle-queue` 발행 확인
 
-- **P1-6.** `apps/workers/subtitle` _(Fargate)_ `[BE][DevOps]`
+- **P1-6.** `apps/workers/subtitle` _(Lambda)_ `[BE][DevOps]`
   - faster-whisper 없음 — VTT 기반 SRT 생성 (VTT 없으면 문자 수 비례 fallback)
   - Edge-TTS 생성 subtitle.vtt → 문장별 타이밍 → 20자 이하 청크 분할
   - 색상 하이라이트 미구현 (ASS BorderStyle=3 불투명 박스 자막만 사용)
@@ -125,7 +125,7 @@
     - 로컬 Docker로 S3에 `subtitle.srt` 생성
     - 타임스탬프 구간 합계 = 오디오 총 길이
 
-- **P1-7.** `apps/workers/render` _(Fargate)_ `[BE][DevOps]`
+- **P1-7.** `apps/workers/render` _(Lambda)_ `[BE][DevOps]`
   - `script.json`의 `scenes[]` 배열 기반 Pexels 동영상(우선)/이미지(fallback) 다운로드
   - zoompan 효과 (zoom-in/out, pan-left/right) 클립 생성, `-r 30` fps 정규화, `-stream_loop -1` 루프
   - 클립 concat + 헤더 오버레이(검정 패널+제목 2줄) + 오디오 + ASS 자막 burn-in (FontSize=76, BorderStyle=3 불투명박스, MarginV=510)
@@ -263,31 +263,28 @@
 
 ## Phase 4 — AWS 서버리스 이관
 
-> 로컬 파이프라인을 Lambda + SQS + Fargate + S3로 이관하고, E2E 자동 업로드를 1회 성공시킨다.
+> 로컬 파이프라인을 Lambda + SQS + S3로 이관하고, E2E 자동 업로드를 1회 성공시킨다.
 
 **전제 조건**
 - AWS 계정 및 IAM 관리자 권한 보유
 - Phase 3 완료 (Supabase DB 연결 확보)
 
 - **P4-1.** `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
-  - S3 버킷, SQS 5큐+DLQ, IAM 역할, ECR 레포 (`subtitle-worker`, `render-worker`)
+  - S3 버킷, SQS 5큐+DLQ, IAM 역할, ECR 레포 (`render-worker`)
   - 검증
-    - AWS 콘솔에서 S3 1개, SQS 10개, IAM 2개, ECR 2개 확인
+    - AWS 콘솔에서 S3 1개, SQS 10개, IAM 2개, ECR 1개 확인
 
 - **P4-2.** Lambda 배포 — script / tts / upload worker `[DevOps][BE]`
   - 각 Worker `serverless.yml` (Serverless Framework v3)
   - 검증
     - Lambda 콘솔 테스트 이벤트 각 Worker 실행 성공
 
-- **P4-3.** Fargate 배포 — subtitle / render worker `[DevOps]`
-  - subtitle-worker: 2 vCPU, 8GB
-  - render-worker: 4 vCPU, 16GB (`PEXELS_API_KEY` 환경변수 포함)
-  - ECR 이미지 빌드 및 푸시 완료
-  - ECS task definition revision 2 (SSM 시크릿 적용): `DATABASE_URL`, `PEXELS_API_KEY`
-  - `FargateTaskExecutionRole`에 SSM 인라인 정책 추가
-  - ECS 서비스 desired_count=1, 배포 COMPLETED
+- **P4-3.** Lambda 배포 — subtitle / render worker `[DevOps]`
+  - subtitle-worker: Lambda (esbuild), SQS Event Source Mapping
+  - render-worker: Lambda Container Image (ECR), `PEXELS_API_KEY` 환경변수 포함
+  - ECR 이미지 빌드 및 푸시 완료 (render-worker)
   - 검증
-    - SQS Long Polling 시작 확인 ✅
+    - Lambda SQS 트리거 동작 확인 ✅
 
 - **P4-4.** API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
   - `apps/api/src/lambda.ts` — `@fastify/aws-lambda` 핸들러 (NestJS + Fastify 래핑)
@@ -326,7 +323,7 @@
     - 3회 재시도 후 DLQ 적재 → 알림 수신 (1분 이내)
 
 - **P5-3.** CloudWatch 알람 설정 `[DevOps]`
-  - Lambda / Fargate 에러율 > 5% → SNS → 이메일 알람
+  - Lambda 에러율 > 5% → SNS → 이메일 알람
   - 검증
     - CloudWatch 알람 설정 확인
 
@@ -346,7 +343,7 @@
 
 > FFmpeg → Remotion으로 렌더러를 교체한다.
 
-**전제 조건**: Remotion이 Fargate(Linux amd64) headless 환경에서 렌더링 가능한지 사전 검증
+**전제 조건**: Remotion이 Lambda Container Image(Linux amd64) headless 환경에서 렌더링 가능한지 사전 검증
 
 - **P6-1.** `render-worker` Remotion 전환 `[FE][BE]`
   - `ShortsVideo.tsx`: 루트 컴포넌트 (1080×1920, fps: 30)
@@ -373,8 +370,7 @@
 > 채널 10개를 추가 인프라 변경 없이 독립적으로 운영할 수 있다.
 
 - **P7-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
-- **P7-2.** Fargate 동적 스케일링 `[DevOps]`
-  - `render-queue` 메시지 수 기반 Auto Scaling
+- **P7-2.** ~~Fargate 동적 스케일링~~ — Lambda 전환으로 Auto Scaling 자동 적용됨, 완료 `[DevOps]`
 - **P7-3.** Analytics 다채널 수집 + 채널 3개 7일 운영 `[BE][DevOps]`
 
 **완료 기준**

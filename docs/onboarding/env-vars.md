@@ -134,7 +134,7 @@ cp apps/web/.env.example apps/web/.env.local
 
 ## AWS SSM Parameter Store (프로덕션)
 
-Lambda 및 Fargate는 `.env` 파일 없이 SSM Parameter Store에서 값을 가져온다.
+Lambda는 `.env` 파일 없이 SSM Parameter Store에서 값을 가져온다.
 
 | SSM 파라미터 이름 | 타입 | 값 설명 |
 |---|---|---|

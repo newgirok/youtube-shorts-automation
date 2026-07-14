@@ -11,7 +11,7 @@
 
 한국 뉴스·시사 쇼츠 채널에 특화: Google News RSS에서 주제를 자동 수집하고, Gemini 2.5 Flash로 25~35초 시사 스크립트를 생성하며, 시사 키워드 하이라이트 자막과 Pexels 이미지 기반 zoompan 영상을 제작한다.
 
-Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라인(Lambda + ECS Fargate + SQS)으로 각 처리 단계를 분리 실행한다. 웹 대시보드(Next.js)로 채널 관리, Job 상태 모니터링, YouTube Analytics 시각화, YPP 진행률 추적을 제공한다.
+Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라인(Lambda + SQS)으로 각 처리 단계를 분리 실행한다. 웹 대시보드(Next.js)로 채널 관리, Job 상태 모니터링, YouTube Analytics 시각화, YPP 진행률 추적을 제공한다.
 
 ---
 
@@ -113,7 +113,7 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 
 ### 4-6. 모니터링 및 알림
 
-- CloudWatch: Lambda·Fargate 로그 수집, 에러율 5% 초과 시 알람
+- CloudWatch: Lambda 로그 수집, 에러율 5% 초과 시 알람
 - SQS DLQ: maxReceiveCount 3회 실패 시 DLQ 이동, DLQ 적재 시 Slack/Discord 알림
 - Sentry: 런타임 에러 트래킹, jobId·channelId 컨텍스트 포함
 - AWS Budget Alert: $20 초과 시 이메일 알람
@@ -152,7 +152,7 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 | Backend | NestJS v11, Fastify Adapter, TypeScript 5.x strict, Zod |
 | Queue | AWS SQS (Standard Queue + DLQ) |
 | Database | PostgreSQL (Supabase → RDS), Prisma v5 |
-| Infra | AWS Lambda (Node.js 20), API Gateway, ECS Fargate, EventBridge, S3, CloudWatch, ECR, IAM, GitHub Actions |
+| Infra | AWS Lambda (Node.js 20), API Gateway, EventBridge, S3, CloudWatch, ECR, IAM, GitHub Actions |
 | Rendering | FFmpeg (zoompan, Phase 1~5) → Remotion (Phase 6~) |
 | AI | Google Gemini 2.5 Flash |
 | TTS | Edge-TTS (초기) → Clova Voice (Phase 8) |
@@ -161,12 +161,12 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 | 뉴스 수집 | Google News RSS |
 | Monitoring | CloudWatch, Sentry |
 
-### Lambda vs ECS Fargate 분리 기준
+### 실행 환경
 
 | 실행 환경 | Worker | 이유 |
 |---|---|---|
-| Lambda | script / tts / upload | 빠르고 가벼운 작업 |
-| ECS Fargate | subtitle (스크립트 기반 SRT), render (Pexels + FFmpeg) | CPU 집약적 처리 |
+| Lambda | script / tts / subtitle / upload | 빠르고 가벼운 작업 |
+| Lambda Container Image | render (Pexels + FFmpeg) | FFmpeg 바이너리 포함 컨테이너 이미지 필요 |
 
 ---
 
@@ -177,11 +177,11 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
            ↓ HTTP
 [API Gateway + Lambda (NestJS)]
            ↓ SQS
-[script-worker]  → Gemini 2.5 Flash  → S3 (script.json)
-[tts-worker]     → Edge-TTS           → S3 (audio.mp3)
-[subtitle-worker]→ 스크립트 기반 SRT  → S3 (subtitle.srt)  ← ECS Fargate
-[render-worker]  → Pexels + FFmpeg    → S3 (output.mp4)    ← ECS Fargate
-[upload-worker]  → YouTube API        → 업로드 완료
+[script-worker]  → Gemini 2.5 Flash  → S3 (script.json)   ← Lambda
+[tts-worker]     → Edge-TTS           → S3 (audio.mp3)     ← Lambda
+[subtitle-worker]→ 스크립트 기반 SRT  → S3 (subtitle.srt)  ← Lambda
+[render-worker]  → Pexels + FFmpeg    → S3 (output.mp4)    ← Lambda Container Image
+[upload-worker]  → YouTube API        → 업로드 완료         ← Lambda
            ↓
 [RDS PostgreSQL / Supabase]
 [EventBridge Scheduler] — 매일 채널별 지정 시간에 Job 생성
@@ -299,11 +299,10 @@ enum JobStatus {
 | Pexels API (무료 플랜) | $0 |
 | Google News RSS | $0 |
 | AWS S3 (~9GB) | ~$0.21 |
-| ECS Fargate (렌더링) | ~$6 |
 | CloudWatch | ~$1 |
 | Lambda, SQS | ~$0 (무료 티어) |
 | Supabase | $0 (무료 플랜) |
-| **합계** | **~$7.5** |
+| **합계** | **~$1.5** |
 
 ---
 
@@ -328,10 +327,10 @@ enum JobStatus {
 | **1** | Monorepo 구성, 로컬 파이프라인 구현, 수동 유튜브 업로드 1회 성공 | 완료 |
 | **2** | 웹 대시보드 (NextAuth, 채널 연결, Job 모니터링, Analytics, auto-news, sync) | 완료 |
 | **3** | Supabase DB 이관 (연결 설정 + 마이그레이션) | 예정 |
-| **4** | AWS 서버리스 이관 (Lambda + SQS + Fargate + S3), E2E 자동 업로드 | 예정 |
+| **4** | AWS 서버리스 이관 (Lambda + SQS + S3), E2E 자동 업로드 | 예정 |
 | **5** | EventBridge 스케줄링, DLQ 모니터링, 7일 무중단 운영 | 예정 |
 | **6** | Remotion 전환, 고성과 패턴 반영 | 예정 |
-| **7** | 멀티채널 독립 스케줄, Fargate 동적 스케일링 | 예정 |
+| **7** | 멀티채널 독립 스케줄, Lambda Auto Scaling | 예정 |
 | **8** | GitHub Actions CI/CD, Sentry, Clova Voice 교체, 30일 안정성 검증 | 예정 |
 
 ---
