@@ -62,6 +62,6 @@ jobs:
               | docker login --username AWS --password-stdin \
                 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com
             cd /home/ec2-user/app
-            sudo docker compose pull
-            sudo docker compose up -d
-            sudo docker compose ps
+            docker compose pull
+            docker compose up -d
+            docker compose ps
