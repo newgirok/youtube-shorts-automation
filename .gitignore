@@ -68,6 +68,9 @@ out/
 .DS_Store
 Thumbs.db
 
+# Prisma 바이너리 (pnpm install 후 deploy-workers.yml에서 복사, Git 추적 불필요)
+**/libquery_engine-*.so.node
+
 # Serverless Framework 배포 아티팩트
 **/.serverless/
 

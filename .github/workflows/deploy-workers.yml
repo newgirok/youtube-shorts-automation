@@ -49,6 +49,11 @@ jobs:
       - name: Build shared
         run: pnpm --filter @shorts/shared build
 
+      - name: Copy Prisma binary to worker directory
+        run: |
+          PRISMA_BIN=$(find node_modules/.pnpm -name "libquery_engine-rhel-openssl-3.0.x.so.node" | head -1)
+          cp "$PRISMA_BIN" "apps/workers/${{ matrix.worker }}/"
+
       - name: Deploy ${{ matrix.worker }}-worker
         run: |
           cd apps/workers/${{ matrix.worker }}
