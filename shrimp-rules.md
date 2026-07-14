@@ -27,12 +27,12 @@ youtube-shorts-automation/
 │   └── workers/
 │       ├── script/           # Lambda: Gemini 2.5 Flash → script.json → S3
 │       ├── tts/              # Lambda: Edge-TTS → audio.mp3 → S3
-│       ├── subtitle/         # ECS Fargate: 스크립트 기반 SRT → subtitle.srt → S3
-│       ├── render/           # ECS Fargate: Pexels + FFmpeg → output.mp4 → S3
+│       ├── subtitle/         # Lambda: 스크립트 기반 SRT → subtitle.srt → S3
+│       ├── render/           # Lambda Container Image: Pexels + FFmpeg → output.mp4 → S3
 │       └── upload/           # Lambda: YouTube Data API → COMPLETED
 ├── packages/
 │   └── shared/               # Prisma 스키마, 공통 타입, 환경변수 Zod 스키마
-├── infra/                    # AWS 리소스 (S3, SQS, IAM, ECS, ECR, EventBridge 등)
+├── infra/                    # AWS 리소스 (S3, SQS, IAM, ECR, EventBridge 등)
 └── scripts/                  # 로컬 진단 도구 (run-pipeline.ts) + 폰트 자산
 ```
 
@@ -44,11 +44,11 @@ jobs/{jobId}/subtitle.srt
 jobs/{jobId}/output.mp4
 ```
 
-**Worker 실행 환경 결정 기준:**
+**Worker 실행 환경:**
 | Worker | 환경 | 이유 |
 |---|---|---|
-| script, tts, upload | Lambda | 가볍고 빠른 작업 |
-| subtitle, render | ECS Fargate | CPU 집약적 처리 |
+| script, tts, subtitle, upload | Lambda (esbuild) | 가볍고 빠른 작업 |
+| render | Lambda Container Image | FFmpeg 바이너리 의존성 |
 
 ---
 
@@ -58,8 +58,8 @@ jobs/{jobId}/output.mp4
 POST /jobs  또는  POST /jobs/auto-news
   → SQS script-queue → script-worker (Lambda)
     → SQS tts-queue → tts-worker (Lambda)
-      → SQS subtitle-queue → subtitle-worker (Fargate)
-        → SQS render-queue → render-worker (Fargate)
+      → SQS subtitle-queue → subtitle-worker (Lambda)
+        → SQS render-queue → render-worker (Lambda Container Image)
           → SQS upload-queue → upload-worker (Lambda)
             → Job 상태: COMPLETED
 ```
