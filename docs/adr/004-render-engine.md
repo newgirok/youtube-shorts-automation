@@ -10,7 +10,7 @@
 
 **Phase 1~5:** FFmpeg 사용
 
-- 추가 런타임 없음 — ECS 이미지에 바이너리 하나만 추가
+- 추가 런타임 없음 — Lambda Container Image에 바이너리 하나만 추가
 - ASS 자막 burn-in, zoompan 효과, 헤더 오버레이 모두 FFmpeg으로 구현 완료
 - 빠른 파이프라인 검증 가능
 
@@ -18,10 +18,10 @@
 
 - React 컴포넌트로 영상 템플릿 관리 → 디자인 변경 시 코드 수정만으로 대응
 - 채널별 브랜딩(로고, 색상, 폰트) 템플릿화 가능
-- Puppeteer(Chromium) 필요 → ECS 이미지 크기 증가 감수
+- Puppeteer(Chromium) 필요 → Lambda Container Image 크기 증가 감수
 
 ## 결과
 
-- Phase 1~5 render-worker는 FFmpeg만 의존 — 이미지 경량
+- Phase 1~5 render-worker는 FFmpeg만 의존 — Lambda Container Image 경량 유지
 - Phase 6 전환 시 render-worker 내부만 교체, S3 출력 키(`jobs/{jobId}/output.mp4`)는 동일 유지
-- Remotion은 Node.js 환경 필요 — Lambda 이전 불가, Fargate 유지
+- Remotion은 Node.js + Chromium 환경 필요 — Lambda Container Image 사용 (Fargate 불필요)

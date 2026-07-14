@@ -12,7 +12,7 @@
 
 | 도구 | 담당 범위 | 위치 |
 |---|---|---|
-| Terraform | S3, SQS, IAM, ECS, ECR, EventBridge, Budget | `infra/*.tf` |
+| Terraform | S3, SQS, IAM, ECR, EventBridge, Budget | `infra/*.tf` |
 | Serverless Framework v3 | Lambda 함수 배포, SQS 트리거, esbuild 번들링 | 각 Worker `serverless.yml` |
 
 **Terraform을 인프라에 선택한 이유:**
