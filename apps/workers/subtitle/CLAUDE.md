@@ -95,6 +95,20 @@ const text = raw
 
 파싱 후 유효 엔트리가 0개이면 (`vttSrt.trim()` 빈 문자열) `buildSrt(script, totalMs)` 문자 비례 fallback을 사용한다.
 
+## 배포 주의사항
+
+`libquery_engine-rhel-openssl-3.0.x.so.node` 파일이 `apps/workers/subtitle/` 디렉토리에 있어야 한다.
+`serverless.yml`의 `package.patterns`에 이 파일이 포함되어 있으며, Lambda 패키지에 번들링된다.
+파일이 없으면 `PrismaClientInitializationError: Invalid t=Object.create() invocation` 오류가 발생한다.
+
+**CI/CD**: `deploy-workers.yml`의 "Copy Prisma binary" 단계에서 `node_modules/.pnpm`에서 자동 복사.
+
+**로컬 배포** 시 수동 복사 필요:
+```bash
+PRISMA_BIN=$(find node_modules/.pnpm -name "libquery_engine-rhel-openssl-3.0.x.so.node" | head -1)
+cp "$PRISMA_BIN" apps/workers/subtitle/
+```
+
 ## SQS 메시지 구조
 
 수신 (`subtitle-queue`):

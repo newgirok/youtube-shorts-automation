@@ -9,6 +9,8 @@ SQS render-queue를 폴링해 FFmpeg으로 영상을 렌더링하는 워커.
 Lambda Container Image (`node:20-slim` + `aws-lambda-ric`), 3008MB / 600s.
 Dockerfile → Docker build (`--platform linux/amd64 --provenance=false`) → ECR push → `serverless deploy`
 
+`ENTRYPOINT ["/usr/local/bin/aws-lambda-ric"]` — v3.3.0부터 `bin/index.js`가 `bin/index.mjs`로 바뀌어 하드코딩된 경로 대신 심볼릭 링크(`/usr/local/bin/aws-lambda-ric`)를 사용한다.
+
 ## 주요 모듈
 
 - `handler.ts` — Lambda SQS 이벤트 핸들러 진입점
