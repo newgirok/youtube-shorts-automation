@@ -4,7 +4,7 @@
 
 | 대상 | 도구 | 위치 |
 |---|---|---|
-| S3, SQS, IAM, ECS, ECR, EventBridge | Terraform | `infra/terraform/*.tf` |
+| S3, SQS, IAM, ECR, EventBridge | Terraform | `infra/terraform/*.tf` |
 | Lambda 함수 배포, SQS 트리거 | Serverless Framework v3 | `apps/workers/*/serverless.yml` |
 
 Terraform과 Serverless Framework를 CDK로 통일하지 말 것.
@@ -15,9 +15,11 @@ Terraform과 Serverless Framework를 CDK로 통일하지 말 것.
 |---|---|---|---|
 | script-worker | Lambda | 512MB | 60s |
 | tts-worker | Lambda | 512MB | 120s |
-| upload-worker | Lambda | 256MB | 300s |
 | subtitle-worker | Lambda | 512MB | 120s |
 | render-worker | Lambda Container Image | 3008MB | 600s |
+| upload-worker | Lambda | 256MB | 300s |
+| scheduler-worker | Lambda | 256MB | 60s |
+| dlq-notifier | Lambda | 128MB | 30s |
 
 **모든 Worker가 Lambda로 운영 중** (subtitle, render 포함) — Fargate ECS Worker 없음.
 기준: 실행시간 > 15분 또는 메모리 > 3GB → Fargate, 그 외 → Lambda.
@@ -51,4 +53,4 @@ aws lambda update-function-configuration \
 - `docs/adr/001-lambda-vs-fargate.md` — 환경 결정 근거
 - `docs/adr/003-sqs-standard-queue.md` — SQS 설정 근거
 - `docs/adr/006-iac-terraform-serverless.md` — IaC 분리 근거
-- `docs/adr/009-fargate-sqs-long-polling.md` — Fargate Long Polling (Superseded, Lambda 전환 경위 기록)
+- `docs/adr/009-fargate-sqs-long-polling.md` — Fargate SQS Long Polling
