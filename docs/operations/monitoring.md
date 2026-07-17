@@ -2,13 +2,14 @@
 
 ## 모니터링 전략 개요
 
-| Phase | 구현 항목 |
-|-------|-----------|
-| Phase 1~2 (완료) | 로컬 Docker Compose 로그, `docker compose logs -f` |
-| Phase 3 (진행 예정) | Supabase 대시보드 (DB 상태 확인) |
-| Phase 4 (진행 예정) | CloudWatch 로그 수집, Lambda 에러율 알람 |
-| Phase 5 | SQS DLQ 알림 (dlq-notifier Lambda, Slack/Discord Webhook) |
-| Phase 8 | Sentry, AWS Budget Alert, CI/CD sourcemaps 업로드 |
+| Phase | 구현 항목 | 상태 |
+|-------|-----------|------|
+| Phase 1~2 | 로컬 Docker Compose 로그, `docker compose logs -f` | ✅ 완료 |
+| Phase 3 | Supabase 대시보드 (DB 상태 확인) | ✅ 완료 |
+| Phase 4 | CloudWatch 로그 그룹 (각 Worker Lambda) | ✅ 완료 |
+| Phase 5-3 | Lambda 에러율 알람 + DLQ 깊이 알람 → SNS 이메일 | ✅ 완료 |
+| Phase 5-2 | SQS DLQ 알림 (dlq-notifier Lambda, Slack/Discord Webhook) | 미구현 |
+| Phase 8 | Sentry, AWS Budget Alert, CI/CD sourcemaps 업로드 | 미구현 |
 
 ---
 
@@ -30,29 +31,25 @@
 - **Lambda**: `Errors`, `Duration`, `Throttles`
 - **SQS**: `NumberOfMessagesSent`, `ApproximateNumberOfMessagesNotVisible`, `NumberOfMessagesDeleted`
 
-### 알람 설정
+### 알람 설정 (운영 중)
 
-**Lambda 에러율 5% 초과 알람**
+**Lambda 에러율 > 5% 알람** — Worker 7개 개별 적용
 
-```hcl
-# Terraform 예시
-resource "aws_cloudwatch_metric_alarm" "lambda_error_rate" {
-  alarm_name          = "lambda-error-rate-high"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
-  threshold           = 5
-
-  metric_query {
-    id          = "error_rate"
-    expression  = "errors / invocations * 100"
-    return_data = true
-  }
-
-  alarm_actions = [aws_sns_topic.alerts.arn]
-}
+```
+prod-{worker}-error-rate  →  5분 윈도우 에러율 > 5%  →  SNS → 이메일
 ```
 
-**SNS 알림 대상**: 팀 이메일 (AWS SNS → Email 구독)
+- 대상 Worker: script / tts / subtitle / render / upload / scheduler / dlq-notifier
+- Metric Math: `IF(invocations > 0, errors / invocations * 100, 0)`
+- `treat_missing_data = notBreaching` (호출 없을 때 알람 억제)
+
+**DLQ 메시지 깊이 > 0 알람** — DLQ 5개 개별 적용
+
+```
+prod-{queue}-dlq-depth  →  ApproximateNumberOfMessagesVisible > 0  →  SNS → 이메일
+```
+
+**SNS 알림 대상**: `prod-shorts-alerts` 토픽 → `newgirok@gmail.com`
 
 ---
 

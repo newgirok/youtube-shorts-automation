@@ -14,8 +14,8 @@
   - [x] P1-3. `apps/api` — POST /jobs `[BE]`
   - [x] P1-4. `apps/workers/script` — Gemini 2.5 Flash, ScriptOutput(8필드) `[BE][AI]`
   - [x] P1-5. `apps/workers/tts` `[BE]`
-  - [x] P1-6. `apps/workers/subtitle` _(Lambda)_ — VTT 기반 SRT 생성 (색상 하이라이트 미구현) `[BE][DevOps]`
-  - [x] P1-7. `apps/workers/render` _(Lambda)_ — Pexels + zoompan + FFmpeg `[BE][DevOps]`
+  - [x] P1-6. `apps/workers/subtitle` _(Lambda)_ — 오디오 길이 기반 글자 비례 SRT 생성 `[BE][DevOps]`
+  - [x] P1-7. `apps/workers/render` _(Lambda Container Image)_ — Pexels + zoompan + FFmpeg `[BE][DevOps]`
   - [x] P1-8. `apps/workers/upload` + 수동 E2E `[BE]`
   - [x] P1-9. Docker Compose 통합 로컬 환경 `[DevOps]`
 - **Phase 2** — 웹 대시보드 ✅ 완료
@@ -28,28 +28,26 @@
   - [x] P2-7. `POST /channels/:id/sync` — YouTube Data API + Analytics API 풀 동기화 `[BE]`
   - [x] P2-8. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
   - [x] P2-9. `Job.privacyStatus` 추적 `[BE]`
-  - [x] P2-10. API 인-프로세스 자동 스케줄러 `[BE]` — `@Cron('* * * * *')` 1분 폴링, `schedulerEnabled` 채널의 `uploadSchedule` cron 평가 → `createFromNews(count:1, category: schedulerCategory)` 자동 호출 (Asia/Seoul, 중복 방지). Phase 5 EventBridge로 대체 예정.
 - **Phase 3** — DB 이관 ✅ 완료
   - [x] P3-1. Supabase 프로젝트 연결 설정 `[BE][DevOps]`
   - [x] P3-2. 마이그레이션 실행 `[BE][DevOps]`
-- **Phase 4** — AWS 서버리스 이관 🔄 진행 중
-  - [x] P4-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]` ✅
-  - [x] P4-2. Lambda 배포 — script / tts / upload worker `[DevOps][BE]` ✅
-  - [x] P4-3. Lambda 배포 — subtitle / render worker `[DevOps]` ✅ (subtitle: 2026-07-12, render: 2026-07-14 Lambda 전환 완료)
-  - [x] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]` ✅
-  - [x] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]` ✅
-- **Phase 5** — 스케줄링 + 운영 안정화
+- **Phase 4** — AWS 서버리스 이관 ✅ 완료
+  - [x] P4-1. `infra/` — AWS 핵심 리소스 (Terraform) `[DevOps]`
+  - [x] P4-2. Lambda 배포 — script / tts / upload worker `[DevOps][BE]`
+  - [x] P4-3. Lambda 배포 — subtitle / render worker `[DevOps]`
+  - [x] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
+  - [x] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]`
+- **Phase 5** — 스케줄링 + 운영 안정화 🔄 진행 중
   - [ ] P5-1. EventBridge Scheduler — 채널별 cron `[DevOps][BE]`
   - [ ] P5-2. DLQ 알림 Lambda `[BE][DevOps]`
-  - [ ] P5-3. CloudWatch 알람 설정 `[DevOps]`
+  - [x] P5-3. CloudWatch 알람 설정 (Lambda 에러율 + DLQ 깊이 → SNS 이메일) `[DevOps]`
   - [ ] P5-4. 7일 연속 운영 검증 `[BE][DevOps]`
 - **Phase 6** — Remotion 전환
   - [ ] P6-1. `render-worker` Remotion 전환 `[FE][BE]`
   - [ ] P6-2. 고성과 스크립트 패턴 → Gemini 프롬프트 반영 `[AI][BE]`
 - **Phase 7** — 멀티채널 + 스케일링
   - [ ] P7-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
-  - [x] P7-2. ~~Fargate 동적 스케일링~~ — Lambda 전환으로 Auto Scaling 자동 적용됨 `[DevOps]`
-  - [ ] P7-3. 채널 3개 7일 운영 `[BE][DevOps]`
+  - [ ] P7-2. Analytics 다채널 수집 + 채널 3개 7일 운영 `[BE][DevOps]`
 - **Phase 8** — 프로덕션 준비
   - [ ] P8-1. GitHub Actions CI/CD `[DevOps]`
   - [ ] P8-2. Sentry 연동 `[BE]`
@@ -118,9 +116,8 @@
     - `subtitle-queue` 발행 확인
 
 - **P1-6.** `apps/workers/subtitle` _(Lambda)_ `[BE][DevOps]`
-  - faster-whisper 없음 — VTT 기반 SRT 생성 (VTT 없으면 문자 수 비례 fallback)
-  - Edge-TTS 생성 subtitle.vtt → 문장별 타이밍 → 20자 이하 청크 분할
-  - 색상 하이라이트 미구현 (ASS BorderStyle=3 불투명 박스 자막만 사용)
+  - `ffprobe`로 오디오 총 길이 측정 → `script.json`의 `script` 필드를 글자 수 비례로 타임스탬프 할당 → 20자 이하 청크 분할
+  - ASS BorderStyle=3 불투명 박스 자막 (색상 하이라이트 미구현)
   - 검증
     - 로컬 Docker로 S3에 `subtitle.srt` 생성
     - 타임스탬프 구간 합계 = 오디오 총 길이
@@ -311,7 +308,6 @@
 > EventBridge로 매일 자동 Job 생성을 활성화하고, 7일 연속 무중단 운영을 검증한다.
 
 - **P5-1.** EventBridge Scheduler — 채널별 cron `[DevOps][BE]`
-  - API 인-프로세스 스케줄러(P2-10)를 EventBridge 외부 cron으로 대체
   - 채널 `uploadSchedule` 필드 기반 cron 스케줄 (채널별 EventBridge Rule 생성/삭제)
   - `topic: null` → `auto-news`로 자동 처리
   - 검증
@@ -322,10 +318,10 @@
   - 검증
     - 3회 재시도 후 DLQ 적재 → 알림 수신 (1분 이내)
 
-- **P5-3.** CloudWatch 알람 설정 `[DevOps]`
-  - Lambda 에러율 > 5% → SNS → 이메일 알람
-  - 검증
-    - CloudWatch 알람 설정 확인
+- **P5-3.** CloudWatch 알람 설정 `[DevOps]` ✅
+  - Lambda 에러율 > 5% (5분 윈도우) → SNS → 이메일 알람
+  - DLQ 메시지 1개 이상 → 즉시 SNS 알람
+  - 알람 대상 Worker 7개: script / tts / subtitle / render / upload / scheduler / dlq-notifier
 
 - **P5-4.** 7일 연속 운영 검증 `[BE][DevOps]`
   - 실패율 = `FAILED / (COMPLETED + FAILED) * 100 ≤ 3%`
@@ -370,8 +366,7 @@
 > 채널 10개를 추가 인프라 변경 없이 독립적으로 운영할 수 있다.
 
 - **P7-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
-- **P7-2.** ~~Fargate 동적 스케일링~~ — Lambda 전환으로 Auto Scaling 자동 적용됨, 완료 `[DevOps]`
-- **P7-3.** Analytics 다채널 수집 + 채널 3개 7일 운영 `[BE][DevOps]`
+- **P7-2.** Analytics 다채널 수집 + 채널 3개 7일 운영 `[BE][DevOps]`
 
 **완료 기준**
 - [ ] 채널 3개 동시 운영 7일 성공 (실패율 3% 이하)
