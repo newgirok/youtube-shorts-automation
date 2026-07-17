@@ -1,0 +1,50 @@
+service: shorts-dlq-notifier
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ap-northeast-2
+  role: arn:aws:iam::682251233572:role/prod-LambdaWorkerRole
+  environment:
+    WEBHOOK_URL: ${ssm:shorts.prod.WEBHOOK_URL}
+
+functions:
+  handler:
+    handler: src/handler.handler
+    timeout: 30
+    memorySize: 128
+    events:
+      - sqs:
+          arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-script-queue-dlq
+          batchSize: 1
+      - sqs:
+          arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-tts-queue-dlq
+          batchSize: 1
+      - sqs:
+          arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-subtitle-queue-dlq
+          batchSize: 1
+      - sqs:
+          arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-render-queue-dlq
+          batchSize: 1
+      - sqs:
+          arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-upload-queue-dlq
+          batchSize: 1
+
+plugins:
+  - serverless-esbuild
+
+package:
+  individually: true
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    format: cjs
+    target: node22
+    sourcemap: false
+    exclude:
+      - '@aws-sdk/*'
+    packager: pnpm

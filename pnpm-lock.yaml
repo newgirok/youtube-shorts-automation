@@ -153,6 +153,21 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  apps/workers/dlq-notifier:
+    devDependencies:
+      '@types/aws-lambda':
+        specifier: ^8.10.0
+        version: 8.10.161
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.18
+      serverless-esbuild:
+        specifier: ^1.57.2
+        version: 1.57.2(esbuild@0.27.7)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   apps/workers/render:
     dependencies:
       '@aws-sdk/client-sqs':
