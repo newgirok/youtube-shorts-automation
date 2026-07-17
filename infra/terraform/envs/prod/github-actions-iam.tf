@@ -170,6 +170,8 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "logs:DeleteLogGroup",
           "logs:DescribeLogGroups",
           "logs:PutRetentionPolicy",
+          "logs:TagResource",
+          "logs:TagLogGroup",
         ]
         Resource = "arn:aws:logs:ap-northeast-2:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/shorts-*"
       },
