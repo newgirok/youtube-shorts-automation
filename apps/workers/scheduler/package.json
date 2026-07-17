@@ -1,0 +1,22 @@
+{
+  "name": "@shorts/scheduler-worker",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/handler.js",
+  "scripts": {
+    "build": "tsc",
+    "lint": "eslint src --ext .ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.0.0",
+    "@shorts/shared": "workspace:*",
+    "cron-parser": "^5.5.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.0",
+    "@types/node": "^22.0.0",
+    "serverless-esbuild": "^1.57.2",
+    "typescript": "^5.7.0"
+  }
+}

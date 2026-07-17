@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       worker:
-        description: '배포할 Worker (all / script / tts / subtitle / render / upload)'
+        description: '배포할 Worker (all / script / tts / subtitle / render / upload / scheduler)'
         required: true
         default: all
   push:
@@ -27,7 +27,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        worker: [script, tts, subtitle, upload]
+        worker: [script, tts, subtitle, upload, scheduler]
     steps:
       - uses: actions/checkout@v4
 

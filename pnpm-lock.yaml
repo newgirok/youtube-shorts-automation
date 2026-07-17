@@ -178,6 +178,31 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
+  apps/workers/scheduler:
+    dependencies:
+      '@aws-sdk/client-sqs':
+        specifier: ^3.0.0
+        version: 3.1045.0
+      '@shorts/shared':
+        specifier: workspace:*
+        version: link:../../../packages/shared
+      cron-parser:
+        specifier: ^5.5.0
+        version: 5.5.0
+    devDependencies:
+      '@types/aws-lambda':
+        specifier: ^8.10.0
+        version: 8.10.161
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.18
+      serverless-esbuild:
+        specifier: ^1.57.2
+        version: 1.57.2(esbuild@0.27.7)
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
   apps/workers/script:
     dependencies:
       '@aws-sdk/client-sqs':

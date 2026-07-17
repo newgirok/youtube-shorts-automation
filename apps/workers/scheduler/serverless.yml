@@ -1,0 +1,43 @@
+service: shorts-scheduler-worker
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ap-northeast-2
+  role: arn:aws:iam::682251233572:role/prod-LambdaWorkerRole
+  environment:
+    DATABASE_URL: ${ssm:shorts.prod.DATABASE_URL}
+    SQS_SCRIPT_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-script-queue
+    PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
+
+functions:
+  handler:
+    handler: src/handler.handler
+    timeout: 60
+    memorySize: 256
+    events:
+      - schedule:
+          rate: rate(1 minute)
+          enabled: true
+
+plugins:
+  - serverless-esbuild
+
+package:
+  individually: true
+  patterns:
+    - 'libquery_engine-rhel-openssl-3.0.x.so.node'
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    format: cjs
+    target: node22
+    sourcemap: false
+    exclude:
+      - '@aws-sdk/*'
+    nativeZip: true
+    packager: pnpm

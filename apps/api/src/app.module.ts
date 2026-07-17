@@ -3,7 +3,6 @@ import { APP_GUARD, Reflector } from '@nestjs/core';
 import { JobsModule } from './jobs/jobs.module.js';
 import { ChannelsModule } from './channels/channels.module.js';
 import { AuthModule } from './auth/auth.module.js';
-import { SchedulerModule } from './scheduler/scheduler.module.js';
 import { InternalKeyGuard } from './auth/internal-key.guard.js';
 import { Public } from './auth/public.decorator.js';
 
@@ -17,7 +16,7 @@ class HealthController {
 }
 
 @Module({
-  imports: [JobsModule, ChannelsModule, AuthModule, SchedulerModule],
+  imports: [JobsModule, ChannelsModule, AuthModule],
   controllers: [HealthController],
   providers: [Reflector, { provide: APP_GUARD, useClass: InternalKeyGuard }],
 })
