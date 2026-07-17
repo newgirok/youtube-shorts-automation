@@ -54,6 +54,9 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "ecr:InitiateLayerUpload",
           "ecr:UploadLayerPart",
           "ecr:CompleteLayerUpload",
+          "ecr:DescribeImages",
+          "ecr:DescribeRepositories",
+          "ecr:ListImages",
         ]
         Resource = [
           "arn:aws:ecr:ap-northeast-2:${data.aws_caller_identity.current.account_id}:repository/web",
@@ -181,6 +184,21 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
       {
         Effect   = "Allow"
         Action   = ["sqs:GetQueueAttributes", "sqs:GetQueueUrl", "sqs:ListQueues"]
+        Resource = "*"
+      },
+      # ── EventBridge (scheduler-worker rate(1 minute) 규칙) ────────────────
+      {
+        Effect = "Allow"
+        Action = [
+          "events:PutRule",
+          "events:DescribeRule",
+          "events:DeleteRule",
+          "events:PutTargets",
+          "events:RemoveTargets",
+          "events:ListRuleNamesByTarget",
+          "events:ListTargetsByRule",
+          "events:TagResource",
+        ]
         Resource = "*"
       },
     ]
