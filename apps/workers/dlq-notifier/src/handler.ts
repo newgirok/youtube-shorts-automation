@@ -1,7 +1,7 @@
 import { request } from 'node:https';
 import type { SQSHandler } from 'aws-lambda';
 
-const WEBHOOK_URL = process.env.WEBHOOK_URL!;
+const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL!;
 
 const QUEUE_LABELS: Record<string, string> = {
   'prod-script-queue-dlq': 'Script (Gemini)',
@@ -11,10 +11,9 @@ const QUEUE_LABELS: Record<string, string> = {
   'prod-upload-queue-dlq': 'Upload (YouTube)',
 };
 
-function postWebhook(url: string, text: string): Promise<void> {
+function postSlack(url: string, text: string): Promise<void> {
   return new Promise((resolve, reject) => {
-    const isDiscord = url.includes('discord.com');
-    const body = JSON.stringify(isDiscord ? { content: text } : { text });
+    const body = JSON.stringify({ text });
     const parsed = new URL(url);
     const req = request(
       {
@@ -65,6 +64,6 @@ export const handler: SQSHandler = async (event) => {
       `• 메시지:\n\`\`\`${rawBody}\`\`\``,
     ].join('\n');
 
-    await postWebhook(WEBHOOK_URL, text);
+    await postSlack(SLACK_WEBHOOK_URL, text);
   }
 };

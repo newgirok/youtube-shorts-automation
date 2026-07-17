@@ -8,7 +8,7 @@ provider:
   region: ap-northeast-2
   role: arn:aws:iam::682251233572:role/prod-LambdaWorkerRole
   environment:
-    WEBHOOK_URL: ${ssm:shorts.prod.WEBHOOK_URL}
+    SLACK_WEBHOOK_URL: ${ssm:shorts.prod.SLACK_WEBHOOK_URL}
 
 functions:
   handler:
