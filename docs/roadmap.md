@@ -7,7 +7,6 @@
 
 ## 진행 현황
 
-- **Phase 0** — 핵심 리스크 검증 ✅ 완료 → 운영 워커(`apps/workers/*`)로 흡수
 - **Phase 1** — 로컬 파이프라인 구현 ✅ 완료
   - [x] P1-1. Monorepo 초기화 `[DevOps]`
   - [x] P1-2. `packages/shared` — 공통 기반 `[BE]`
@@ -41,27 +40,14 @@
   - [x] P5-1. EventBridge Scheduler — `rate(1 minute)` 트리거 scheduler-worker `[DevOps][BE]`
   - [x] P5-2. DLQ 알림 Lambda `[BE][DevOps]`
   - [x] P5-3. CloudWatch 알람 설정 (Lambda 에러율 + DLQ 깊이 → SNS 이메일) `[DevOps]`
-- **Phase 6** — Remotion 전환
-  - [ ] P6-1. `render-worker` Remotion 전환 `[FE][BE]`
-  - [ ] P6-2. 고성과 스크립트 패턴 → Gemini 프롬프트 반영 `[AI][BE]`
-- **Phase 7** — 멀티채널 + 스케일링
-  - [ ] P7-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
-  - [ ] P7-2. Analytics 다채널 수집 + 채널 3개 7일 운영 `[BE][DevOps]`
-- **Phase 8** — 프로덕션 준비
-  - [x] P8-1. GitHub Actions CI/CD `[DevOps]`
-  - [ ] P8-2. Sentry 연동 `[BE]`
-  - [ ] P8-3. Edge-TTS → Clova Voice 교체 `[BE][AI]`
-  - [ ] P8-4. AWS Budget Alert `[DevOps]`
-
----
-
-## Phase 0 — 핵심 리스크 검증 (완료)
-
-> TTS·렌더링·업로드를 단독 스크립트로 검증 후 전부 운영 워커(`apps/workers/*`)로 이전 완료.
-> - P0-1 TTS (52.4초, PASS) → `apps/workers/tts/src/EdgeTTSAdapter.ts`
-> - P0-2 FFmpeg 렌더링 (1080×1920, 54초, PASS) → `apps/workers/render/src/renderer.ts`
-> - P0-3 YouTube 업로드 (videoId: HEHyy3p7zpc, PASS) → `apps/workers/upload/src/uploader.ts`
-> 전체 파이프라인 로컬 진단: `npx tsx scripts/run-pipeline.ts [주제]`
+- **Phase 6** — 멀티채널 + 스케일링
+  - [ ] P6-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
+  - [ ] P6-2. Analytics 다채널 수집 `[BE][DevOps]`
+- **Phase 7** — 프로덕션 준비
+  - [x] P7-1. GitHub Actions CI/CD `[DevOps]`
+  - [ ] P7-2. Sentry 연동 `[BE]`
+  - [ ] P7-3. Edge-TTS → Clova Voice 교체 `[BE][AI]`
+  - [ ] P7-4. AWS Budget Alert `[DevOps]`
 
 ---
 
@@ -328,52 +314,26 @@
 
 ---
 
-## Phase 6 — Remotion 전환
-
-> FFmpeg → Remotion으로 렌더러를 교체한다.
-
-**전제 조건**: Remotion이 Lambda Container Image(Linux amd64) headless 환경에서 렌더링 가능한지 사전 검증
-
-- **P6-1.** `render-worker` Remotion 전환 `[FE][BE]`
-  - `ShortsVideo.tsx`: 루트 컴포넌트 (1080×1920, fps: 30)
-  - `SubtitleLayer.tsx`: 현재 frame 기반 단어 하이라이트
-  - `renderMedia()`: `codec: 'h264'`, headless
-  - 검증
-    - 1080×1920 `output.mp4` 생성
-    - 단어별 자막 강조 동작 확인
-    - 모바일 앱에서 기존 FFmpeg 출력과 동등 이상 품질
-
-- **P6-2.** 고성과 스크립트 패턴 → Gemini 프롬프트 반영 `[AI][BE]`
-  - `viewCount` 상위 20% Job의 `scriptContent` 분석
-  - 고성과 hook 예시 3~5개 few-shot 삽입
-  - 검증
-    - 샘플 10개 생성 후 hook 품질 개선 확인
-
-**완료 기준**
-- [ ] Remotion 렌더링 결과 모바일 품질 합격
-
----
-
-## Phase 7 — 멀티채널 + 스케일링
+## Phase 6 — 멀티채널 + 스케일링
 
 > 채널 10개를 추가 인프라 변경 없이 독립적으로 운영할 수 있다.
 
-- **P7-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
-- **P7-2.** Analytics 다채널 수집 `[BE][DevOps]`
+- **P6-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
+- **P6-2.** Analytics 다채널 수집 `[BE][DevOps]`
 
 **완료 기준**
 - [ ] 채널 3개 동시 스케줄 배포 및 Analytics 수집 정상
 
 ---
 
-## Phase 8 — 프로덕션 준비
+## Phase 7 — 프로덕션 준비
 
 > CI/CD, 에러 추적, TTS 업그레이드, 비용 관리.
 
-- **P8-1.** GitHub Actions CI/CD `[DevOps]`
-- **P8-2.** Sentry 연동 `[BE]`
-- **P8-3.** Edge-TTS → Clova Voice 교체 `[BE][AI]`
-- **P8-4.** AWS Budget Alert `[DevOps]`
+- **P7-1.** GitHub Actions CI/CD `[DevOps]`
+- **P7-2.** Sentry 연동 `[BE]`
+- **P7-3.** Edge-TTS → Clova Voice 교체 `[BE][AI]`
+- **P7-4.** AWS Budget Alert `[DevOps]`
 
 **완료 기준**
 - [ ] 월 운영 비용 $10 이하 (Budget Alert 수신 확인)
@@ -385,28 +345,24 @@
 ## Phase 의존 관계
 
 ```
-Phase 0 — 핵심 리스크 검증
-  └── Phase 1 — 로컬 파이프라인 구현
+Phase 1 — 로컬 파이프라인 구현
         └── Phase 2 — 웹 대시보드 (docker-compose 기반 로컬 개발)
               └── Phase 3 — DB 이관 (Supabase)
                     └── Phase 4 — AWS 서버리스 이관
                           ├── Phase 5 — 스케줄링 + 운영 안정화
-                          │     └── Phase 6 — Remotion 전환
-                          └── Phase 7 — 멀티채널 + 스케일링
+                          └── Phase 6 — 멀티채널 + 스케일링
                                        │
-                          Phase 6 + Phase 7 완료 ▼
-                               Phase 8 — 프로덕션 준비
+                          Phase 5 + Phase 6 완료 ▼
+                               Phase 7 — 프로덕션 준비
 ```
 
 **Phase별 시작 조건:**
 
 | Phase | 선행 Phase | 시작 조건 |
 |---|---|---|
-| Phase 1 | Phase 0 | TTS·FFmpeg·YouTube API 3종 로컬 검증 통과 |
 | Phase 2 | Phase 1 | `docker-compose up` 한 번으로 `POST /jobs` → COMPLETED 자동 완료 |
 | Phase 3 | Phase 2 | 대시보드 전 기능 로컬 동작, 재시도 기능 정상 동작 |
 | Phase 4 | Phase 3 | Supabase DB 연결 및 마이그레이션 완료 |
 | Phase 5 | Phase 4 | AWS E2E 자동 업로드 1회 성공 |
-| Phase 6 | Phase 5 | Phase 5 완료 |
-| Phase 7 | Phase 4 | AWS E2E 완료 |
-| Phase 8 | Phase 6 + Phase 7 | Remotion 완료 AND Phase 7 완료 |
+| Phase 6 | Phase 4 | AWS E2E 완료 |
+| Phase 7 | Phase 5 + Phase 6 | Phase 5 완료 AND Phase 6 완료 |
