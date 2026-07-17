@@ -47,7 +47,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build shared
-        run: pnpm --filter @shorts/shared build
+        run: pnpm --filter @shorts/shared prisma:generate && pnpm --filter @shorts/shared build
 
       - name: Copy Prisma binary to worker directory
         run: |
@@ -84,7 +84,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build shared
-        run: pnpm install --frozen-lockfile && pnpm --filter @shorts/shared build && pnpm --filter @shorts/render-worker build
+        run: pnpm install --frozen-lockfile && pnpm --filter @shorts/shared prisma:generate && pnpm --filter @shorts/shared build && pnpm --filter @shorts/render-worker build
 
       - name: Build & push render Docker image
         run: |
