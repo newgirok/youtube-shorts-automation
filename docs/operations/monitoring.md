@@ -9,7 +9,7 @@
 | Phase 4 | CloudWatch 로그 그룹 (각 Worker Lambda) | ✅ 완료 |
 | Phase 5-3 | Lambda 에러율 알람 + DLQ 깊이 알람 → SNS 이메일 | ✅ 완료 |
 | Phase 5-2 | SQS DLQ 알림 (dlq-notifier Lambda, Slack Webhook) | ✅ 완료 |
-| Phase 8 | Sentry, AWS Budget Alert, CI/CD sourcemaps 업로드 | 미구현 |
+| Phase 7 | Sentry, AWS Budget Alert | 미구현 |
 
 ---
 
@@ -158,7 +158,7 @@ API가 `status = PENDING`으로 초기화하고 script-queue에 메시지를 재
 
 ---
 
-## Sentry (Phase 8)
+## Sentry (Phase 7)
 
 ### 초기화
 
@@ -198,11 +198,11 @@ try {
 
 ### CI/CD sourcemaps 업로드
 
-GitHub Actions에서 빌드 후 Sentry CLI로 sourcemaps 업로드 (Phase 7 `deploy-workers.yml` 참고).
+GitHub Actions `deploy-workers.yml` 빌드 후 Sentry CLI로 sourcemaps 업로드.
 
 ---
 
-## AWS Budget Alert (Phase 8)
+## AWS Budget Alert (Phase 7)
 
 - **월 예산**: $20
 - **80% 도달 시**: 경고 알림 (SNS → 이메일)
