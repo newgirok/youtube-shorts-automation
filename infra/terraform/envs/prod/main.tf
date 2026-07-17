@@ -267,7 +267,7 @@ resource "aws_sns_topic" "alerts" {
 resource "aws_sns_topic_subscription" "email" {
   topic_arn = aws_sns_topic.alerts.arn
   protocol  = "email"
-  endpoint  = "fingercloud5900@gmail.com"
+  endpoint  = "newgirok@gmail.com"
 }
 
 # Lambda 에러율 > 5% 알람 (5분 윈도우)
