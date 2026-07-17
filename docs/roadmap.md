@@ -37,7 +37,7 @@
   - [x] P4-2. Lambda 배포 — script / tts / upload worker `[DevOps][BE]` ✅
   - [x] P4-3. Lambda 배포 — subtitle / render worker `[DevOps]` ✅ (subtitle: 2026-07-12, render: 2026-07-14 Lambda 전환 완료)
   - [x] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]` ✅
-  - [ ] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]`
+  - [x] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]` ✅
 - **Phase 5** — 스케줄링 + 운영 안정화
   - [ ] P5-1. EventBridge Scheduler — 채널별 cron `[DevOps][BE]`
   - [ ] P5-2. DLQ 알림 Lambda `[BE][DevOps]`
@@ -299,10 +299,10 @@
   - 검증
     - `POST /jobs` 한 번으로 YouTube 업로드 자동 완료
 
-**완료 기준**
-- [ ] AWS E2E 파이프라인 자동 완료 1회 성공
-- [ ] S3에 4개 파일 모두 존재 (`script.json` / `audio.mp3` / `subtitle.srt` / `output.mp4`)
-- [ ] CloudWatch에서 각 Worker 로그 확인 가능
+**완료 기준** ✅
+- [x] AWS E2E 파이프라인 자동 완료 1회 성공
+- [x] S3에 4개 파일 모두 존재 (`script.json` / `audio.mp3` / `subtitle.srt` / `output.mp4`)
+- [x] CloudWatch에서 각 Worker 로그 확인 가능
 
 ---
 
