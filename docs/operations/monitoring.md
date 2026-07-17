@@ -8,7 +8,7 @@
 | Phase 3 | Supabase 대시보드 (DB 상태 확인) | ✅ 완료 |
 | Phase 4 | CloudWatch 로그 그룹 (각 Worker Lambda) | ✅ 완료 |
 | Phase 5-3 | Lambda 에러율 알람 + DLQ 깊이 알람 → SNS 이메일 | ✅ 완료 |
-| Phase 5-2 | SQS DLQ 알림 (dlq-notifier Lambda, Slack/Discord Webhook) | 미구현 |
+| Phase 5-2 | SQS DLQ 알림 (dlq-notifier Lambda, Slack Webhook) | ✅ 완료 |
 | Phase 8 | Sentry, AWS Budget Alert, CI/CD sourcemaps 업로드 | 미구현 |
 
 ---
@@ -20,11 +20,13 @@
 | 서비스 | 로그 그룹 |
 |--------|-----------|
 | API (Lambda) | `/aws/lambda/shorts-api-prod-api` |
-| subtitle-worker (Lambda) | `/aws/lambda/shorts-prod-subtitle-worker` |
-| render-worker (Lambda) | `/aws/lambda/shorts-prod-render-worker` |
-| script-worker (Lambda) | `/aws/lambda/script-worker-prod` |
-| tts-worker (Lambda) | `/aws/lambda/tts-worker-prod` |
-| upload-worker (Lambda) | `/aws/lambda/upload-worker-prod` |
+| script-worker (Lambda) | `/aws/lambda/shorts-script-worker-prod-handler` |
+| tts-worker (Lambda) | `/aws/lambda/shorts-tts-worker-prod-handler` |
+| subtitle-worker (Lambda) | `/aws/lambda/shorts-subtitle-worker-prod-handler` |
+| render-worker (Lambda) | `/aws/lambda/shorts-render-worker-prod-handler` |
+| upload-worker (Lambda) | `/aws/lambda/shorts-upload-worker-prod-handler` |
+| scheduler-worker (Lambda) | `/aws/lambda/shorts-scheduler-worker-prod-handler` |
+| dlq-notifier (Lambda) | `/aws/lambda/shorts-dlq-notifier-prod-handler` |
 
 ### 핵심 메트릭
 
