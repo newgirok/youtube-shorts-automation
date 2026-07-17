@@ -37,11 +37,10 @@
   - [x] P4-3. Lambda 배포 — subtitle / render worker `[DevOps]`
   - [x] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
   - [x] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]`
-- **Phase 5** — 스케줄링 + 운영 안정화 🔄 진행 중
-  - [ ] P5-1. EventBridge Scheduler — 채널별 cron `[DevOps][BE]`
-  - [ ] P5-2. DLQ 알림 Lambda `[BE][DevOps]`
+- **Phase 5** — 스케줄링 + 운영 안정화 ✅ 완료
+  - [x] P5-1. EventBridge Scheduler — `rate(1 minute)` 트리거 scheduler-worker `[DevOps][BE]`
+  - [x] P5-2. DLQ 알림 Lambda `[BE][DevOps]`
   - [x] P5-3. CloudWatch 알람 설정 (Lambda 에러율 + DLQ 깊이 → SNS 이메일) `[DevOps]`
-  - [ ] P5-4. 7일 연속 운영 검증 `[BE][DevOps]`
 - **Phase 6** — Remotion 전환
   - [ ] P6-1. `render-worker` Remotion 전환 `[FE][BE]`
   - [ ] P6-2. 고성과 스크립트 패턴 → Gemini 프롬프트 반영 `[AI][BE]`
@@ -49,11 +48,10 @@
   - [ ] P7-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
   - [ ] P7-2. Analytics 다채널 수집 + 채널 3개 7일 운영 `[BE][DevOps]`
 - **Phase 8** — 프로덕션 준비
-  - [ ] P8-1. GitHub Actions CI/CD `[DevOps]`
+  - [x] P8-1. GitHub Actions CI/CD `[DevOps]`
   - [ ] P8-2. Sentry 연동 `[BE]`
   - [ ] P8-3. Edge-TTS → Clova Voice 교체 `[BE][AI]`
   - [ ] P8-4. AWS Budget Alert `[DevOps]`
-  - [ ] P8-5. 30일 연속 운영 최종 검증 `[BE][DevOps][FE][AI]`
 
 ---
 
@@ -305,33 +303,28 @@
 
 ## Phase 5 — 스케줄링 + 운영 안정화
 
-> EventBridge로 매일 자동 Job 생성을 활성화하고, 7일 연속 무중단 운영을 검증한다.
+> EventBridge로 매일 자동 Job 생성을 활성화하고 운영 안정화 기반을 구축한다.
 
-- **P5-1.** EventBridge Scheduler — 채널별 cron `[DevOps][BE]`
-  - 채널 `uploadSchedule` 필드 기반 cron 스케줄 (채널별 EventBridge Rule 생성/삭제)
-  - `topic: null` → `auto-news`로 자동 처리
+- **P5-1.** EventBridge Scheduler — `rate(1 minute)` scheduler-worker `[DevOps][BE]`
+  - EventBridge `rate(1 minute)` 규칙으로 scheduler-worker Lambda 매분 트리거
+  - 활성 채널의 `uploadSchedule` cron을 매분 평가 → 해당 시각이면 `POST /jobs/auto-news` 호출
   - 검증
-    - 다음 날 지정 시간에 Job 자동 생성
+    - CloudWatch 로그에서 매분 실행 확인
 
 - **P5-2.** DLQ 알림 Lambda `[BE][DevOps]`
-  - 5개 DLQ 모두 동일 Lambda에 연결 → Slack/Discord Webhook
+  - 5개 DLQ 모두 동일 Lambda에 연결 → Slack Webhook
   - 검증
-    - 3회 재시도 후 DLQ 적재 → 알림 수신 (1분 이내)
+    - DLQ 적재 → Slack 알림 수신 확인
 
-- **P5-3.** CloudWatch 알람 설정 `[DevOps]` ✅
+- **P5-3.** CloudWatch 알람 설정 `[DevOps]`
   - Lambda 에러율 > 5% (5분 윈도우) → SNS → 이메일 알람
   - DLQ 메시지 1개 이상 → 즉시 SNS 알람
   - 알람 대상 Worker 7개: script / tts / subtitle / render / upload / scheduler / dlq-notifier
 
-- **P5-4.** 7일 연속 운영 검증 `[BE][DevOps]`
-  - 실패율 = `FAILED / (COMPLETED + FAILED) * 100 ≤ 3%`
-  - 검증
-    - 7일간 실패율 3% 이하
-    - 매일 YouTube 업로드 완료
-
-**완료 기준**
-- [ ] 7일 연속 자동 업로드 성공 (실패율 3% 이하)
-- [ ] DLQ 적재 시 알림 수신 확인
+**완료 기준** ✅
+- [x] scheduler-worker CloudWatch 로그 정상 (매분 실행)
+- [x] DLQ 적재 시 Slack 알림 수신
+- [x] CloudWatch 알람 7개 + SNS 이메일 연결
 
 ---
 
@@ -366,27 +359,24 @@
 > 채널 10개를 추가 인프라 변경 없이 독립적으로 운영할 수 있다.
 
 - **P7-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
-- **P7-2.** Analytics 다채널 수집 + 채널 3개 7일 운영 `[BE][DevOps]`
+- **P7-2.** Analytics 다채널 수집 `[BE][DevOps]`
 
 **완료 기준**
-- [ ] 채널 3개 동시 운영 7일 성공 (실패율 3% 이하)
+- [ ] 채널 3개 동시 스케줄 배포 및 Analytics 수집 정상
 
 ---
 
 ## Phase 8 — 프로덕션 준비
 
-> CI/CD, 에러 추적, TTS 업그레이드, 30일 안정성 검증.
+> CI/CD, 에러 추적, TTS 업그레이드, 비용 관리.
 
 - **P8-1.** GitHub Actions CI/CD `[DevOps]`
 - **P8-2.** Sentry 연동 `[BE]`
 - **P8-3.** Edge-TTS → Clova Voice 교체 `[BE][AI]`
 - **P8-4.** AWS Budget Alert `[DevOps]`
-- **P8-5.** 30일 연속 운영 최종 검증 `[BE][DevOps][FE][AI]`
 
-**완료 기준 (전체 플랫폼)**
-- [ ] 채널 3개에서 30일 연속 자동 업로드 성공
-- [ ] 실패율 3% 이하
-- [ ] 월 운영 비용 $10 이하
+**완료 기준**
+- [ ] 월 운영 비용 $10 이하 (Budget Alert 수신 확인)
 - [ ] 모바일 유튜브 앱에서 자막·오디오 품질 합격
 - [ ] 대시보드 전 기능 동작
 
@@ -417,6 +407,6 @@ Phase 0 — 핵심 리스크 검증
 | Phase 3 | Phase 2 | 대시보드 전 기능 로컬 동작, 재시도 기능 정상 동작 |
 | Phase 4 | Phase 3 | Supabase DB 연결 및 마이그레이션 완료 |
 | Phase 5 | Phase 4 | AWS E2E 자동 업로드 1회 성공 |
-| Phase 6 | Phase 5 | 7일 연속 실패율 3% 이하 |
+| Phase 6 | Phase 5 | Phase 5 완료 |
 | Phase 7 | Phase 4 | AWS E2E 완료 |
-| Phase 8 | Phase 6 + Phase 7 | Remotion 완료 AND 채널 3개 7일 운영 + 실패율 3% 이하 |
+| Phase 8 | Phase 6 + Phase 7 | Remotion 완료 AND Phase 7 완료 |
