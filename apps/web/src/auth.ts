@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth';
 import Google from 'next-auth/providers/google';
+import { prisma } from '@shorts/shared/prisma.js';
 
 const nextAuth = NextAuth({
   secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
@@ -13,6 +14,15 @@ const nextAuth = NextAuth({
   session: { strategy: 'jwt' },
   pages: { signIn: '/login' },
   callbacks: {
+    async signIn({ user }) {
+      const email = user.email?.toLowerCase();
+      if (!email) return false;
+      const found = await prisma.user.findUnique({
+        where: { email },
+        select: { id: true },
+      });
+      return !!found;
+    },
     authorized({ auth: session }) {
       return !!session?.user;
     },

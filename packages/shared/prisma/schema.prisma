@@ -82,3 +82,9 @@ model ChannelAnalytics {
 
   @@unique([channelId, date])
 }
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
