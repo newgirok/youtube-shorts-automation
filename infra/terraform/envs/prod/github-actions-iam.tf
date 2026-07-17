@@ -84,7 +84,6 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "cloudformation:DescribeStackResource",
           "cloudformation:DescribeStackResources",
           "cloudformation:ListStackResources",
-          "cloudformation:ValidateTemplate",
           "cloudformation:GetTemplate",
           "cloudformation:CreateChangeSet",
           "cloudformation:ExecuteChangeSet",
@@ -92,6 +91,12 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "cloudformation:DescribeChangeSet",
         ]
         Resource = "arn:aws:cloudformation:ap-northeast-2:${data.aws_caller_identity.current.account_id}:stack/shorts-*"
+      },
+      # ValidateTemplate은 스택 ARN 리소스 범위를 지원하지 않아 * 필요
+      {
+        Effect   = "Allow"
+        Action   = ["cloudformation:ValidateTemplate"]
+        Resource = "*"
       },
       # ── S3 (Serverless 배포 아티팩트 버킷) ───────────────────────────────
       {
