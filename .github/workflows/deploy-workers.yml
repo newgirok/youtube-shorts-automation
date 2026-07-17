@@ -57,7 +57,7 @@ jobs:
       - name: Deploy ${{ matrix.worker }}-worker
         run: |
           cd apps/workers/${{ matrix.worker }}
-          npx serverless deploy --stage prod
+          npx serverless@3 deploy --stage prod
 
   # ── render-worker (Lambda Container Image) ───────────────────────────────
   deploy-render:
@@ -101,4 +101,4 @@ jobs:
       - name: Deploy render-worker (serverless)
         run: |
           cd apps/workers/render
-          npx serverless deploy --stage prod
+          npx serverless@3 deploy --stage prod
