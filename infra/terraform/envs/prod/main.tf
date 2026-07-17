@@ -71,11 +71,6 @@ module "iam" {
 
 # ── ECR ───────────────────────────────────────────────────────────────────────
 
-module "ecr_subtitle" {
-  source = "../../modules/ecr-repo"
-  name   = "subtitle-worker"
-}
-
 module "ecr_render" {
   source               = "../../modules/ecr-repo"
   name                 = "render-worker"
@@ -86,13 +81,6 @@ module "ecr_web" {
   source               = "../../modules/ecr-repo"
   name                 = "web"
   image_tag_mutability = "MUTABLE"
-}
-
-# ── ECS Cluster ───────────────────────────────────────────────────────────────
-
-module "ecs_cluster" {
-  source       = "../../modules/ecs-cluster"
-  cluster_name = "prod-shorts"
 }
 
 # ── Security Groups ───────────────────────────────────────────────────────────
@@ -121,23 +109,6 @@ resource "aws_security_group" "web" {
     ignore_changes = [ingress]
   }
 }
-
-resource "aws_security_group" "fargate_worker" {
-  name        = "prod-fargate-worker-sg"
-  description = "Fargate worker outbound only"
-  vpc_id      = data.aws_vpc.default.id
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-# ── ECS Workers ───────────────────────────────────────────────────────────────
-
-
 
 # ── EC2 Web Service ───────────────────────────────────────────────────────────
 
