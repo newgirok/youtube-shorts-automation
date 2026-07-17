@@ -4,7 +4,7 @@
 youtube-shorts-automation/
 ├── .claude/
 │   ├── agents/                       # 전문화된 Claude AI 에이전트 설정
-│   │   ├── ai-agent.md               # AI/ML 태스크 담당 (Gemini·Remotion)
+│   │   ├── ai-agent.md               # AI/ML 태스크 담당 (Gemini·스크립트 프롬프트)
 │   │   ├── be-agent.md               # 백엔드 담당 (NestJS·Prisma·SQS)
 │   │   ├── devops-agent.md           # 인프라 담당 (Terraform·Lambda·GitHub Actions)
 │   │   └── fe-agent.md               # 프론트엔드 담당 (Next.js·shadcn/ui)
