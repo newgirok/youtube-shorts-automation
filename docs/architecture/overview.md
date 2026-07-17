@@ -12,7 +12,7 @@
 └───────────────────────┬─────────────────────────────────────┘
                         │ HTTPS
 ┌───────────────────────▼─────────────────────────────────────┐
-│         Next.js 15 대시보드 (Vercel / AWS Amplify)            │
+│         Next.js 15 대시보드 (EC2, Docker Compose)             │
 │  /dashboard  /dashboard/[id]  /channels  /channels/[id]     │
 └───────────────────────┬─────────────────────────────────────┘
                         │ HTTP (API 호출)
@@ -76,7 +76,7 @@ render-worker는 Lambda Container Image로 패키징됩니다 (3008MB, 600s).
 
 | 분류 | 기술 | 비고 |
 |---|---|---|
-| **Frontend** | Next.js 15 (App Router), React 19 | Vercel 또는 AWS Amplify 배포 |
+| **Frontend** | Next.js 15 (App Router), React 19 | EC2 (GitHub Actions SSH 배포, standalone Docker) |
 | **UI** | TailwindCSS, shadcn/ui | |
 | **상태관리** | TanStack Query v5, Zustand v4 | 서버 상태 / 클라이언트 상태 분리 |
 | **Backend** | NestJS v11, Fastify Adapter | Lambda 함수로 패키징 |
@@ -114,7 +114,7 @@ youtube-shorts-automation/        ← Turborepo 루트
 │       └── upload/               ← YouTube Data API (Lambda)
 ├── packages/
 │   └── shared/                   ← Prisma 스키마, S3 클라이언트, logger, 공유 타입
-├── infra/                        ← Terraform (VPC, Fargate, RDS, S3, SQS)
+├── infra/                        ← Terraform (S3, SQS, IAM, EventBridge, ECR)
 ├── scripts/                      ← 로컬 검증 스크립트 (Phase 0)
 ├── docker-compose.yml            ← 로컬 개발용 (PostgreSQL, LocalStack)
 ├── turbo.json                    ← Turborepo 파이프라인 설정
@@ -126,7 +126,7 @@ youtube-shorts-automation/        ← Turborepo 루트
 ```
 packages/shared/
 ├── prisma/
-│   └── schema.prisma             ← Channel, Job, ChannelAnalytics 스키마
+│   └── schema.prisma             ← Channel, Job, ChannelAnalytics, User 스키마
 │                                   (Job.privacyStatus, ChannelAnalytics.watchTimeMinutes 포함)
 └── src/
     ├── index.ts                  ← 전체 공통 모듈 re-export 진입점
@@ -211,7 +211,7 @@ packages/shared/
 |---|---|---|
 | **런타임** | Node.js 20, TypeScript 5.x strict | `any` 사용 금지, ESM |
 | **패키지 관리** | pnpm workspace, Turborepo | |
-| **인증** | NextAuth (Google OAuth, JWT) | |
+| **인증** | NextAuth v5 (Google OAuth, JWT) | signIn 콜백 + Prisma User 테이블 이메일 제한 |
 | **로컬 개발** | Docker Compose, LocalStack v3 | |
 | **에러 추적** | Sentry | Phase 7 |
 
@@ -228,4 +228,4 @@ packages/shared/
 | [ADR 005](../adr/005-gemini-flash.md) | AI 모델 선택 (Gemini 2.5 Flash) |
 | [ADR 006](../adr/006-iac-terraform-serverless.md) | IaC 전략 |
 | [ADR 007](../adr/007-database-strategy.md) | DB 전략 (Supabase + pgBouncer) |
-| [ADR 009](../adr/009-fargate-sqs-long-polling.md) | Fargate SQS Long Polling 자체 구현 |
+| [ADR 009](../adr/009-fargate-sqs-long-polling.md) | Fargate SQS Long Polling (Superseded — 전체 Lambda 전환) |

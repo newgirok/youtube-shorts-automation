@@ -74,6 +74,12 @@ model ChannelAnalytics {
   channel           Channel  @relation(fields: [channelId], references: [id])
   @@unique([channelId, date])
 }
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
 ```
 
 ---
@@ -89,6 +95,7 @@ model ChannelAnalytics {
 | `20260525180000_add_job_thumbnail_url` | `Job.thumbnailUrl String?` 추가 |
 | `20260525190000_drop_channel_analytics` | ChannelAnalytics 삭제 |
 | `20260525200000_restore_channel_analytics` | ChannelAnalytics 복원 |
+| `20260717022729_add_user_table` | `User` 테이블 추가 (로그인 허용 이메일 관리) |
 
 ---
 
@@ -153,6 +160,14 @@ model ChannelAnalytics {
 │ watchTimeMinutes BigInt              │
 │ ──────────────────────────────────── │
 │ UNIQUE (channelId, date)             │
+└──────────────────────────────────────┘
+
+┌──────────────────────────────────────┐
+│               User                    │
+│──────────────────────────────────────│
+│ id        String (PK, cuid)          │
+│ email     String (UNIQUE)            │
+│ createdAt DateTime                   │
 └──────────────────────────────────────┘
 ```
 

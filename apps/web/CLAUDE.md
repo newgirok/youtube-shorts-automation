@@ -215,4 +215,5 @@ const NEWS_CATEGORIES = [
 
 ### 인증
 - `src/auth.ts`: GoogleProvider + JWT 세션, `secret`은 `AUTH_SECRET` 우선 → `NEXTAUTH_SECRET` 폴백
+- **signIn 콜백**: Prisma `User` 테이블 조회 → 등록된 이메일만 로그인 허용. Google 인증 성공 후에도 미등록 이메일은 차단됨. 허용 이메일 추가는 Supabase `User` 테이블에 직접 row insert.
 - `src/middleware.ts`: `api|_next/static|_next/image|_next|login|close|popup|favicon.ico|이미지·영상 확장자(.jpg/.jpeg/.png/.gif/.svg/.webp/.ico/.mp4/.webm/.ogg)` 경로 제외 후 미인증 접근을 `/login`으로 리다이렉트
