@@ -55,17 +55,19 @@ youtube-shorts-automation/
 │       │   └── src/
 │       │       └── script-generator.ts  # ScriptOutput(8필드): title,hook,script,description,scenes[],hashtags,thumbnail_text,comment_bait
 │       ├── tts/                      # SQS → Edge-TTS → audio.mp3
-│       ├── subtitle/                 # Lambda: Edge-TTS VTT 기반 SRT 생성 (faster-whisper 제거됨)
+│       ├── subtitle/                 # Lambda: ffprobe 오디오 길이 측정 → 글자 비례 SRT 생성
 │       │   └── src/
-│       │       └── processor.ts      # VTT 기반 SRT 생성 (vtt 없으면 ffprobe 길이 측정 후 글자 비례 fallback)
+│       │       └── processor.ts      # script 필드 글자 수 비례 타임스탬프 할당, 20자 이하 청크 분할
 │       ├── render/                   # Lambda Container Image: Pexels 동영상/이미지 + zoompan + FFmpeg → output.mp4 + thumbnail.jpg
 │       │   └── src/
 │       │       ├── processor.ts      # scenes 배열 기반 동영상/이미지 다운로드 + 클립 생성 + thumbnail.jpg 추출
 │       │       ├── renderer.ts       # zoompan 효과 (zoom-in/out, pan-left/right), FontSize=76 ASS 자막 (BorderStyle=3), 헤더 오버레이
 │       │       └── image-generator.ts  # Pexels API 동영상/이미지 검색·다운로드
-│       └── upload/                   # SQS → YouTube Data API → COMPLETED
-│           └── src/
-│               └── uploader.ts       # description+해시태그 설명문, categoryId=25(뉴스), containsSyntheticMedia: true
+│       ├── upload/                   # SQS → YouTube Data API → COMPLETED
+│       │   └── src/
+│       │       └── uploader.ts       # description+해시태그 설명문, categoryId=25(뉴스), containsSyntheticMedia: true
+│       ├── scheduler/                # EventBridge rate(1 min) → uploadSchedule cron 평가 → auto-news 호출
+│       └── dlq-notifier/             # 5개 DLQ SQS Event Source → Slack Webhook 알림
 ├── packages/
 │   └── shared/                       # 전 앱 공통 — Prisma, 로거, S3, 환경변수
 │       └── prisma/
