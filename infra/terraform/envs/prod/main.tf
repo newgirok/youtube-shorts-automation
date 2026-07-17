@@ -241,3 +241,98 @@ output "web_public_ip" {
   value       = aws_eip.web.public_ip
   description = "Web 앱 고정 IP — NEXTAUTH_URL SSM 파라미터 업데이트 후 Google OAuth URI 등록 필요"
 }
+
+# ── CloudWatch 알람 (P5-3) ────────────────────────────────────────────────────
+
+locals {
+  lambda_workers = {
+    script       = "shorts-script-worker-prod-handler"
+    tts          = "shorts-tts-worker-prod-handler"
+    subtitle     = "shorts-subtitle-worker-prod-handler"
+    render       = "shorts-render-worker-prod-handler"
+    upload       = "shorts-upload-worker-prod-handler"
+    scheduler    = "shorts-scheduler-worker-prod-handler"
+    dlq_notifier = "shorts-dlq-notifier-prod-handler"
+  }
+}
+
+resource "aws_sns_topic" "alerts" {
+  name = "prod-shorts-alerts"
+}
+
+resource "aws_sns_topic_subscription" "email" {
+  topic_arn = aws_sns_topic.alerts.arn
+  protocol  = "email"
+  endpoint  = "fingercloud5900@gmail.com"
+}
+
+# Lambda 에러율 > 5% 알람 (5분 윈도우)
+resource "aws_cloudwatch_metric_alarm" "lambda_error_rate" {
+  for_each            = local.lambda_workers
+  alarm_name          = "prod-${each.key}-error-rate"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  threshold           = 5
+  alarm_description   = "${each.key} worker 5분 에러율 > 5%"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+  ok_actions          = [aws_sns_topic.alerts.arn]
+
+  metric_query {
+    id          = "error_rate"
+    expression  = "IF(invocations > 0, errors / invocations * 100, 0)"
+    label       = "Error Rate (%)"
+    return_data = true
+  }
+
+  metric_query {
+    id = "errors"
+    metric {
+      metric_name = "Errors"
+      namespace   = "AWS/Lambda"
+      period      = 300
+      stat        = "Sum"
+      dimensions = {
+        FunctionName = each.value
+      }
+    }
+  }
+
+  metric_query {
+    id = "invocations"
+    metric {
+      metric_name = "Invocations"
+      namespace   = "AWS/Lambda"
+      period      = 300
+      stat        = "Sum"
+      dimensions = {
+        FunctionName = each.value
+      }
+    }
+  }
+}
+
+# DLQ 메시지 누적 알람 — 1개 이상 쌓이면 즉시 알림
+resource "aws_cloudwatch_metric_alarm" "dlq_depth" {
+  for_each            = toset(["prod-script-queue-dlq", "prod-tts-queue-dlq", "prod-subtitle-queue-dlq", "prod-render-queue-dlq", "prod-upload-queue-dlq"])
+  alarm_name          = "${each.value}-depth"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = 60
+  statistic           = "Sum"
+  threshold           = 0
+  alarm_description   = "${each.value} 메시지 누적 — DLQ 도달"
+  treat_missing_data  = "notBreaching"
+  alarm_actions       = [aws_sns_topic.alerts.arn]
+
+  dimensions = {
+    QueueName = each.value
+  }
+}
+
+output "alerts_sns_arn" {
+  value       = aws_sns_topic.alerts.arn
+  description = "CloudWatch 알람 SNS 토픽 ARN"
+}
