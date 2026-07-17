@@ -38,7 +38,7 @@ script-worker → tts-worker → subtitle-worker → render-worker → upload-wo
 
 ## DLQ (Dead Letter Queue)
 
-SQS 메시지가 `Max Receive Count(3회)` 이상 실패했을 때 이동하는 별도의 SQS 큐입니다. DLQ에 메시지가 쌓이면 CloudWatch 알람이 발화되고 Slack/Discord에 알림이 전송됩니다 (Phase 4 구현).
+SQS 메시지가 `Max Receive Count(3회)` 이상 실패했을 때 이동하는 별도의 SQS 큐입니다. DLQ에 메시지가 쌓이면 CloudWatch 알람이 발화되고 dlq-notifier Lambda가 Slack Webhook으로 알림을 전송합니다.
 
 - DLQ 메시지 보관 기간: 14일
 - 역할: 수동 디버깅, 재처리 (메시지를 원본 큐로 이동해 재처리 가능)
@@ -55,7 +55,7 @@ SQS 메시지가 `Max Receive Count(3회)` 이상 실패했을 때 이동하는 
 | `PENDING` | Job 생성 직후, 아직 처리 시작 전 |
 | `SCRIPT_PROCESSING` | script-worker가 Gemini API로 스크립트 생성 중 |
 | `TTS_PROCESSING` | tts-worker가 Edge-TTS로 음성 합성 중 |
-| `SUBTITLE_PROCESSING` | subtitle-worker가 VTT 기반으로 SRT 자막 생성 중 |
+| `SUBTITLE_PROCESSING` | subtitle-worker가 script.json 글자 수 비례로 SRT 자막 생성 중 |
 | `RENDER_PROCESSING` | render-worker가 FFmpeg으로 영상 합성 중 |
 | `UPLOAD_PROCESSING` | upload-worker가 YouTube API로 업로드 중 |
 | `COMPLETED` | 파이프라인 전 단계 완료, YouTube 업로드 성공 |
@@ -155,7 +155,7 @@ YouTube Data API 접근에 필요한 OAuth2 토큰 쌍입니다.
 
 | Phase | 사용 기술 | 특징 |
 |---|---|---|
-| Phase 1~6 | Edge-TTS `ko-KR-SunHiNeural` | 무료, 자연스러운 한국어 |
+| Phase 1~6 | Edge-TTS `ko-KR-SunHiNeural +20%` | 무료, 자연스러운 한국어, Lambda Layer 불필요 |
 | Phase 7~ | Clova Voice (Naver) | 더 자연스러운 억양, 유료 |
 
 - 관련 ADR: [ADR 002 — TTS 엔진](../adr/002-tts-engine.md)
@@ -166,21 +166,11 @@ YouTube Data API 접근에 필요한 OAuth2 토큰 쌍입니다.
 
 ## STT (Speech-to-Text)
 
-오디오 파일을 텍스트(자막)로 변환하는 기술입니다. 이 플랫폼에서는 MP3 → SRT 자막 파일 생성에 사용합니다.
+자막 생성에 사용하는 방식입니다.
 
-- 현재 구현: faster-whisper 미사용. tts-worker가 생성한 VTT(word-level timing)를 기반으로 SRT를 생성합니다. VTT 없을 경우 `script.json`의 `script` 필드를 글자 수 비례로 타임스탬프 산출하는 fallback을 사용합니다.
+- 구현: `ffprobe`로 오디오 총 길이 측정 → `script.json`의 `script` 필드를 글자 수 비례로 타임스탬프 산출 → 20자 이하 청크 분할 → SRT 생성
 - Worker: `apps/workers/subtitle`
 - 출력: `jobs/{jobId}/subtitle.srt`
-
----
-
-## Remotion
-
-React 컴포넌트로 영상을 렌더링하는 프레임워크입니다. 현재는 FFmpeg을 사용하고 있으며, Phase 5부터 render-worker를 Remotion으로 전환합니다.
-
-- 전환 이유: 코드로 영상 레이아웃 제어 (텍스트 위치, 애니메이션, 자막 스타일), React 개발자 친화적
-- 현재 상태: Phase 1~4는 FFmpeg 유지
-- 관련 ADR: [ADR 004 — 렌더링 엔진](../adr/004-render-engine.md)
 
 ---
 
@@ -188,10 +178,9 @@ React 컴포넌트로 영상을 렌더링하는 프레임워크입니다. 현재
 
 AWS EventBridge의 스케줄러 기능으로, 채널별 지정 시간에 Job을 자동 생성합니다.
 
-- `Channel.uploadSchedule` cron 표현식을 기반으로 동작
-- Phase 4에서 구현 예정
-- 예시: `"0 9 * * *"` = 매일 UTC 오전 9시 Job 생성
-- 대안으로 고려했던 방식: Lambda + CloudWatch Events (동일 결과, EventBridge가 더 세밀한 스케줄 지원)
+- `rate(1 minute)` 규칙으로 scheduler-worker Lambda를 매분 트리거
+- `Channel.uploadSchedule` cron을 매분 평가해 해당 시각이면 `POST /jobs/auto-news` 호출
+- 예시: `"0 9 * * *"` = 매일 UTC 오전 9시 Job 자동 생성
 
 ---
 

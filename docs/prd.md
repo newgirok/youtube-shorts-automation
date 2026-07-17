@@ -22,7 +22,6 @@ Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라
 | 핵심 목표 | 채널당 매일 1개 뉴스·시사 쇼츠를 완전 자동으로 생성·업로드 |
 | 품질 목표 | 댓글 유도·클릭 유발·시청 완료율 높은 시사 콘텐츠 생성 |
 | 비용 목표 | 채널 3개 기준 월 운영비 $10 이하 |
-| 안정성 목표 | 30일 연속 자동 운영, 실패율 3% 이하 |
 | 확장 목표 | 멀티채널 관리, YPP(유튜브 파트너 프로그램) 달성 지원 |
 
 ---
@@ -47,9 +46,9 @@ Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라
 | 단계 | 기능 | 구현 방식 |
 |---|---|---|
 | 스크립트 생성 | 뉴스·시사 주제 기반 쇼츠 스크립트 자동 작성 | Google Gemini 2.5 Flash |
-| TTS | 스크립트 → MP3 오디오 변환 | Edge-TTS → Phase 8: Clova Voice |
-| 자막 | 스크립트 텍스트 → SRT 자막 파일 생성 (시사 키워드 하이라이트) | 스크립트 기반 직접 생성 (faster-whisper 제거) |
-| 영상 합성 | Pexels 이미지 + zoompan 효과 + 오디오 + 자막 합성, 1080×1920 포맷 | FFmpeg → Phase 6: Remotion |
+| TTS | 스크립트 → MP3 오디오 변환 | Edge-TTS `ko-KR-SunHiNeural +20%` → Phase 7: Clova Voice |
+| 자막 | 오디오 길이 기반 글자 비례 SRT 생성 (20자 이하 청크) | `ffprobe` 측정 → `script` 필드 비례 타임스탬프 할당 |
+| 영상 합성 | Pexels 이미지 + zoompan 효과 + 오디오 + 자막 합성, 1080×1920 포맷 | FFmpeg (Lambda Container Image) |
 | 업로드 | YouTube Data API로 영상 업로드, 생성된 설명문·뉴스 카테고리 설정 (`containsSyntheticMedia: true`) | YouTube Data API v3 |
 
 **스크립트 출력 형식 (`ScriptOutput`):**
@@ -132,7 +131,6 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 
 | 항목 | 요구사항 |
 |---|---|
-| 가용성 | 파이프라인 실패율 3% 이하 (30일 기준) |
 | 응답 시간 | API Gateway → Lambda 첫 응답 3초 이내 |
 | 확장성 | 채널 10개까지 추가 인프라 변경 없이 운영 가능 |
 | 비용 | 채널 3개·영상 90개/월 기준 AWS + AI 합산 $10 이하 |
@@ -153,10 +151,10 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 | Queue | AWS SQS (Standard Queue + DLQ) |
 | Database | PostgreSQL (Supabase → RDS), Prisma v5 |
 | Infra | AWS Lambda (Node.js 20), API Gateway, EventBridge, S3, CloudWatch, ECR, IAM, GitHub Actions |
-| Rendering | FFmpeg (zoompan, Phase 1~5) → Remotion (Phase 6~) |
+| Rendering | FFmpeg (zoompan 효과, ASS 자막, 썸네일 추출) |
 | AI | Google Gemini 2.5 Flash |
-| TTS | Edge-TTS (초기) → Clova Voice (Phase 8) |
-| 자막 생성 | 스크립트 기반 SRT + 시사 키워드 하이라이트 (faster-whisper 제거) |
+| TTS | Edge-TTS `ko-KR-SunHiNeural` → Clova Voice (Phase 7) |
+| 자막 생성 | `ffprobe` 오디오 길이 측정 → `script` 필드 글자 수 비례 SRT 생성 |
 | 이미지 | Pexels API (scenes[].keyword 기반) |
 | 뉴스 수집 | Google News RSS |
 | Monitoring | CloudWatch, Sentry |
@@ -323,22 +321,18 @@ enum JobStatus {
 
 | Phase | 목표 | 상태 |
 |---|---|---|
-| **0** | 3가지 핵심 리스크 단독 검증 | 완료 |
 | **1** | Monorepo 구성, 로컬 파이프라인 구현, 수동 유튜브 업로드 1회 성공 | 완료 |
 | **2** | 웹 대시보드 (NextAuth, 채널 연결, Job 모니터링, Analytics, auto-news, sync) | 완료 |
-| **3** | Supabase DB 이관 (연결 설정 + 마이그레이션) | 예정 |
-| **4** | AWS 서버리스 이관 (Lambda + SQS + S3), E2E 자동 업로드 | 예정 |
-| **5** | EventBridge 스케줄링, DLQ 모니터링, 7일 무중단 운영 | 예정 |
-| **6** | Remotion 전환, 고성과 패턴 반영 | 예정 |
-| **7** | 멀티채널 독립 스케줄, Lambda Auto Scaling | 예정 |
-| **8** | GitHub Actions CI/CD, Sentry, Clova Voice 교체, 30일 안정성 검증 | 예정 |
+| **3** | Supabase DB 이관 (연결 설정 + 마이그레이션) | 완료 |
+| **4** | AWS 서버리스 이관 (Lambda + SQS + S3), E2E 자동 업로드 | 완료 |
+| **5** | EventBridge 스케줄링, DLQ 알림, CloudWatch 알람 | 완료 |
+| **6** | 멀티채널 독립 스케줄, Analytics 다채널 수집 | 예정 |
+| **7** | GitHub Actions CI/CD, Sentry, Clova Voice 교체, Budget Alert | 진행 중 (P7-1 완료) |
 
 ---
 
 ## 13. 완료 기준 (전체 플랫폼)
 
-- [ ] 채널 3개에서 매일 자동 업로드 30일 연속 성공
-- [ ] 실패율 3% 이하
 - [ ] 월 운영 비용 $10 이하
 - [ ] 모바일 유튜브 앱에서 자막·오디오 품질 합격 판정
 - [ ] 대시보드에서 채널·Job 관리 전 기능 동작
