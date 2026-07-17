@@ -1,14 +1,6 @@
-# ADR 002: TTS 엔진 — msedge-tts (→ Phase 8: Clova Voice)
+# ADR 002: TTS 엔진 — msedge-tts (→ Phase 7: Clova Voice)
 
-**상태:** Accepted (부분 업데이트: 2026-07-12)
-
-## 현황 업데이트 (2026-07-12)
-
-Python CLI `edge-tts`에서 Node.js npm 패키지 `msedge-tts`로 교체됐다.
-
-- **교체 이유:** Lambda nodejs22.x(Amazon Linux 2023)에 python3가 없어 `edge-tts` 실행 시 exit code 127 발생. `msedge-tts`는 순수 Node.js WebSocket 클라이언트로 Lambda Layer 불필요.
-- **VTT 미생성:** `msedge-tts`는 word-level 타임스탬프 VTT를 생성하지 않는다. subtitle-worker는 항상 `script.json`의 `script` 필드 + 오디오 길이 기반 글자 비례 fallback으로 SRT를 생성한다.
-- 음성(`ko-KR-SunHiNeural`), 속도(`+20%`), TTS 인터페이스 추상화는 그대로 유지.
+**상태:** Accepted
 
 ## 배경
 
@@ -16,14 +8,15 @@ Python CLI `edge-tts`에서 Node.js npm 패키지 `msedge-tts`로 교체됐다.
 
 ## 결정
 
-**Phase 0~7:** `msedge-tts` npm 패키지 `ko-KR-SunHiNeural +20%` 사용
+**Phase 1~6:** `msedge-tts` npm 패키지 `ko-KR-SunHiNeural +20%` 사용
 
-- API 키 불필요 — Phase 0 검증 즉시 착수 가능
+- API 키 불필요
 - Microsoft Azure 기반으로 음질 양호
-- 무료 — 파이프라인 검증 비용 없음
-- Lambda Layer 불필요 — 순수 Node.js 패키지
+- 무료 — 파이프라인 운영 비용 없음
+- Lambda Layer 불필요 — 순수 Node.js WebSocket 클라이언트
+- VTT 미생성 — subtitle-worker는 `script.json`의 `script` 필드 + 오디오 길이 기반 글자 비례 SRT 생성
 
-**Phase 8 이후:** Clova Voice로 전환 검토
+**Phase 7 이후:** Clova Voice로 전환 검토
 
 - 더 자연스러운 한국어 억양
 - 감정 표현 지원 (구독 유도 CTA에 효과적)
