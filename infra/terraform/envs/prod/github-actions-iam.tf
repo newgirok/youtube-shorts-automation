@@ -113,6 +113,10 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "s3:PutEncryptionConfiguration",
           "s3:GetBucketPolicy",
           "s3:PutBucketPolicy",
+          "s3:PutBucketTagging",
+          "s3:GetBucketTagging",
+          "s3:PutBucketVersioning",
+          "s3:GetBucketVersioning",
         ]
         Resource = [
           "arn:aws:s3:::shorts-*",
