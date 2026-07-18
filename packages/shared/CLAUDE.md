@@ -17,6 +17,25 @@
 | env | `src/env.ts` | `BaseEnvSchema` (Zod), `parseBaseEnv()`, `BaseEnv` 타입 — 각 앱에서 `.extend()`로 확장 |
 | types | `src/types.ts` | `ScriptOutput` (8필드), `ScriptContent` (`Partial<ScriptOutput>`), SQS 메시지 타입 6종 |
 
+## package.json exports map (subpath 임포트)
+
+webpack(Next.js 빌드 환경)은 `package.json`의 `exports` 맵을 강제 적용한다. 새 모듈을 `src/`에 추가하면 반드시 `exports` 맵에도 subpath를 추가해야 빌드가 깨지지 않는다.
+
+```json
+{
+  "exports": {
+    ".":           "./dist/index.js",
+    "./prisma.js": "./dist/prisma.js",
+    "./s3.js":     "./dist/s3.js",
+    "./logger.js": "./dist/logger.js",
+    "./env.js":    "./dist/env.js",
+    "./types.js":  "./dist/types.js"
+  }
+}
+```
+
+**주의**: esbuild 기반 Worker는 `exports` 맵을 강제하지 않아도 동작하지만, Next.js(webpack) + Dockerfile 빌드는 강제한다. `import { prisma } from '@shorts/shared/prisma.js'` 형태로 subpath import 사용.
+
 ## Exports (index.ts)
 
 ```typescript
@@ -59,10 +78,10 @@ export type {
 
 | 모델 | 주요 필드 |
 |---|---|
-| `Channel` | `id`, `youtubeId`, `name`, `niche`, `refreshToken`, `isActive`, `schedulerEnabled`, `schedulerCategory`, `subscriberCount(Int)`, `totalViews(BigInt)`, `userId(FK→User)` |
+| `Channel` | `id`, `youtubeId`, `name`, `niche`, `refreshToken`, `isActive`, `schedulerEnabled`, `schedulerCategory`, `subscriberCount(Int)`, `totalViews(BigInt)`, `userId(String, FK→User, @@index)` |
 | `Job` | `id`, `channelId`, `topic`, `status(JobStatus)`, `retryCount`, `failReason`, `scriptContent(Json?)`, `audioS3Key`, `subtitleS3Key`, `videoS3Key`, `youtubeVideoId`, `thumbnailUrl`, `viewCount(BigInt)`, `likeCount(BigInt)` |
 | `ChannelAnalytics` | `id`, `channelId`, `date`, `views(BigInt)`, `subscribers(Int)`, `estimatedRevenue(Float)`, `watchTimeMinutes(BigInt)` |
-| `User` | `id`, `email(UNIQUE)`, `createdAt` — 로그인 허용 이메일 관리, Channel 소유자 |
+| `User` | `id`, `email(UNIQUE)`, `createdAt` — 로그인 허용 이메일 관리, `channels Channel[]` 역참조 |
 
 `JobStatus` enum 순서: `PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING → RENDER_PROCESSING → UPLOAD_PROCESSING → COMPLETED / FAILED`
 
