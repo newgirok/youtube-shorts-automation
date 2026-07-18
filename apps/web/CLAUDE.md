@@ -12,6 +12,17 @@ Next.js 15 App Router 기반 관리 대시보드.
 - `pnpm build` — Next.js 빌드 (로컬, standalone 비활성)
 - `DOCKER_BUILD=true pnpm build` — Docker 이미지용 빌드 (standalone 활성, `.next/standalone` 생성)
 
+## Docker 빌드 주의사항
+
+베이스 이미지: `node:20-bullseye-slim` (base·runner 모두). Bullseye(OpenSSL 1.1)를 사용해 Prisma `debian-openssl-1.1.x` 엔진 바이너리와 매칭.
+
+builder 스테이지에서 `@shorts/shared` 빌드를 반드시 선행해야 webpack이 `@shorts/shared/prisma.js` subpath를 resolve할 수 있다:
+```dockerfile
+RUN pnpm --filter @shorts/shared prisma:generate && pnpm --filter @shorts/shared build
+```
+
+`page.tsx` / `channels/[id]/page.tsx`는 `export const dynamic = 'force-dynamic'`을 선언해 빌드 타임 프리렌더를 방지한다. 이 페이지들은 `auth()`를 호출하므로 빌드 환경에 `AUTH_SECRET`이 없으면 정적 생성 시 실패한다.
+
 ## 주요 페이지 및 담당 컴포넌트
 
 | 경로 | 서버 컴포넌트 | 클라이언트 컴포넌트 |
@@ -50,10 +61,10 @@ src/
 │   └── ui/                       — shadcn/ui 기본 컴포넌트
 ├── lib/
 │   ├── types.ts                  — Job, Channel, AnalyticsRow, JobStatus 타입
-│   ├── api.ts                    — apiGet / apiPost / apiPatch / apiDelete 헬퍼 (API_INTERNAL_URL → NEXT_PUBLIC_API_URL 폴백, NEXT_PUBLIC_API_SECRET Bearer 헤더 자동 첨부)
+│   ├── api.ts                    — apiGet / apiPost / apiPatch / apiDelete 헬퍼. 두 번째 인자로 extraHeaders?: Record<string, string> 수용 (x-user-id 전달용). API_INTERNAL_URL → NEXT_PUBLIC_API_URL 폴백, NEXT_PUBLIC_API_SECRET Bearer 헤더 자동 첨부
 │   ├── store.ts                  — Zustand: selectedChannelId, setSelectedChannelId, clearSelectedChannelId
 │   └── utils.ts                  — cn() 유틸 + toProxyThumbUrl() S3 썸네일 → 프록시 URL 변환
-├── auth.ts                       — NextAuth v5 (GoogleProvider + JWT)
+├── auth.ts                       — NextAuth v5 (GoogleProvider + JWT + Prisma). signIn·jwt·session 콜백 포함
 └── middleware.ts                 — 미인증 접근 → /login 리다이렉트
 ```
 
@@ -215,5 +226,9 @@ const NEWS_CATEGORIES = [
 
 ### 인증
 - `src/auth.ts`: GoogleProvider + JWT 세션, `secret`은 `AUTH_SECRET` 우선 → `NEXTAUTH_SECRET` 폴백
-- **signIn 콜백**: Prisma `User` 테이블 조회 → 등록된 이메일만 로그인 허용. Google 인증 성공 후에도 미등록 이메일은 차단됨. 허용 이메일 추가는 Supabase `User` 테이블에 직접 row insert.
+- **signIn 콜백**: Prisma `User` 테이블 조회 → 등록된 이메일만 로그인 허용. 미등록 이메일은 Google 인증 성공 후에도 차단됨. 허용 이메일 추가는 Supabase `User` 테이블에 직접 row insert.
+- **jwt 콜백**: 로그인 시(`user` 파라미터 있을 때) Prisma DB 조회 → `token.userId = user.id` 저장. JWT 갱신마다 재조회하지 않음.
+- **session 콜백**: `token.userId` → `session.user.id` 노출. `Session` 타입에 `user.id: string` 확장 선언(`declare module 'next-auth'`).
+- 웹 서버 컴포넌트에서 `await auth()` → `session.user.id` 추출 → API 호출 시 `x-user-id` 헤더로 전달.
+- **Sidebar**: `useSession()` hook으로 `session.user.id` 읽어 YouTube OAuth 연결 팝업 URL(`/auth/youtube?userId=...`)에 포함.
 - `src/middleware.ts`: `api|_next/static|_next/image|_next|login|close|popup|favicon.ico|이미지·영상 확장자(.jpg/.jpeg/.png/.gif/.svg/.webp/.ico/.mp4/.webm/.ogg)` 경로 제외 후 미인증 접근을 `/login`으로 리다이렉트
