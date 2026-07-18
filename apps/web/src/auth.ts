@@ -30,9 +30,10 @@ const nextAuth = NextAuth({
       return !!found;
     },
     async jwt({ token, user }) {
-      if (user?.email) {
+      const email = (user?.email ?? token.email as string | undefined)?.toLowerCase();
+      if (email && !token.userId) {
         const found = await prisma.user.findUnique({
-          where: { email: user.email.toLowerCase() },
+          where: { email },
           select: { id: true },
         });
         if (found) token.userId = found.id;
