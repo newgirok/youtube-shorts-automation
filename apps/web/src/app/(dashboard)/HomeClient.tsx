@@ -212,10 +212,11 @@ function JobCarousel({ jobs }: { jobs: JobType[] }) {
   );
 }
 
-export function HomeClient({ channels }: { channels: Channel[] }) {
+export function HomeClient({ channels, userId = '' }: { channels: Channel[]; userId?: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { selectedChannelId, setSelectedChannelId, clearSelectedChannelId } = useChannelStore();
+  const userHeaders = userId ? { 'x-user-id': userId } : {};
 
   const [topic, setTopic] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -235,16 +236,16 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
   // 채널 변경 시 sync 호출 → 조회수 DB 갱신 후 Jobs 목록 refetch
   useEffect(() => {
     if (!activeChannelId) return;
-    apiPost(`/channels/${activeChannelId}/sync`, {})
+    apiPost(`/channels/${activeChannelId}/sync`, {}, userHeaders)
       .then(() => queryClient.invalidateQueries({ queryKey: ['jobs', activeChannelId] }))
       .catch(() => {});
-  }, [activeChannelId, queryClient]);
+  }, [activeChannelId, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const hadProcessingRef = useRef(false);
 
   const { data: realJobs = [] } = useQuery<JobType[]>({
     queryKey: ['jobs', activeChannelId],
-    queryFn: () => apiGet<JobType[]>(`/jobs?channelId=${activeChannelId}`),
+    queryFn: () => apiGet<JobType[]>(`/jobs?channelId=${activeChannelId}`, userHeaders),
     enabled: Boolean(activeChannelId),
     refetchInterval: (query) => {
       const data = query.state.data ?? [];
@@ -259,12 +260,12 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
     if (!activeChannelId || realJobs.length === 0) return;
     const hasProcessing = realJobs.some((j) => j.status !== 'COMPLETED' && j.status !== 'FAILED');
     if (hadProcessingRef.current && !hasProcessing) {
-      apiPost(`/channels/${activeChannelId}/sync-videos`, {})
+      apiPost(`/channels/${activeChannelId}/sync-videos`, {}, userHeaders)
         .then(() => queryClient.invalidateQueries({ queryKey: ['jobs', activeChannelId] }))
         .catch(() => {});
     }
     hadProcessingRef.current = hasProcessing;
-  }, [realJobs, activeChannelId, queryClient]);
+  }, [realJobs, activeChannelId, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const jobs = realJobs;
 
@@ -310,7 +311,7 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
     setAutoNewsLoading(true);
     setSubmitError(null);
     try {
-      await apiPost('/jobs/auto-news', { channelId: activeChannelId, category, count: 1 });
+      await apiPost('/jobs/auto-news', { channelId: activeChannelId, category, count: 1 }, userHeaders);
       queryClient.invalidateQueries({ queryKey: ['jobs', activeChannelId] });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '자동 수집 오류');
@@ -325,7 +326,7 @@ export function HomeClient({ channels }: { channels: Channel[] }) {
     setSubmitting(true);
     setSubmitError(null);
     try {
-      const data = await apiPost<JobType>('/jobs', { channelId: activeChannelId, topic: topic.trim() });
+      const data = await apiPost<JobType>('/jobs', { channelId: activeChannelId, topic: topic.trim() }, userHeaders);
       router.push(`/dashboard/${data.id}`);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : '오류가 발생했습니다.');

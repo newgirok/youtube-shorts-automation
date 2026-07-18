@@ -68,7 +68,7 @@ function scheduleLabel(freq: Freq, hour: number, day: number): string {
   return `매주 ${d} ${h}`;
 }
 
-function SchedulerPanel({ channelId, channel }: { channelId: string; channel: Channel }) {
+function SchedulerPanel({ channelId, channel, userHeaders }: { channelId: string; channel: Channel; userHeaders: Record<string, string> }) {
   const queryClient = useQueryClient();
 
   const init = cronToSchedule(channel.uploadSchedule ?? '0 9 * * *');
@@ -91,7 +91,7 @@ function SchedulerPanel({ channelId, channel }: { channelId: string; channel: Ch
         cronExpression: scheduleToCron(s.freq, s.hour, s.day),
         schedulerEnabled: s.enabled,
         schedulerCategory: s.category,
-      });
+      }, userHeaders);
     },
     onSuccess: () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -257,13 +257,14 @@ function SchedulerPanel({ channelId, channel }: { channelId: string; channel: Ch
   );
 }
 
-export function ChannelClient({ channel: initial }: { channel: Channel }) {
+export function ChannelClient({ channel: initial, userId = '' }: { channel: Channel; userId?: string }) {
   const queryClient = useQueryClient();
   const { setSelectedChannelId } = useChannelStore();
+  const userHeaders = userId ? { 'x-user-id': userId } : {};
 
   const { data: channel = initial } = useQuery<Channel>({
     queryKey: ['channel', initial.id],
-    queryFn: () => apiGet<Channel>(`/channels/${initial.id}`),
+    queryFn: () => apiGet<Channel>(`/channels/${initial.id}`, userHeaders),
     initialData: initial,
     staleTime: 0,
     refetchInterval: 30000,
@@ -274,17 +275,17 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
   }, [initial.id, setSelectedChannelId]);
 
   useEffect(() => {
-    apiPost(`/channels/${initial.id}/sync`, {})
+    apiPost(`/channels/${initial.id}/sync`, {}, userHeaders)
       .then(() => {
         queryClient.invalidateQueries({ queryKey: ['channel', initial.id] });
         queryClient.invalidateQueries({ queryKey: ['analytics', initial.id] });
       })
       .catch(() => {});
-  }, [initial.id, queryClient]);
+  }, [initial.id, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: analytics = [] } = useQuery<AnalyticsRow[]>({
     queryKey: ['analytics', initial.id],
-    queryFn: () => apiGet<AnalyticsRow[]>(`/channels/${initial.id}/analytics`),
+    queryFn: () => apiGet<AnalyticsRow[]>(`/channels/${initial.id}/analytics`, userHeaders),
     staleTime: 60000,
     refetchInterval: 60000,
   });
@@ -502,7 +503,7 @@ export function ChannelClient({ channel: initial }: { channel: Channel }) {
         {/* 우: 자동 업로드 스케줄러 */}
         <div className="rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 flex flex-col min-h-[200px] lg:min-h-0 overflow-hidden">
           <p className="text-sm font-semibold text-white mb-4 shrink-0">자동 업로드 스케줄러</p>
-          <SchedulerPanel channelId={initial.id} channel={channel} />
+          <SchedulerPanel channelId={initial.id} channel={channel} userHeaders={userHeaders} />
         </div>
       </div>
     </div>
