@@ -21,16 +21,17 @@ function createOAuth2Client(): OAuth2Client {
 
 @Injectable()
 export class AuthService {
-  getAuthUrl(): string {
+  getAuthUrl(userId: string): string {
     const client = createOAuth2Client();
     return client.generateAuthUrl({
       access_type: 'offline',
       scope: SCOPES,
       prompt: 'consent',
+      state: userId,
     });
   }
 
-  async handleCallback(code: string): Promise<{ id: string }> {
+  async handleCallback(code: string, state?: string): Promise<{ id: string }> {
     log.info('OAuth 콜백 처리 시작');
     const client = createOAuth2Client();
     const { tokens } = await client.getToken(code);
@@ -48,6 +49,9 @@ export class AuthService {
     }
 
     const encryptedRefreshToken = encrypt(tokens.refresh_token);
+    const userId = state;
+    if (!userId) throw new Error('userId가 없습니다 — OAuth 흐름을 다시 시작하세요');
+
     const channel = await prisma.channel.upsert({
       where: { youtubeId: ytChannel.id! },
       create: {
@@ -57,6 +61,7 @@ export class AuthService {
         refreshToken: encryptedRefreshToken,
         uploadSchedule: '0 9 * * *',
         isActive: true,
+        userId,
         subscriberCount: parseInt(ytChannel.statistics?.subscriberCount ?? '0', 10),
         totalViews: parseInt(ytChannel.statistics?.viewCount ?? '0', 10),
         createdAt: new Date(ytChannel.snippet?.publishedAt ?? Date.now()),
