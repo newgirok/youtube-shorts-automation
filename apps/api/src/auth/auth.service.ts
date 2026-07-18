@@ -12,11 +12,11 @@ const SCOPES = [
 ];
 
 function createOAuth2Client(): OAuth2Client {
-  return new OAuth2Client(
-    process.env.YOUTUBE_CLIENT_ID,
-    process.env.YOUTUBE_CLIENT_SECRET,
-    process.env.YOUTUBE_REDIRECT_URI,
-  );
+  return new OAuth2Client({
+    clientId: process.env.YOUTUBE_CLIENT_ID,
+    clientSecret: process.env.YOUTUBE_CLIENT_SECRET,
+    redirectUri: process.env.YOUTUBE_REDIRECT_URI,
+  });
 }
 
 @Injectable()
@@ -31,9 +31,14 @@ export class AuthService {
     });
   }
 
-  async handleCallback(code: string, state?: string): Promise<{ id: string }> {
-    log.info('OAuth 콜백 처리 시작');
+  async handleCallback(code: string | undefined, state?: string): Promise<{ id: string }> {
+    log.info({ code: code ? code.slice(0, 8) + '...' : 'MISSING', state }, 'OAuth 콜백 처리 시작');
+    if (!code) throw new Error('authorization code 없음 — OAuth 흐름을 다시 시작하세요');
     const client = createOAuth2Client();
+    log.info({
+      clientId: process.env.YOUTUBE_CLIENT_ID ? process.env.YOUTUBE_CLIENT_ID.slice(0, 12) + '...' : 'MISSING',
+      redirectUri: process.env.YOUTUBE_REDIRECT_URI,
+    }, 'OAuth2Client 생성');
     const { tokens } = await client.getToken(code);
     if (!tokens.refresh_token) {
       throw new Error('refresh_token 없음 — 기존 앱 접근 취소 후 재시도 필요');

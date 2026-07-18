@@ -16,7 +16,7 @@ export class AuthController {
 
   @Get('youtube/callback')
   async handleYouTubeCallback(
-    @Query('code') code: string,
+    @Query('code') code: string | undefined,
     @Query('error') error: string | undefined,
     @Query('state') state: string | undefined,
     @Res() res: FastifyReply,
@@ -26,7 +26,12 @@ export class AuthController {
       res.code(302).redirect(`${webOrigin}/close?auth_error=${encodeURIComponent(error)}`);
       return;
     }
-    const channel = await this.authService.handleCallback(code, state);
-    res.code(302).redirect(`${webOrigin}/close?channelId=${channel.id}`);
+    try {
+      const channel = await this.authService.handleCallback(code, state);
+      res.code(302).redirect(`${webOrigin}/close?channelId=${channel.id}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'OAuth 처리 실패';
+      res.code(302).redirect(`${webOrigin}/close?auth_error=${encodeURIComponent(msg)}`);
+    }
   }
 }
