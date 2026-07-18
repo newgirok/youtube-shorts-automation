@@ -17,8 +17,9 @@ export function Sidebar() {
 
   function openYoutubeConnect() {
     const userId = session?.user?.id ?? '';
+    const email = session?.user?.email ?? '';
     const base = process.env.NEXT_PUBLIC_API_URL ?? '';
-    const url = `${base}/auth/youtube?userId=${encodeURIComponent(userId)}`;
+    const url = `${base}/auth/youtube?userId=${encodeURIComponent(userId)}&loginHint=${encodeURIComponent(email)}`;
     const width = 500;
     const height = 620;
     const left = Math.round(window.screenX + (window.outerWidth - width) / 2);

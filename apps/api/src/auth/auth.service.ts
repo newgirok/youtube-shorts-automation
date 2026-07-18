@@ -21,13 +21,14 @@ function createOAuth2Client(): OAuth2Client {
 
 @Injectable()
 export class AuthService {
-  getAuthUrl(userId: string): string {
+  getAuthUrl(userId: string, loginHint?: string): string {
     const client = createOAuth2Client();
     return client.generateAuthUrl({
       access_type: 'offline',
       scope: SCOPES,
       prompt: 'consent',
       state: userId,
+      ...(loginHint ? { login_hint: loginHint } : {}),
     });
   }
 
