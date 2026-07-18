@@ -9,6 +9,17 @@
 ```prisma
 // packages/shared/prisma/schema.prisma
 
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
 enum JobStatus {
   PENDING
   SCRIPT_PROCESSING
@@ -29,15 +40,19 @@ model Channel {
   uploadSchedule    String?
   schedulerEnabled  Boolean   @default(false)
   schedulerCategory String    @default("top")
-  affiliateUrl      String?
   isActive          Boolean   @default(true)
   subscriberCount   Int       @default(0)
   totalViews        BigInt    @default(0)
-  isYPPQualified    Boolean   @default(false)
+  userId            String
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+
+  user              User             @relation(fields: [userId], references: [id])
   jobs              Job[]
   analytics         ChannelAnalytics[]
+
+  @@index([isActive])
+  @@index([userId])
 }
 
 model Job {
@@ -60,7 +75,12 @@ model Job {
   completedAt      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+
   channel          Channel   @relation(fields: [channelId], references: [id])
+
+  @@index([channelId])
+  @@index([channelId, status])
+  @@index([youtubeVideoId])
 }
 
 model ChannelAnalytics {
@@ -71,14 +91,18 @@ model ChannelAnalytics {
   subscribers       Int      @default(0)
   estimatedRevenue  Float    @default(0)
   watchTimeMinutes  BigInt   @default(0)
+
   channel           Channel  @relation(fields: [channelId], references: [id])
+
   @@unique([channelId, date])
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id        String    @id @default(cuid())
+  email     String    @unique
+  createdAt DateTime  @default(now())
+
+  channels  Channel[]
 }
 ```
 
@@ -96,6 +120,7 @@ model User {
 | `20260525190000_drop_channel_analytics` | ChannelAnalytics 삭제 |
 | `20260525200000_restore_channel_analytics` | ChannelAnalytics 복원 |
 | `20260717022729_add_user_table` | `User` 테이블 추가 (로그인 허용 이메일 관리) |
+| `20260718000000_add_userid_to_channel` | `Channel.userId String` FK 추가 → `User` 소유권 연결, `@@index([userId])` |
 
 ---
 
@@ -103,21 +128,30 @@ model User {
 
 ```
 ┌──────────────────────────────────────┐
+│                User                   │
+│──────────────────────────────────────│
+│ id        String (PK, cuid)          │
+│ email     String (UNIQUE)            │
+│ createdAt DateTime                   │
+└──────────────┬───────────────────────┘
+               │ 1
+               │
+               │ N
+┌──────────────▼───────────────────────┐
 │              Channel                  │
 │──────────────────────────────────────│
 │ id              String (PK, cuid)    │
 │ youtubeId       String (UNIQUE)      │
 │ name            String               │
 │ niche           String               │
-│ refreshToken      String (암호화)     │
-│ uploadSchedule    String?            │
+│ refreshToken    String (암호화)       │
+│ uploadSchedule  String?              │
 │ schedulerEnabled  Boolean            │
 │ schedulerCategory String             │
-│ affiliateUrl      String?            │
 │ isActive        Boolean              │
 │ subscriberCount Int                  │
 │ totalViews      BigInt               │
-│ isYPPQualified  Boolean              │
+│ userId          String (FK → User)   │
 │ createdAt       DateTime             │
 │ updatedAt       DateTime             │
 └──────────────┬───────────────────────┘
@@ -161,14 +195,6 @@ model User {
 │ ──────────────────────────────────── │
 │ UNIQUE (channelId, date)             │
 └──────────────────────────────────────┘
-
-┌──────────────────────────────────────┐
-│               User                    │
-│──────────────────────────────────────│
-│ id        String (PK, cuid)          │
-│ email     String (UNIQUE)            │
-│ createdAt DateTime                   │
-└──────────────────────────────────────┘
 ```
 
 ---
@@ -184,14 +210,15 @@ model User {
 | `refreshToken` | `String` | YouTube OAuth2 refresh_token (AES-256-GCM 암호화) |
 | `uploadSchedule` | `String?` | cron 표현식 — 일일 업로드 시간 (null이면 스케줄 미설정) |
 | `schedulerEnabled` | `Boolean` | 자동 업로드 스케줄러 활성화 여부 |
-| `schedulerCategory` | `String` | 뉴스 자동 수집 카테고리 (`top` \| `politics` \| `business` \| `nation`) |
-| `affiliateUrl` | `String?` | 쿠팡 파트너스 링크 (null이면 CTA 자막 미삽입) |
-| `isActive` | `Boolean` | 비활성화 시 EventBridge 스케줄에서 제외 |
+| `schedulerCategory` | `String` | 뉴스 자동 수집 카테고리 (`top` \| `business` \| `technology` \| `health` \| `science` \| `nation`) |
+| `isActive` | `Boolean` | 비활성화 시 스케줄러·API 필터링에서 제외 |
 | `subscriberCount` | `Int` | YouTube Analytics에서 주기적으로 동기화 |
 | `totalViews` | `BigInt` | 채널 전체 누적 조회수 (BigInt 이유: 수억 이상 가능) |
-| `isYPPQualified` | `Boolean` | YPP 달성 여부 (2단계 기준: 비즈니스 규칙 참고) |
+| `userId` | `String` | 채널 소유자 FK (`User.id`). OAuth 연결 시 `state` 파라미터로 전달된 userId |
 | `createdAt` | `DateTime` | 채널 최초 연결 시각 |
 | `updatedAt` | `DateTime` | 마지막 정보 갱신 시각 |
+
+> **isYPPQualified**: DB 컬럼이 아닌 `GET /channels/:id` 응답 시 `channels.service.ts`에서 실시간 계산하는 파생 필드. `subscriberCount >= 500 AND uploadCount90d >= 3 AND shortsViews90d >= 3,000,000` 세 조건 모두 충족 시 `true`.
 
 ### refreshToken AES-256-GCM 암호화
 
@@ -199,23 +226,19 @@ model User {
 
 암호화 키 설정 방법은 [암호화 키 설정 가이드](../runbook/encryption-key-setup.md)를 참고하세요. 보안 규칙 전체는 [비즈니스 규칙 — 보안](../product/business-rules.md#보안-규칙)을 참고하세요.
 
+### userId 소유권 연결
+
+OAuth 연결 흐름: 웹 대시보드 → `GET /auth/youtube?userId={id}` → Google OAuth state에 userId 포함 → 콜백에서 `state`로 userId 추출 → `Channel.upsert({ create: { userId } })`. 재연결(upsert update 블록) 시에는 userId를 덮어쓰지 않아 최초 소유자가 유지됩니다.
+
 ### uploadSchedule cron 형식
 
-EventBridge Scheduler는 **Unix cron** 형식을 사용합니다:
+scheduler-worker가 매분 `uploadSchedule` cron을 평가해 해당 시각이면 `POST /jobs/auto-news`를 호출합니다.
 
 ```
 "0 9 * * *"   → 매일 오전 9시 (UTC 기준)
-"0 18 * * *"  → 매일 오후 6시 (UTC 기준, KST 기준 익일 03시)
+"0 18 * * *"  → 매일 오후 6시 (UTC 기준)
 "30 0 * * *"  → 매일 오전 00:30 (UTC)
 ```
-
-| 필드 | 의미 | 예시 |
-|---|---|---|
-| 분 (0~59) | 업로드 분 | `0` = 정각 |
-| 시 (0~23) | 업로드 시 (UTC) | `9` = 오전 9시 UTC |
-| 일 (1~31) | `*` = 매일 | |
-| 월 (1~12) | `*` = 매월 | |
-| 요일 (0~6) | `*` = 매일 | |
 
 ---
 
@@ -271,7 +294,19 @@ YouTube 조회수는 수억 단위를 초과할 수 있습니다. JavaScript의 
 
 ### watchTimeMinutes 수집 방식
 
-`POST /channels/:id/sync` 호출 시 YouTube Analytics API(`youtubeAnalytics.reports.query`)로 최근 30일치 일별 `estimatedMinutesWatched` 지표를 수집해 upsert합니다. YPP(YouTube Partner Program) 자격 판단(연간 4,000시간)에 활용됩니다.
+`POST /channels/:id/sync` 호출 시 YouTube Analytics API(`youtubeAnalytics.reports.query`)로 최근 30일치 일별 `estimatedMinutesWatched` 지표를 수집해 upsert합니다.
+
+---
+
+## User 모델 필드 설명
+
+| 필드 | 타입 | 설명 |
+|---|---|---|
+| `id` | `String` | CUID 기반 Primary Key |
+| `email` | `String` | Google 계정 이메일 (UNIQUE). 이 테이블에 존재하는 이메일만 로그인 허용. |
+| `createdAt` | `DateTime` | row 생성 시각 |
+
+로그인 허용 이메일 추가는 Supabase `User` 테이블에 직접 row insert. `NextAuth signIn` 콜백이 `prisma.user.findUnique({ where: { email } })`로 검증하며, 미등록 이메일은 Google 인증 성공 후에도 차단됩니다.
 
 ---
 

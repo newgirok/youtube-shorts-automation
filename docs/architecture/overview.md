@@ -149,7 +149,7 @@ packages/shared/
 | `GET` | `/jobs/:id/thumbnail` | S3 썸네일 이미지 프록시 서빙 (`@Public()`) |
 | `POST` | `/jobs/auto-news` | Google News RSS 수집 → Job 일괄 생성 |
 | `POST` | `/jobs/:id/retry` | FAILED Job 재시도 |
-| `GET` | `/channels` | 활성 채널 목록 |
+| `GET` | `/channels` | 활성 채널 목록. `x-user-id` 헤더 있으면 해당 userId 소유 채널만 반환, 없으면 전체 (Worker 내부 호출 대비) |
 | `GET` | `/channels/:id` | 채널 상세 + YPP 통계 |
 | `PATCH` | `/channels/:id/schedule` | 업로드 cron 스케줄·`schedulerEnabled`·`schedulerCategory` 변경 |
 | `DELETE` | `/channels/:id` | 채널 연결 해제 (isActive=false, 데이터 보존) |
@@ -208,7 +208,7 @@ packages/shared/
 |---|---|---|
 | **런타임** | Node.js 20, TypeScript 5.x strict | `any` 사용 금지, ESM |
 | **패키지 관리** | pnpm workspace, Turborepo | |
-| **인증** | NextAuth v5 (Google OAuth, JWT) | signIn 콜백 + Prisma User 테이블 이메일 제한 |
+| **인증** | NextAuth v5 (Google OAuth, JWT) | signIn: Prisma User 이메일 제한 / jwt: DB 조회 → `token.userId` 저장 / session: `session.user.id` 노출 → 웹이 `x-user-id` 헤더로 API에 전달 |
 | **로컬 개발** | Docker Compose, LocalStack v3 | |
 | **에러 추적** | Sentry | Phase 7 |
 
