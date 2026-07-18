@@ -28,8 +28,21 @@ Web은 `COPY . .` 후 Docker 내부에서 빌드하므로 `docker compose build 
 ### `auth/`
 Google OAuth2 채널 연결 처리.
 
-- `GET /auth/youtube` — OAuth 인증 URL로 302 리다이렉트
-- `GET /auth/youtube/callback` — 인증 코드로 토큰 교환, 채널 upsert 후 `/close?channelId={id}` 로 리다이렉트 (에러 시 `/close?auth_error={msg}`)
+- `GET /auth/youtube` — OAuth 인증 URL로 302 리다이렉트 (`YOUTUBE_REDIRECT_URI` 기준)
+- `GET /auth/youtube/callback` — 인증 코드로 토큰 교환, 채널 upsert 후 `/close?channelId={id}` 로 리다이렉트. 에러(code 누락, refresh_token 없음, 채널 없음 등) 시 `/close?auth_error={msg}` 로 리다이렉트
+
+**OAuth 리다이렉트 흐름:**
+```
+Google → https://shortsautomation.com/api/auth/youtube/callback (Next.js 프록시, 302)
+       → https://wc2kcpa4k3.execute-api.ap-northeast-2.amazonaws.com/auth/youtube/callback
+       → auth.controller → auth.service.handleCallback
+       → /close?channelId={id}  또는  /close?auth_error={msg}
+```
+`YOUTUBE_REDIRECT_URI = https://shortsautomation.com/api/auth/youtube/callback` (SSM, GCP에 등록된 값과 일치해야 함)
+
+**에러 처리:** 컨트롤러에 try-catch 적용 — 예외 발생 시 500 대신 `/close?auth_error=` 리다이렉트로 팝업 창에 에러 전달.
+
+**OAuth2Client 생성:** `new OAuth2Client({ clientId, clientSecret, redirectUri })` 객체 형태 사용 (esbuild 번들 환경에서의 안정성).
 
 OAuth 스코프:
 - `https://www.googleapis.com/auth/youtube.upload`
@@ -120,7 +133,7 @@ Job 생성 및 상태 조회, 재시도.
 ```
 YOUTUBE_CLIENT_ID
 YOUTUBE_CLIENT_SECRET
-YOUTUBE_REDIRECT_URI
+YOUTUBE_REDIRECT_URI  - https://shortsautomation.com/api/auth/youtube/callback (GCP에 등록된 값과 반드시 일치)
 ENCRYPTION_KEY
 SQS_SCRIPT_QUEUE_URL
 API_INTERNAL_SECRET

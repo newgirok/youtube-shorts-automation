@@ -21,6 +21,21 @@ builder 스테이지에서 `@shorts/shared` 빌드를 반드시 선행해야 web
 RUN pnpm --filter @shorts/shared prisma:generate && pnpm --filter @shorts/shared build
 ```
 
+**Prisma 엔진 바이너리 명시 복사 (필수):** Next.js standalone 빌드는 `.so.node` 파일을 자동 포함하지 않는다. Dockerfile runner 스테이지에서 반드시 명시적으로 복사해야 한다:
+```dockerfile
+# builder 스테이지: 엔진 파일을 고정 위치로 집결
+RUN find /app -name "libquery_engine-debian-openssl-1.1.x.so.node" | head -1 | xargs -I{} cp {} /tmp/prisma-engine-debian.so.node
+
+# runner 스테이지: 명시 복사
+RUN mkdir -p ./apps/web/.prisma/client
+COPY --from=builder /tmp/prisma-engine-debian.so.node ./apps/web/.prisma/client/libquery_engine-debian-openssl-1.1.x.so.node
+```
+
+**next.config.ts 핵심 설정:**
+- `serverExternalPackages: ['@prisma/client', 'prisma']` — Prisma를 webpack 번들 대상에서 제외해 엔진 바이너리 경로 보존
+- `outputFileTracingRoot: path.join(__dirname, '../../')` — pnpm 모노레포에서 상위 경로 파일(`packages/shared` 등)을 standalone에 포함
+- `output: process.env.DOCKER_BUILD === 'true' ? 'standalone' : undefined` — 로컬 빌드(Windows)에서 symlink 권한 오류(EPERM) 방지
+
 `page.tsx` / `channels/[id]/page.tsx`는 `export const dynamic = 'force-dynamic'`을 선언해 빌드 타임 프리렌더를 방지한다. 이 페이지들은 `auth()`를 호출하므로 빌드 환경에 `AUTH_SECRET`이 없으면 정적 생성 시 실패한다.
 
 ## 주요 페이지 및 담당 컴포넌트
@@ -50,7 +65,8 @@ src/
 │   │       ├── page.tsx          — 채널 초기 데이터 로드 (서버)
 │   │       └── ChannelClient.tsx — YPP 현황·차트·일별 테이블 (클라이언트)
 │   ├── api/
-│   │   └── thumbnail/[id]/route.ts — S3 썸네일 same-origin 프록시 (API_INTERNAL_URL 경유)
+│   │   ├── thumbnail/[id]/route.ts — S3 썸네일 same-origin 프록시 (API_INTERNAL_URL 경유)
+│   │   └── auth/youtube/callback/route.ts — YouTube OAuth 콜백 프록시 (Google → 이 라우트 → API Gateway 302 체인)
 │   ├── providers.tsx             — QueryClientProvider 래퍼
 │   └── layout.tsx                — 루트 레이아웃
 ├── components/
@@ -153,7 +169,7 @@ interface AnalyticsRow {
 - `cursor-not-allowed` 등 커서 스타일 변경 금지 (Tailwind `disabled:cursor-not-allowed` 미적용)
 
 ### 홈 갤러리 표시 조건
-- `activeChannelId` 없으면 갤러리 전체 숨김
+- 갤러리는 채널 연결 여부와 무관하게 항상 렌더링 (`activeChannelId` 조건 없음)
 - 연/월 필터는 항상 표시, 현재 연도는 jobs 없어도 기본 포함
 - `close/page.tsx`: `useSearchParams`로 `channelId` / `auth_error` 파싱 → 올바른 대상 URL로 이동 후 팝업 닫기 (`Suspense` 필수)
 
@@ -232,3 +248,25 @@ const NEWS_CATEGORIES = [
 - 웹 서버 컴포넌트에서 `await auth()` → `session.user.id` 추출 → API 호출 시 `x-user-id` 헤더로 전달.
 - **Sidebar**: `useSession()` hook으로 `session.user.id` 읽어 YouTube OAuth 연결 팝업 URL(`/auth/youtube?userId=...`)에 포함.
 - `src/middleware.ts`: `api|_next/static|_next/image|_next|login|close|popup|favicon.ico|이미지·영상 확장자(.jpg/.jpeg/.png/.gif/.svg/.webp/.ico/.mp4/.webm/.ogg)` 경로 제외 후 미인증 접근을 `/login`으로 리다이렉트
+
+### YouTube OAuth 채널 연결 흐름
+
+`shortsautomation.com` 도메인이 GCP에 검증 도메인으로 등록되어 있어 restricted scope(`youtube.upload`)를 허용받음.
+`wc2kcpa4k3.execute-api.ap-northeast-2.amazonaws.com`(API Gateway 원본 도메인)은 직접 redirect_uri로 사용 불가.
+
+```
+[팝업 열기]
+Sidebar → GET /auth/youtube?userId=... (API Lambda)
+        → 302 accounts.google.com/o/oauth2/v2/auth?redirect_uri=https://shortsautomation.com/api/auth/youtube/callback
+
+[동의 완료 후]
+Google → 302 https://shortsautomation.com/api/auth/youtube/callback?code=XXX&state=UUID
+       → Next.js route.ts → 302 https://wc2kcpa4k3.../auth/youtube/callback?code=XXX&state=UUID
+       → API Lambda (auth.controller) → auth.service.handleCallback
+       → 성공: 302 https://shortsautomation.com/close?channelId=...
+       → 실패: 302 https://shortsautomation.com/close?auth_error=...
+```
+
+- `app/api/auth/youtube/callback/route.ts`는 `export const dynamic = 'force-dynamic'` 필수 (캐싱 방지)
+- GCP OAuth 클라이언트에 `https://shortsautomation.com/api/auth/youtube/callback` 등록 필수
+- `YOUTUBE_REDIRECT_URI` SSM 값 = GCP 등록 URI와 반드시 일치해야 token exchange 성공

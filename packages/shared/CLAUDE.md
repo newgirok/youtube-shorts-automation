@@ -85,6 +85,23 @@ export type {
 
 `JobStatus` enum 순서: `PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING → RENDER_PROCESSING → UPLOAD_PROCESSING → COMPLETED / FAILED`
 
+## Prisma binaryTargets
+
+```prisma
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "rhel-openssl-3.0.x"]
+}
+```
+
+| 타겟 | 용도 |
+|---|---|
+| `native` | 로컬 개발 (macOS/Windows) |
+| `debian-openssl-1.1.x` | EC2 web 컨테이너 (`node:20-bullseye-slim`) |
+| `rhel-openssl-3.0.x` | Lambda Workers (Amazon Linux 2023) |
+
+web Dockerfile에서 `libquery_engine-debian-openssl-1.1.x.so.node`를 명시 복사해야 한다 (`apps/web/CLAUDE.md` Docker 빌드 주의사항 참고).
+
 ## 변경 시 필수 확인
 
 | 변경 대상 | 반드시 확인할 항목 |
