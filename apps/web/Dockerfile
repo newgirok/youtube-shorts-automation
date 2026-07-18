@@ -1,4 +1,4 @@
-FROM node:20-slim AS base
+FROM node:20-bullseye-slim AS base
 RUN npm install -g pnpm
 
 FROM base AS deps
@@ -22,7 +22,7 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 ENV NEXT_PUBLIC_API_SECRET=$NEXT_PUBLIC_API_SECRET
 RUN DOCKER_BUILD=true pnpm --filter web build
 
-FROM node:20-slim AS runner
+FROM node:20-bullseye-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 COPY --from=builder /app/apps/web/.next/standalone ./

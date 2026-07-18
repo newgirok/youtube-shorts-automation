@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { auth } from '@/auth';
 import { apiGet } from '@/lib/api';
 import type { Channel } from '@/lib/types';
