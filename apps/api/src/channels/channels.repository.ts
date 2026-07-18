@@ -4,9 +4,9 @@ import type { JobStatus } from '@shorts/shared';
 
 @Injectable()
 export class ChannelsRepository {
-  findAll() {
+  findAll(userId?: string) {
     return prisma.channel.findMany({
-      where: { isActive: true },
+      where: { isActive: true, ...(userId ? { userId } : {}) },
       select: { id: true, name: true, niche: true },
     });
   }

@@ -12,8 +12,8 @@ const log = createLogger({});
 export class ChannelsService {
   constructor(@Inject(ChannelsRepository) private readonly repo: ChannelsRepository) {}
 
-  findAll() {
-    return this.repo.findAll();
+  findAll(userId?: string) {
+    return this.repo.findAll(userId);
   }
 
   async findById(id: string) {

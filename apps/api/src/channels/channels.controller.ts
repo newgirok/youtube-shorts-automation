@@ -11,14 +11,15 @@ import {
 } from '@nestjs/common';
 import { ChannelsService } from './channels.service.js';
 import { UpdateScheduleSchema } from './dto/update-schedule.dto.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
 
 @Controller('channels')
 export class ChannelsController {
   constructor(@Inject(ChannelsService) private readonly service: ChannelsService) {}
 
   @Get()
-  findAll() {
-    return this.service.findAll();
+  findAll(@CurrentUser() userId: string | undefined) {
+    return this.service.findAll(userId);
   }
 
   @Get(':id')

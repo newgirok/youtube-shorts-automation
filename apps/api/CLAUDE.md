@@ -107,12 +107,14 @@ Job 생성 및 상태 조회, 재시도.
 `retry` 조건: `Job.status === 'FAILED'`만 허용. Job이 없으면 404 NotFound, 다른 상태에서 호출 시 400 BadRequest.
 
 ### 인증 방식
-전역 `InternalKeyGuard` 적용 — 모든 요청에 `x-internal-secret` 헤더 필요 (`API_INTERNAL_SECRET` 환경변수와 비교).
+전역 `InternalKeyGuard` 적용 — 모든 요청에 `Authorization: Bearer {API_INTERNAL_SECRET}` 헤더 필요.
+추가로 `x-user-id` 헤더(web이 NextAuth session에서 추출해 전달)를 파싱해 `req.userId`에 주입.
+`GET /channels`는 `req.userId`가 있으면 해당 userId의 채널만 반환, 없으면 전체 반환(Worker 내부 호출 대비).
 예외: `@Public()` 데코레이터가 붙은 핸들러는 인증 제외.
 - `GET /health` — `@Public()`
 - `GET /jobs/:id/thumbnail` — `@Public()`
-- `GET /auth/youtube` — `@Public()` (컨트롤러 단위)
-- `GET /auth/youtube/callback` — `@Public()` (컨트롤러 단위)
+- `GET /auth/youtube` — `@Public()` (컨트롤러 단위), `?userId=` 쿼리로 OAuth state에 userId 포함
+- `GET /auth/youtube/callback` — `@Public()` (컨트롤러 단위), state에서 userId 추출해 Channel 생성 시 userId 저장
 
 ### 필수 환경변수
 ```
