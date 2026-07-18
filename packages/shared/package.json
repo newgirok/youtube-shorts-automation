@@ -6,7 +6,12 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.js"
+    ".": "./dist/index.js",
+    "./prisma.js": "./dist/prisma.js",
+    "./s3.js": "./dist/s3.js",
+    "./logger.js": "./dist/logger.js",
+    "./env.js": "./dist/env.js",
+    "./types.js": "./dist/types.js"
   },
   "scripts": {
     "build": "tsc",
