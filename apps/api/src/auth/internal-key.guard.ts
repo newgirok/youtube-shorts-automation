@@ -21,6 +21,9 @@ export class InternalKeyGuard implements CanActivate {
     if (!token || token !== process.env.API_INTERNAL_SECRET) {
       throw new UnauthorizedException();
     }
+
+    const userId = req.headers['x-user-id'];
+    (req as FastifyRequest & { userId?: string }).userId = typeof userId === 'string' ? userId : undefined;
     return true;
   }
 }
