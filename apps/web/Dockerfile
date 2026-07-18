@@ -15,6 +15,7 @@ COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
 RUN pnpm install --frozen-lockfile
 COPY . .
+RUN pnpm --filter @shorts/shared prisma:generate && pnpm --filter @shorts/shared build
 ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_API_SECRET
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
