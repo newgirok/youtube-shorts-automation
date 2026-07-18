@@ -381,8 +381,8 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
         {autoNewsLoading && <span className="text-xs text-white/30">수집 중...</span>}
       </div>
 
-      {/* 갤러리 — 채널 연결 시에만 표시 */}
-      {activeChannelId && <div className="w-full max-w-5xl mt-6 md:mt-10 bg-black/30 backdrop-blur-sm rounded-xl">
+      {/* 갤러리 */}
+      <div className="w-full max-w-5xl mt-6 md:mt-10 bg-black/30 backdrop-blur-sm rounded-xl">
         {/* 연/월 필터 */}
         <div className="flex items-center gap-1.5 px-3 pt-2 pb-2 border-b border-white/10 flex-wrap rounded-t-xl">
             <button
@@ -427,7 +427,7 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
         <div className="py-2 overflow-visible">
           <JobCarousel jobs={filteredJobs} />
         </div>
-      </div>}
+      </div>
 
       <div className="flex-1" />
     </div>
