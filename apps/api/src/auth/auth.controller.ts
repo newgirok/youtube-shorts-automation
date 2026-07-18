@@ -9,12 +9,8 @@ export class AuthController {
   constructor(@Inject(AuthService) private readonly authService: AuthService) {}
 
   @Get('youtube')
-  initiateYouTubeOAuth(
-    @Query('userId') userId: string,
-    @Query('loginHint') loginHint: string | undefined,
-    @Res() res: FastifyReply,
-  ) {
-    const url = this.authService.getAuthUrl(userId, loginHint);
+  initiateYouTubeOAuth(@Query('userId') userId: string, @Res() res: FastifyReply) {
+    const url = this.authService.getAuthUrl(userId);
     res.code(302).redirect(url);
   }
 
