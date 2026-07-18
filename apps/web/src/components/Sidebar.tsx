@@ -3,26 +3,28 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Home, Youtube, Settings, LogOut } from 'lucide-react';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { useChannelStore } from '@/lib/store';
 import { apiDelete } from '@/lib/api';
-
-const YOUTUBE_CONNECT_URL = `${process.env.NEXT_PUBLIC_API_URL ?? ''}/auth/youtube`;
-
-function openYoutubeConnect() {
-  const width = 500;
-  const height = 620;
-  const left = Math.round(window.screenX + (window.outerWidth - width) / 2);
-  const top = Math.round(window.screenY + (window.outerHeight - height) / 2.5);
-  window.open(YOUTUBE_CONNECT_URL, 'youtube-connect', `popup,width=${width},height=${height},left=${left},top=${top}`);
-}
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { selectedChannelId, clearSelectedChannelId } = useChannelStore();
+  const { data: session } = useSession();
   const isConnected = Boolean(selectedChannelId);
+
+  function openYoutubeConnect() {
+    const userId = session?.user?.id ?? '';
+    const base = process.env.NEXT_PUBLIC_API_URL ?? '';
+    const url = `${base}/auth/youtube?userId=${encodeURIComponent(userId)}`;
+    const width = 500;
+    const height = 620;
+    const left = Math.round(window.screenX + (window.outerWidth - width) / 2);
+    const top = Math.round(window.screenY + (window.outerHeight - height) / 2.5);
+    window.open(url, 'youtube-connect', `popup,width=${width},height=${height},left=${left},top=${top}`);
+  }
 
   async function handleYoutubeClick() {
     if (!isConnected) {
