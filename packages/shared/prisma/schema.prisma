@@ -32,13 +32,16 @@ model Channel {
   isActive         Boolean   @default(true)
   subscriberCount  Int       @default(0)
   totalViews       BigInt    @default(0)
+  userId           String
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
+  user             User      @relation(fields: [userId], references: [id])
   jobs             Job[]
   analytics        ChannelAnalytics[]
 
   @@index([isActive])
+  @@index([userId])
 }
 
 model Job {
@@ -84,7 +87,8 @@ model ChannelAnalytics {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  createdAt DateTime @default(now())
+  id        String    @id @default(cuid())
+  email     String    @unique
+  createdAt DateTime  @default(now())
+  channels  Channel[]
 }

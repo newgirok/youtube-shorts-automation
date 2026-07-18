@@ -59,10 +59,10 @@ export type {
 
 | 모델 | 주요 필드 |
 |---|---|
-| `Channel` | `id`, `youtubeId`, `name`, `niche`, `refreshToken`, `isActive`, `schedulerEnabled`, `schedulerCategory`, `subscriberCount(Int)`, `totalViews(BigInt)` |
+| `Channel` | `id`, `youtubeId`, `name`, `niche`, `refreshToken`, `isActive`, `schedulerEnabled`, `schedulerCategory`, `subscriberCount(Int)`, `totalViews(BigInt)`, `userId(FK→User)` |
 | `Job` | `id`, `channelId`, `topic`, `status(JobStatus)`, `retryCount`, `failReason`, `scriptContent(Json?)`, `audioS3Key`, `subtitleS3Key`, `videoS3Key`, `youtubeVideoId`, `thumbnailUrl`, `viewCount(BigInt)`, `likeCount(BigInt)` |
 | `ChannelAnalytics` | `id`, `channelId`, `date`, `views(BigInt)`, `subscribers(Int)`, `estimatedRevenue(Float)`, `watchTimeMinutes(BigInt)` |
-| `User` | `id`, `email(UNIQUE)`, `createdAt` — 로그인 허용 이메일 관리 (signIn 콜백에서 조회) |
+| `User` | `id`, `email(UNIQUE)`, `createdAt` — 로그인 허용 이메일 관리, Channel 소유자 |
 
 `JobStatus` enum 순서: `PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING → RENDER_PROCESSING → UPLOAD_PROCESSING → COMPLETED / FAILED`
 
