@@ -152,11 +152,11 @@ export class ChannelsRepository {
     );
   }
 
-  updateChannelStats(id: string, data: { subscriberCount: number; totalViews: number }) {
+  updateChannelStats(id: string, data: { subscriberCount: number; totalViews: number; name?: string }) {
     return prisma.channel.update({
       where: { id },
       data,
-      select: { id: true, subscriberCount: true, totalViews: true },
+      select: { id: true, name: true, subscriberCount: true, totalViews: true },
     });
   }
 

@@ -66,14 +66,17 @@ export class ChannelsService {
     client.setCredentials({ refresh_token: refreshToken });
     const yt = google.youtube({ version: 'v3', auth: client });
 
-    const channelRes = await yt.channels.list({ part: ['statistics'], id: [channelRow.youtubeId] });
-    const stats = channelRes.data.items?.[0]?.statistics;
+    const channelRes = await yt.channels.list({ part: ['statistics', 'snippet'], id: [channelRow.youtubeId] });
+    const item = channelRes.data.items?.[0];
+    const stats = item?.statistics;
+    const snippet = item?.snippet;
     if (stats) {
       await this.repo.updateChannelStats(channelId, {
         subscriberCount: parseInt(stats.subscriberCount ?? '0', 10),
         totalViews: parseInt(stats.viewCount ?? '0', 10),
+        ...(snippet?.title ? { name: snippet.title } : {}),
       });
-      log.info({ channelId, subscriberCount: stats.subscriberCount, viewCount: stats.viewCount }, '채널 통계 갱신 완료');
+      log.info({ channelId, subscriberCount: stats.subscriberCount, viewCount: stats.viewCount, name: snippet?.title }, '채널 통계 갱신 완료');
     }
 
     await this.syncAnalytics(channelId, channelRow.youtubeId, client).catch((err) => {
