@@ -51,6 +51,12 @@ export class JobsRepository {
     return rows.map((r) => ({ ...r, viewCount: Number(r.viewCount), thumbnailUrl: resolveThumbUrl(r.thumbnailUrl) }));
   }
 
+  async countCreatedToday(channelId: string, since: Date): Promise<number> {
+    return prisma.job.count({
+      where: { channelId, createdAt: { gte: since } },
+    });
+  }
+
   async hasActiveJob(channelId: string): Promise<boolean> {
     const count = await prisma.job.count({
       where: {

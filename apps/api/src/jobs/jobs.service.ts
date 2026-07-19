@@ -2,18 +2,31 @@ import { Injectable, Inject } from '@nestjs/common';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { createLogger, downloadFromS3, jobKey } from '@shorts/shared';
 import { JobsRepository } from './jobs.repository.js';
-import { JobNotFoundError, JobNotRetryableError } from './jobs.errors.js';
+import { JobNotFoundError, JobNotRetryableError, DailyQuotaExceededError } from './jobs.errors.js';
 import { fetchNewsTopics } from './news-fetcher.js';
 import type { AutoNewsJobDto } from './dto/auto-news.dto.js';
 
+const DAILY_LIMIT = 3;
+
 const sqs = new SQSClient({ region: process.env.AWS_REGION ?? 'ap-northeast-2' });
 const log = createLogger({});
+
+function getTodayStartSeoul(): Date {
+  const seoulDate = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  return new Date(`${seoulDate}T00:00:00+09:00`);
+}
 
 @Injectable()
 export class JobsService {
   constructor(@Inject(JobsRepository) private readonly repo: JobsRepository) {}
 
   async create(channelId: string, topic: string) {
+    const createdToday = await this.repo.countCreatedToday(channelId, getTodayStartSeoul());
+    if (createdToday >= DAILY_LIMIT) throw new DailyQuotaExceededError(channelId);
+
     const job = await this.repo.create(channelId, topic);
     log.info({ jobId: job.id, channelId }, 'Job 생성');
 
@@ -46,7 +59,17 @@ export class JobsService {
     const items = await fetchNewsTopics(dto.category, dto.count);
     if (items.length === 0) throw new Error('수집된 뉴스 없음');
     log.info({ category: dto.category, count: items.length }, '뉴스 자동 수집 완료');
-    return Promise.all(items.map((item) => this.create(dto.channelId, item.title)));
+
+    const results = [];
+    for (const item of items) {
+      try {
+        results.push(await this.create(dto.channelId, item.title));
+      } catch (err) {
+        if (err instanceof DailyQuotaExceededError) break;
+        throw err;
+      }
+    }
+    return results;
   }
 
   async getThumbnail(id: string): Promise<Buffer | null> {

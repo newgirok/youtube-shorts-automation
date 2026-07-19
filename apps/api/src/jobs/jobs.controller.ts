@@ -9,12 +9,14 @@ import {
   Res,
   BadRequestException,
   NotFoundException,
+  HttpException,
+  HttpStatus,
 } from '@nestjs/common';
 import type { FastifyReply } from 'fastify';
 import { JobsService } from './jobs.service.js';
 import { CreateJobSchema } from './dto/create-job.dto.js';
 import { AutoNewsJobSchema } from './dto/auto-news.dto.js';
-import { JobNotFoundError, JobNotRetryableError } from './jobs.errors.js';
+import { JobNotFoundError, JobNotRetryableError, DailyQuotaExceededError } from './jobs.errors.js';
 import { Public } from '../auth/public.decorator.js';
 
 @Controller('jobs')
@@ -25,7 +27,12 @@ export class JobsController {
   async create(@Body() body: unknown) {
     const result = CreateJobSchema.safeParse(body);
     if (!result.success) throw new BadRequestException(result.error.issues);
-    return this.service.create(result.data.channelId, result.data.topic);
+    try {
+      return await this.service.create(result.data.channelId, result.data.topic);
+    } catch (err) {
+      if (err instanceof DailyQuotaExceededError) throw new HttpException(err.message, HttpStatus.TOO_MANY_REQUESTS);
+      throw err;
+    }
   }
 
   @Get()
@@ -44,7 +51,12 @@ export class JobsController {
   async autoNews(@Body() body: unknown) {
     const result = AutoNewsJobSchema.safeParse(body);
     if (!result.success) throw new BadRequestException(result.error.issues);
-    return this.service.createFromNews(result.data);
+    try {
+      return await this.service.createFromNews(result.data);
+    } catch (err) {
+      if (err instanceof DailyQuotaExceededError) throw new HttpException(err.message, HttpStatus.TOO_MANY_REQUESTS);
+      throw err;
+    }
   }
 
   @Public()

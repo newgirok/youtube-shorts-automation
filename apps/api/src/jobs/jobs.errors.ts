@@ -11,3 +11,10 @@ export class JobNotRetryableError extends Error {
     this.name = 'JobNotRetryableError';
   }
 }
+
+export class DailyQuotaExceededError extends Error {
+  constructor(channelId: string) {
+    super(`채널 ${channelId}의 일일 업로드 한도(3회)를 초과했습니다`);
+    this.name = 'DailyQuotaExceededError';
+  }
+}
