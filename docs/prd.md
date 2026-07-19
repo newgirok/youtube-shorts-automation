@@ -201,22 +201,30 @@ jobs/{jobId}/output.mp4
 
 ```prisma
 model Channel {
-  id              String    @id @default(cuid())
-  youtubeId       String    @unique
-  name            String
-  niche           String
-  refreshToken    String    // AES-256-GCM 암호화
-  uploadSchedule  String    @default("0 9 * * *")  // cron
-  affiliateUrl    String?
-  isActive        Boolean   @default(true)
-  subscriberCount Int       @default(0)
-  totalViews      BigInt    @default(0)
-  isYPPQualified  Boolean   @default(false)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  jobs            Job[]
-  analytics       ChannelAnalytics[]
+  id                String    @id @default(cuid())
+  youtubeId         String    @unique
+  name              String
+  niche             String
+  refreshToken      String    // AES-256-GCM 암호화
+  uploadSchedule    String?
+  schedulerEnabled  Boolean   @default(false)
+  schedulerCategory String    @default("top")
+  isActive          Boolean   @default(true)
+  subscriberCount   Int       @default(0)
+  totalViews        BigInt    @default(0)  // YouTube Data API channels.list statistics.viewCount
+  userId            String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  user              User             @relation(fields: [userId], references: [id])
+  jobs              Job[]
+  analytics         ChannelAnalytics[]
+
+  @@index([isActive])
+  @@index([userId])
 }
+
+// isYPPQualified, uploadCount90d, shortsViews90d는 DB 컬럼이 아닌 GET /channels/:id 응답 시 동적 계산 파생 필드
 
 model Job {
   id              String    @id @default(cuid())
@@ -230,6 +238,7 @@ model Job {
   subtitleS3Key   String?
   videoS3Key      String?
   youtubeVideoId  String?
+  thumbnailUrl    String?
   privacyStatus   String    @default("public")
   viewCount       BigInt    @default(0)
   likeCount       BigInt    @default(0)

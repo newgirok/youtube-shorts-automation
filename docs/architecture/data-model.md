@@ -212,8 +212,8 @@ model User {
 | `schedulerEnabled` | `Boolean` | 자동 업로드 스케줄러 활성화 여부 |
 | `schedulerCategory` | `String` | 뉴스 자동 수집 카테고리 (`top` \| `business` \| `technology` \| `health` \| `science` \| `nation`) |
 | `isActive` | `Boolean` | 비활성화 시 스케줄러·API 필터링에서 제외 |
-| `subscriberCount` | `Int` | YouTube Analytics에서 주기적으로 동기화 |
-| `totalViews` | `BigInt` | 채널 전체 누적 조회수 (BigInt 이유: 수억 이상 가능) |
+| `subscriberCount` | `Int` | sync 시 YouTube Data API `channels.list statistics.subscriberCount`에서 갱신 |
+| `totalViews` | `BigInt` | sync 시 YouTube Data API `channels.list statistics.viewCount`에서 갱신. 채널 전체 누적 조회수 (Job 조회수 합산이 아님) |
 | `userId` | `String` | 채널 소유자 FK (`User.id`). OAuth 연결 시 `state` 파라미터로 전달된 userId |
 | `createdAt` | `DateTime` | 채널 최초 연결 시각 |
 | `updatedAt` | `DateTime` | 마지막 정보 갱신 시각 |

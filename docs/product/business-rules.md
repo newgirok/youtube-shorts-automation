@@ -69,9 +69,10 @@ YouTube Partner Program은 2단계로 나뉩니다.
 - 달성 시 쇼츠 피드 광고 수익 창출
 
 **데이터 소스**:
-- `Channel.subscriberCount`, `Channel.uploadCount90d`, `Channel.shortsViews90d` — 채널 동기화(`POST /channels/:id/sync`) 시 갱신
+- `Channel.subscriberCount` — sync 시 YouTube Data API `channels.list`에서 갱신 (DB 저장)
+- `uploadCount90d`, `shortsViews90d` — `GET /channels/:id` 요청 시 Job 테이블에서 동적 계산 (DB 컬럼 없음)
+- `isYPPQualified` — `GET /channels/:id` 요청 시 위 세 조건을 실시간으로 판별 (DB 컬럼 없음)
 - `totalWatchHours` — `ChannelAnalytics.watchTimeMinutes` 합산으로 계산
-- `Channel.isYPPQualified`는 YouTube Analytics 수집 시 자동으로 업데이트됩니다.
 - 대시보드 `/channels/[id]`에서 1·2단계 진행률을 ProgressBar로 확인할 수 있습니다.
 - YPP 달성 후 `AnalyticsRow.estimatedRevenue` 필드에 예상 수익이 기록됩니다.
 

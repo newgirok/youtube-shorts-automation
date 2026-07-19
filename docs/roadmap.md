@@ -70,7 +70,7 @@
 
 - **P1-2.** `packages/shared` — 공통 기반 `[BE]`
   - `prisma/schema.prisma`
-    - `Channel`: id, youtubeId, name, niche, refreshToken, uploadSchedule, affiliateUrl?, isActive, subscriberCount, totalViews(BigInt), isYPPQualified, createdAt, updatedAt
+    - `Channel`: id, youtubeId, name, niche, refreshToken, uploadSchedule?, schedulerEnabled, schedulerCategory, isActive, subscriberCount, totalViews(BigInt), userId(FK→User), createdAt, updatedAt
     - `Job`: id, channelId, topic, status(JobStatus), retryCount, failReason?, scriptContent?, audioS3Key?, subtitleS3Key?, videoS3Key?, youtubeVideoId?, privacyStatus(@default("public")), viewCount(BigInt), likeCount(BigInt), startedAt?, completedAt?, createdAt, updatedAt
     - `ChannelAnalytics`: id, channelId, date(@db.Date), views(BigInt), subscribers, estimatedRevenue, watchTimeMinutes(BigInt) — `@@unique([channelId, date])`
     - `JobStatus` enum: `PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING → RENDER_PROCESSING → UPLOAD_PROCESSING → COMPLETED / FAILED`
