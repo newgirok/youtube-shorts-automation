@@ -346,6 +346,12 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
             <textarea
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  e.currentTarget.form?.requestSubmit();
+                }
+              }}
               rows={3}
               required
               disabled={!activeChannelId}
