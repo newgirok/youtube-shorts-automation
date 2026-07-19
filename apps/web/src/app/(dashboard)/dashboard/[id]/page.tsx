@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Eye, ThumbsUp, Clock, RefreshCw, ExternalLink, Play, X } from 'lucide-react';
 import { apiGet, apiPost } from '@/lib/api';
-import { toProxyThumbUrl } from '@/lib/utils';
+import { effectiveThumbUrl } from '@/lib/utils';
 import { StatusTimeline } from '@/components/StatusTimeline';
 import type { Job } from '@/lib/types';
 
@@ -64,23 +64,21 @@ export default function JobDetailPage() {
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, [job?.channelId, job?.youtubeVideoId, id, queryClient]);
 
-  // thumbnailUrl이 새 URL로 바뀌면 에러 상태 리셋
+  // youtubeVideoId가 새로 생기면 썸네일 에러 상태 리셋
   useEffect(() => {
-    const newUrl = job?.thumbnailUrl;
-    if (prevThumbUrlRef.current !== undefined && prevThumbUrlRef.current !== newUrl) {
+    const newId = job?.youtubeVideoId;
+    if (prevThumbUrlRef.current !== undefined && prevThumbUrlRef.current !== newId) {
       setThumbnailError(false);
     }
-    prevThumbUrlRef.current = newUrl;
-  }, [job?.thumbnailUrl]);
+    prevThumbUrlRef.current = newId;
+  }, [job?.youtubeVideoId]);
 
   // YouTube CDN 썸네일 미처리(404) 시 15초 후 자동 재시도
   useEffect(() => {
-    if (!thumbnailError) return;
-    const url = job?.thumbnailUrl ?? '';
-    if (!url.includes('ytimg.com')) return;
+    if (!thumbnailError || !job?.youtubeVideoId) return;
     const timer = setTimeout(() => setThumbnailError(false), 15_000);
     return () => clearTimeout(timer);
-  }, [thumbnailError, job?.thumbnailUrl]);
+  }, [thumbnailError, job?.youtubeVideoId]);
 
   if (isLoading) {
     return (
@@ -190,7 +188,7 @@ export default function JobDetailPage() {
   const title = job.scriptContent?.title ?? job.topic;
   const processingTime = calcProcessingTime(job.startedAt, job.completedAt);
   const isYoutubeDeleted = job.status === 'FAILED' && job.failReason === '유튜브에서 영상이 삭제되었습니다.';
-  const thumbnailUrl = toProxyThumbUrl(job.thumbnailUrl);
+  const thumbnailUrl = effectiveThumbUrl(job.youtubeVideoId, job.thumbnailUrl);
   const sc = job.scriptContent;
 
   return (

@@ -212,7 +212,7 @@ function JobCarousel({ jobs }: { jobs: JobType[] }) {
   );
 }
 
-export function HomeClient({ channels, userId = '' }: { channels: Channel[]; userId?: string }) {
+export function HomeClient({ channels, userId = '', firstChannelId = '', initialJobs = [] }: { channels: Channel[]; userId?: string; firstChannelId?: string; initialJobs?: JobType[] }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { selectedChannelId, setSelectedChannelId, clearSelectedChannelId } = useChannelStore();
@@ -250,6 +250,7 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
     queryKey: ['jobs', activeChannelId],
     queryFn: () => apiGet<JobType[]>(`/jobs?channelId=${activeChannelId}`, userHeaders),
     enabled: Boolean(activeChannelId),
+    initialData: activeChannelId === firstChannelId ? initialJobs : undefined,
     refetchInterval: (query) => {
       const data = query.state.data ?? [];
       if (data.length === 0) return 2000;
