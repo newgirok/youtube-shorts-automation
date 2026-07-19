@@ -4,6 +4,7 @@ import { Eye, Video } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Job as JobType, JobStatus } from '@/lib/types';
+import { toProxyThumbUrl } from '@/lib/utils';
 
 const STATUS_LABEL: Record<JobStatus, string> = {
   PENDING: '대기',
@@ -44,13 +45,14 @@ function formatDate(iso: string): string {
 export function VideoCard({ video }: { video: JobType }) {
   const title = video.scriptContent?.title ?? video.topic;
   const isDeleted = video.status === 'FAILED' && video.failReason === YOUTUBE_DELETED_REASON;
+  const thumbnailSrc = toProxyThumbUrl(video.thumbnailUrl);
 
   return (
     <Card className="overflow-hidden cursor-pointer hover:ring-1 hover:ring-border transition-all">
       <div className="relative aspect-[9/16] max-h-36 bg-muted">
-        {!isDeleted && video.thumbnailUrl ? (
+        {!isDeleted && thumbnailSrc ? (
           <img
-            src={video.thumbnailUrl}
+            src={thumbnailSrc}
             alt={title}
             className="w-full h-full object-cover"
           />
