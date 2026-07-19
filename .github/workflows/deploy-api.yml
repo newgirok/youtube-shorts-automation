@@ -1,27 +1,50 @@
 name: Deploy API
+
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - apps/api/**
+      - packages/shared/**
+      - .github/workflows/deploy-api.yml
+
+env:
+  AWS_REGION: ap-northeast-2
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         with: { version: 9.15.0 }
+
       - uses: actions/setup-node@v4
         with: { node-version: 20, cache: pnpm }
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm --filter @shorts/api build
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-northeast-2
-      - name: Login to Amazon ECR
-        run: aws ecr get-login-password --region ap-northeast-2 | docker login --username AWS --password-stdin ${{ secrets.ECR_API_URI }}
-      - name: Build & push Docker image
+          role-to-assume: arn:aws:iam::682251233572:role/github-actions-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared
+        run: pnpm --filter @shorts/shared prisma:generate && pnpm --filter @shorts/shared build
+
+      - name: Copy Prisma binary
         run: |
-          docker build -t ${{ secrets.ECR_API_URI }}:${{ github.sha }} -f apps/api/Dockerfile .
-          docker push ${{ secrets.ECR_API_URI }}:${{ github.sha }}
+          PRISMA_BIN=$(find node_modules/.pnpm -name "libquery_engine-rhel-openssl-3.0.x.so.node" | head -1)
+          cp "$PRISMA_BIN" apps/api/
+
+      - name: Deploy API
+        run: |
+          cd apps/api
+          npx serverless@3 deploy --stage prod
