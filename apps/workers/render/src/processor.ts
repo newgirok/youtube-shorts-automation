@@ -112,25 +112,15 @@ export async function processMessage(
     writeFileSync(srtPath, finalSrt, 'utf-8');
 
     log.info('FFmpeg 최종 합성 시작');
-    const thumbnailPath = join(tmpDir, `${jobId}-thumbnail.jpg`);
-    concatClipsWithAudio(clipPaths, audioPath, srtPath, outputPath, env.FFMPEG_PATH, fontName, tmpDir, scriptContent?.title ?? '', env.FONTS_DIR, thumbnailPath);
+    concatClipsWithAudio(clipPaths, audioPath, srtPath, outputPath, env.FFMPEG_PATH, fontName, tmpDir, scriptContent?.title ?? '', env.FONTS_DIR);
 
     const videoBuf = readFileSync(outputPath);
     const videoS3Key = jobKey(jobId, 'output.mp4');
     await uploadToS3(videoS3Key, videoBuf);
 
-    let thumbnailUrl: string | undefined;
-    try {
-      await uploadToS3(jobKey(jobId, 'thumbnail.jpg'), readFileSync(thumbnailPath));
-      thumbnailUrl = `/jobs/${jobId}/thumbnail`;
-      log.info('썸네일 생성 완료');
-    } catch (thumbErr) {
-      log.warn({ thumbErr }, '썸네일 업로드 실패 (무시)');
-    }
-
     await prisma.job.update({
       where: { id: jobId },
-      data: { videoS3Key, ...(thumbnailUrl ? { thumbnailUrl } : {}) },
+      data: { videoS3Key },
     });
 
     await sqs.send(

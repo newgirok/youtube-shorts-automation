@@ -44,7 +44,6 @@ const toSafeMsg = (err: unknown) =>
 3. scenes가 없는 경우: topic 키워드로 단일 이미지 fallback (50초 zoom-in)
 4. `concatClipsWithAudio()`: 클립 concat → **헤더 오버레이** + 오디오 + **ASS 자막** burn-in → output.mp4
    - 출력 길이 = `min(concat_raw.mp4 길이, min(audio 길이, 60초))` — 씬 클립 합계가 오디오보다 짧으면 오디오를 잘라 화면 정지(tpad clone) 방지
-5. 썸네일 추출: FFmpeg `-vframes 1` (헤더·푸터 오버레이 적용 첫 프레임, `concatPath` 기준) → `jobs/{jobId}/thumbnail.jpg` S3 업로드 → DB `thumbnailUrl = '/jobs/{jobId}/thumbnail'` 저장 (non-fatal, 실패 시 무시)
 
 ## zoompan 효과
 
@@ -107,11 +106,9 @@ Style: Default,{FontName},76,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,
 
 ```
 jobs/{jobId}/output.mp4      — 최종 렌더링 영상
-jobs/{jobId}/thumbnail.jpg   — FFmpeg 첫 프레임 캡처 썸네일 (-vframes 1)
 ```
 
-- `thumbnailUrl = '/jobs/{jobId}/thumbnail'` 형태로 DB 저장
-- API `GET /jobs/:id/thumbnail` 엔드포인트가 S3에서 프록시 서빙
+썸네일은 render-worker에서 생성하지 않음. upload-worker가 YouTube 업로드 완료 후 `youtubeVideoId`를 DB에 저장하면 프론트엔드가 `https://i.ytimg.com/vi/{videoId}/hqdefault.jpg`로 직접 접근.
 
 ## SQS 메시지 구조
 

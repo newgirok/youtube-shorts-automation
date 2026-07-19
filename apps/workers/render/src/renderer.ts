@@ -105,8 +105,7 @@ export function concatClipsWithAudio(
   fontName: string,
   tmpDir: string,
   title: string,
-  fontsDir?: string,
-  thumbnailPath?: string
+  fontsDir?: string
 ): void {
   const listPath = join(tmpDir, 'concat_list.txt');
   const listContent = clipPaths.map(p => `file '${p.replace(/\\/g, '/')}'`).join('\n');
@@ -183,16 +182,6 @@ export function concatClipsWithAudio(
   }
   const headerFilter = `drawbox=x=0:y=0:w=iw:h=${HEADER_H}:color=black@1.0:t=fill${headerTextFilter}`;
   const footerFilter = `drawbox=x=0:y=${FOOTER_Y}:w=iw:h=${FOOTER_H}:color=black@1.0:t=fill`;
-
-  // 헤더+바디+푸터 레이아웃이 적용된 썸네일 생성 (자막 없이 첫 프레임 캡처)
-  if (thumbnailPath) {
-    try {
-      execSync(
-        `"${ffmpegPath}" -y -i "${concatPath}" -vf "${headerFilter},${footerFilter}" -vframes 1 -q:v 2 "${thumbnailPath}"`,
-        { stdio: 'pipe' }
-      );
-    } catch { /* 썸네일 생성 실패 시 무시 */ }
-  }
 
   const assPath = join(tmpDir, 'subtitle.ass');
   execSync(`"${ffmpegPath}" -y -i "${srtPath}" "${assPath}"`, { stdio: 'pipe' });

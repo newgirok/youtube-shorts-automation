@@ -58,8 +58,8 @@ src/
 │   │   └── close/page.tsx        — 팝업 완료 후 닫기
 │   ├── (dashboard)/
 │   │   ├── layout.tsx            — 사이드바 포함 레이아웃 (서버)
-│   │   ├── page.tsx              — 홈 (서버, 채널 목록 로드 후 HomeClient 전달)
-│   │   ├── HomeClient.tsx        — 토픽 입력 폼 + 갤러리 카루셀 (클라이언트)
+│   │   ├── page.tsx              — 홈 (서버, channels + 첫 채널 jobs SSR prefetch 후 HomeClient 전달)
+│   │   ├── HomeClient.tsx        — 토픽 입력 폼 + 갤러리 카루셀 (클라이언트). firstChannelId·initialJobs props로 SSR 데이터 수신
 │   │   ├── dashboard/[id]/page.tsx — Job 상세: 상태 배지·privacyStatus·타임라인·스크립트 (클라이언트)
 │   │   └── channels/[id]/
 │   │       ├── page.tsx          — 채널 초기 데이터 로드 (서버)
@@ -71,7 +71,7 @@ src/
 │   └── layout.tsx                — 루트 레이아웃
 ├── components/
 │   ├── StatusTimeline.tsx        — Job 처리 단계 타임라인 + 재시도 버튼
-│   ├── VideoCard.tsx             — Job 카드 (썸네일·상태 배지·삭제 오버레이, aspect-[9/16] max-h-36, toProxyThumbUrl()로 변환 후 프록시 URL 사용)
+│   ├── VideoCard.tsx             — Job 카드 (썸네일·상태 배지·삭제 오버레이, aspect-[9/16] max-h-36, effectiveThumbUrl()로 YouTube 또는 프록시 URL 선택)
 │   ├── Sidebar.tsx               — 데스크톱 사이드 내비게이션
 │   ├── BottomNav.tsx             — 모바일 하단 내비게이션
 │   └── ui/                       — shadcn/ui 기본 컴포넌트
@@ -79,7 +79,7 @@ src/
 │   ├── types.ts                  — Job, Channel, AnalyticsRow, JobStatus 타입
 │   ├── api.ts                    — apiGet / apiPost / apiPatch / apiDelete 헬퍼 + ApiError 클래스. 응답 실패 시 body.message 추출해 ApiError(status, message) throw. API_INTERNAL_URL → NEXT_PUBLIC_API_URL 폴백, NEXT_PUBLIC_API_SECRET Bearer 헤더 자동 첨부
 │   ├── store.ts                  — Zustand: selectedChannelId, setSelectedChannelId, clearSelectedChannelId
-│   └── utils.ts                  — cn() 유틸 + toProxyThumbUrl() S3 썸네일 → 프록시 URL 변환
+│   └── utils.ts                  — cn() 유틸 + toProxyThumbUrl() S3 썸네일 → 프록시 URL 변환 + effectiveThumbUrl() YouTube/S3 썸네일 선택
 ├── auth.ts                       — NextAuth v5 (GoogleProvider + JWT + Prisma). signIn·jwt·session 콜백 포함
 └── middleware.ts                 — 미인증 접근 → /login 리다이렉트
 ```
@@ -136,10 +136,16 @@ interface AnalyticsRow {
 ## 주요 동작 규칙
 
 ### 썸네일 표시 전략
-- `thumbnailUrl`은 render-worker가 FFmpeg 첫 프레임으로 생성한 S3 URL만 사용. upload-worker 완료 후에도 YouTube URL로 대체하지 않아 이미지 변화 없음.
-- CORS 방지를 위해 `toProxyThumbUrl()`로 `/api/thumbnail/{jobId}` 프록시 URL로 변환 후 사용
+- `effectiveThumbUrl(youtubeVideoId, thumbnailUrl)`: `youtubeVideoId`가 있으면 `https://i.ytimg.com/vi/{id}/hqdefault.jpg` 반환, 없으면 `toProxyThumbUrl(thumbnailUrl)` 반환
 - `toProxyThumbUrl(url)`: `/jobs/{id}/thumbnail` 패턴이면 `/api/thumbnail/{id}` 반환, 그 외는 원본 반환
-- `/api/thumbnail/[id]` route: `API_INTERNAL_URL/jobs/{id}/thumbnail` 경유로 S3 콘텐츠를 same-origin으로 프록시. `Cache-Control: public, max-age=3600`
+- VideoCard·GalleryCard·dashboard 페이지 모두 `effectiveThumbUrl()` 사용. 폴링으로 `youtubeVideoId` 감지 시 자동으로 YouTube CDN 썸네일로 전환
+- `/api/thumbnail/[id]` route: `API_INTERNAL_URL/jobs/{id}/thumbnail` 경유로 S3 콘텐츠를 same-origin으로 프록시. `Cache-Control: public, max-age=3600` (youtubeVideoId 없는 경우에만 경유)
+- YouTube CDN 썸네일 404(업로드 직후 미처리) 시 15초 후 자동 재시도 (`thumbnailError` + `setTimeout`)
+
+### 홈 초기 로딩 전략
+- `page.tsx`(서버): channels 조회 후 첫 채널의 jobs도 서버에서 즉시 조회 → `firstChannelId`, `initialJobs` props로 HomeClient에 전달
+- `HomeClient` `useQuery`: `activeChannelId === firstChannelId`이면 `initialData`로 SSR 데이터 사용 → 클라이언트 첫 렌더에 jobs 즉시 표시, Lambda 추가 호출 없음
+- 다른 채널 선택 시(Zustand `selectedChannelId` 불일치) 해당 채널 jobs는 클라이언트 fetch
 
 ### 폴링
 - 홈(`/`): 진행 중 Job이 있으면 2초, 모두 완료/실패면 30초
