@@ -37,7 +37,7 @@ const toSafeMsg = (err: unknown) =>
    - 영상/오디오 길이 차이 2초 이내 (화면 정지 의심 감지)
 6. YouTube Data API v3로 영상 업로드
 7. DB 업데이트: `youtubeVideoId`, `privacyStatus: 'public'`, `status: 'COMPLETED'`, `completedAt`
-   - `thumbnailUrl: https://i.ytimg.com/vi/{videoId}/hqdefault.jpg` 를 직접 DB에 저장 (`setYouTubeThumbnail()` 제거됨)
+   - `thumbnailUrl`은 render-worker가 설정한 S3 프록시 URL을 그대로 유지 (YouTube URL로 덮어쓰지 않음)
 8. 실패 시: `status: 'FAILED'`, `failReason` 기록 후 예외 재throw (SQS 재시도)
 
 ## YouTube 업로드 메타데이터

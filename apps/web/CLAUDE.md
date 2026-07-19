@@ -104,7 +104,7 @@ interface Job {
   startedAt: string | null;
   completedAt: string | null;
   youtubeVideoId: string | null;
-  thumbnailUrl: string | null;  // render-worker 완료 시 API 프록시 URL로 먼저 채워짐; sync-videos 후 YouTube URL로 대체될 수 있음
+  thumbnailUrl: string | null;  // render-worker 완료 시 S3 URL로 채워짐; 이후 변경 없음 (YouTube URL로 대체하지 않음)
   privacyStatus: string; // 'public' | 'unlisted' | 'private'
 }
 
@@ -136,10 +136,9 @@ interface AnalyticsRow {
 ## 주요 동작 규칙
 
 ### 썸네일 표시 전략
-- `thumbnailUrl`은 두 가지 값을 가질 수 있음:
-  1. **S3 URL** (`https://*.s3.amazonaws.com/jobs/{jobId}/thumbnail.jpg`): render-worker 완료 직후 상태. CORS 문제 방지를 위해 `toProxyThumbUrl()`로 `/api/thumbnail/{jobId}` 프록시 URL로 변환 후 사용
-  2. **YouTube URL** (`https://i.ytimg.com/vi/{videoId}/hqdefault.jpg`): upload-worker 완료 시 DB에 직접 저장. 프록시 불필요, 직접 사용
-- `toProxyThumbUrl(url)`: S3 URL이면 `/api/thumbnail/{jobId}` 반환, 그 외(YouTube URL 등)는 원본 반환
+- `thumbnailUrl`은 render-worker가 FFmpeg 첫 프레임으로 생성한 S3 URL만 사용. upload-worker 완료 후에도 YouTube URL로 대체하지 않아 이미지 변화 없음.
+- CORS 방지를 위해 `toProxyThumbUrl()`로 `/api/thumbnail/{jobId}` 프록시 URL로 변환 후 사용
+- `toProxyThumbUrl(url)`: S3 URL이면 `/api/thumbnail/{jobId}` 반환, 그 외는 원본 반환
 - `/api/thumbnail/[id]` route: `API_INTERNAL_URL/jobs/{id}/thumbnail` 경유로 S3 콘텐츠를 same-origin으로 프록시. `Cache-Control: public, max-age=3600`
 
 ### 폴링
@@ -164,9 +163,10 @@ interface AnalyticsRow {
 - `HomeClient.tsx`: 서버에서 받은 `channels` 목록에 `selectedChannelId`가 없으면 자동 초기화 (`clearSelectedChannelId`)
 - `ChannelClient.tsx`: 마운트 시 `setSelectedChannelId(initial.id)` 호출 — OAuth 후 `/channels/:id`로 직접 랜딩해도 GNB 즉시 표시
 
-### 스크립트 입력 비활성화
-- 홈 화면 토픽 입력 textarea: `disabled={!activeChannelId}` — 채널 미연결 시 입력 불가
+### 토픽 입력 textarea 동작
+- `disabled={!activeChannelId}` — 채널 미연결 시 입력 불가
 - `cursor-not-allowed` 등 커서 스타일 변경 금지 (Tailwind `disabled:cursor-not-allowed` 미적용)
+- **Enter** → form submit (생성하기). **Shift+Enter** → 개행. `onKeyDown`에서 `!e.shiftKey` 조건으로 분기.
 
 ### 홈 갤러리 표시 조건
 - 갤러리는 채널 연결 여부와 무관하게 항상 렌더링 (`activeChannelId` 조건 없음)
@@ -175,8 +175,8 @@ interface AnalyticsRow {
 
 ### 채널 sync
 - 홈·채널 페이지 마운트 시 `POST /channels/:id/sync` 호출 → Jobs 목록/채널 정보 refetch
-- 홈 페이지: 잡이 완료되는 순간(`hasProcessing: true → false` 전환) `POST /channels/:id/sync-videos` 자동 호출 → thumbnailUrl DB 갱신 → 갤러리 썸네일 즉시 표시
-- `/dashboard/[id]` 페이지: `youtubeVideoId` 최초 감지 시 `sync-videos` 즉시 호출 후 10초·40초 뒤 재호출 (YouTube CDN 썸네일 처리 완료 대기, `syncedRef` 패턴으로 중복 실행 방지)
+- 홈 페이지: 잡이 완료되는 순간(`hasProcessing: true → false` 전환) `POST /channels/:id/sync-videos` 자동 호출 → 갤러리 갱신
+- `/dashboard/[id]` 페이지: `youtubeVideoId` 최초 감지 시 `sync-videos` 즉시 호출 후 10초·40초 뒤 재호출 (`syncedRef` 패턴으로 중복 실행 방지)
 
 #### invalidate 범위 (쿼리 누락 방지)
 | sync 호출 위치 | invalidate 대상 |
