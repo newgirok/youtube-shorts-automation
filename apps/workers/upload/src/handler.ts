@@ -83,7 +83,6 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
           privacyStatus: 'public',
           status: 'COMPLETED',
           completedAt: new Date(),
-          thumbnailUrl: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
         },
       });
 
