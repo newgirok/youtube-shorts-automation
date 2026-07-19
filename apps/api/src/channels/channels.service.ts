@@ -176,10 +176,6 @@ export class ChannelsService {
     if (viewCountUpdates.length > 0) {
       await this.repo.updateJobViewCounts(viewCountUpdates);
       log.info({ channelId, updated: viewCountUpdates.length }, '조회수 업데이트 완료');
-
-      // 영상별 조회수 합산을 채널 총 조회수로 반영
-      const totalVideoViews = viewCountUpdates.reduce((sum, v) => sum + v.viewCount, 0);
-      await this.repo.updateTotalViews(channelId, totalVideoViews);
     }
 
     return { synced: jobs.length, deleted: deletedJobs.length };

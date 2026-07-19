@@ -160,14 +160,6 @@ export class ChannelsRepository {
     });
   }
 
-  updateTotalViews(id: string, totalViews: number) {
-    return prisma.channel.update({
-      where: { id },
-      data: { totalViews },
-      select: { id: true, totalViews: true },
-    });
-  }
-
   deactivate(id: string) {
     return prisma.channel.update({
       where: { id },
