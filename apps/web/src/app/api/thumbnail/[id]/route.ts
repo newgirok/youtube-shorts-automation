@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const apiUrl = process.env.API_INTERNAL_URL ?? 'http://localhost:3000';
+  const apiUrl = process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
   try {
     const res = await fetch(`${apiUrl}/jobs/${id}/thumbnail`, { cache: 'no-store' });
     if (!res.ok) return new NextResponse(null, { status: res.status });
