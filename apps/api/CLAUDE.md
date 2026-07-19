@@ -73,7 +73,7 @@ YouTube 채널 CRUD 및 동기화.
 - `POST /channels/:id/sync-videos` — 영상 조회수·privacyStatus 동기화 + 삭제된 영상 FAILED 처리
 
 `sync` 흐름:
-1. `channels.list(part: statistics)` → subscriberCount, totalViews 갱신
+1. `channels.list(part: statistics, snippet)` → subscriberCount, totalViews, **name** 갱신 (채널명 변경 반영)
 2. `youtubeAnalytics.reports.query(metrics: views,subscribersGained,estimatedMinutesWatched, dimensions: day)` → 최근 30일 일별 upsert
 3. `videos.list(part: id,statistics,status)` → viewCount, likeCount, privacyStatus 갱신; YouTube에서 삭제된 영상은 status=FAILED, failReason='유튜브에서 영상이 삭제되었습니다.'
 
@@ -97,13 +97,9 @@ Job 생성 및 상태 조회, 재시도.
 - `POST /jobs` — 채널 + 토픽으로 Job 생성 후 script-queue에 발행. 일일 한도(3회) 초과 시 429
 - `GET /jobs` — Job 목록 (channelId 쿼리로 필터링 가능)
 - `GET /jobs/:id` — Job 상세 조회 (없으면 404)
-- `GET /jobs/:id/thumbnail` — S3에서 썸네일 이미지(image/jpeg) 프록시 서빙 (없으면 404, `@Public()` 인증 제외)
+- `GET /jobs/:id/thumbnail` — S3에서 썸네일 이미지(image/jpeg) 프록시 서빙 (없으면 404, `@Public()` 인증 제외, render-worker가 thumbnailUrl을 저장하지 않으므로 사실상 미사용)
 - `POST /jobs/auto-news` — Google News RSS 수집 후 뉴스 제목으로 Job 순차 생성. 남은 한도만큼만 생성 후 중단 (한도 소진 시 429)
 - `POST /jobs/:id/retry` — FAILED 상태 Job만 PENDING으로 초기화 후 script-queue 재발행 (한도 미소모)
-
-`thumbnailUrl` 반환 형식:
-- render-worker가 `/jobs/{jobId}/thumbnail` 형태로 DB 저장
-- `jobs.repository.ts`의 `resolveThumbUrl()`이 반환 시 `{API_BASE_URL}/jobs/{id}/thumbnail` 절대 URL로 변환
 
 `auto-news` 요청 바디:
 ```json

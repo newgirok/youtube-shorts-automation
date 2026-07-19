@@ -103,8 +103,8 @@ interface Job {
   createdAt: string;
   startedAt: string | null;
   completedAt: string | null;
-  youtubeVideoId: string | null;
-  thumbnailUrl: string | null;  // render-worker 완료 시 S3 URL로 채워짐; 이후 변경 없음 (YouTube URL로 대체하지 않음)
+  youtubeVideoId: string | null;  // upload 완료 후 설정. effectiveThumbUrl()이 이 값 우선 사용
+  thumbnailUrl: string | null;    // render-worker가 저장하지 않으므로 신규 Job은 null. effectiveThumbUrl() fallback 경로
   privacyStatus: string; // 'public' | 'unlisted' | 'private'
 }
 
