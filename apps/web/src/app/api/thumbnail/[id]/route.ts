@@ -8,8 +8,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   try {
     const res = await fetch(`${apiUrl}/jobs/${id}/thumbnail`, { cache: 'no-store' });
     if (!res.ok) return new NextResponse(null, { status: res.status });
-    const buffer = await res.arrayBuffer();
-    return new NextResponse(buffer, {
+    return new NextResponse(res.body, {
       status: 200,
       headers: {
         'Content-Type': res.headers.get('content-type') ?? 'image/jpeg',
