@@ -71,7 +71,7 @@ src/
 │   └── layout.tsx                — 루트 레이아웃
 ├── components/
 │   ├── StatusTimeline.tsx        — Job 처리 단계 타임라인 + 재시도 버튼
-│   ├── VideoCard.tsx             — Job 카드 (썸네일·상태 배지·삭제 오버레이, aspect-[9/16] max-h-36, thumbnailUrl 직접 사용 — 프록시 미경유)
+│   ├── VideoCard.tsx             — Job 카드 (썸네일·상태 배지·삭제 오버레이, aspect-[9/16] max-h-36, toProxyThumbUrl()로 변환 후 프록시 URL 사용)
 │   ├── Sidebar.tsx               — 데스크톱 사이드 내비게이션
 │   ├── BottomNav.tsx             — 모바일 하단 내비게이션
 │   └── ui/                       — shadcn/ui 기본 컴포넌트
@@ -138,7 +138,7 @@ interface AnalyticsRow {
 ### 썸네일 표시 전략
 - `thumbnailUrl`은 render-worker가 FFmpeg 첫 프레임으로 생성한 S3 URL만 사용. upload-worker 완료 후에도 YouTube URL로 대체하지 않아 이미지 변화 없음.
 - CORS 방지를 위해 `toProxyThumbUrl()`로 `/api/thumbnail/{jobId}` 프록시 URL로 변환 후 사용
-- `toProxyThumbUrl(url)`: S3 URL이면 `/api/thumbnail/{jobId}` 반환, 그 외는 원본 반환
+- `toProxyThumbUrl(url)`: `/jobs/{id}/thumbnail` 패턴이면 `/api/thumbnail/{id}` 반환, 그 외는 원본 반환
 - `/api/thumbnail/[id]` route: `API_INTERNAL_URL/jobs/{id}/thumbnail` 경유로 S3 콘텐츠를 same-origin으로 프록시. `Cache-Control: public, max-age=3600`
 
 ### 폴링

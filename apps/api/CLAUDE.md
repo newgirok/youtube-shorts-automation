@@ -104,7 +104,6 @@ Job 생성 및 상태 조회, 재시도.
 `thumbnailUrl` 반환 형식:
 - render-worker가 `/jobs/{jobId}/thumbnail` 형태로 DB 저장
 - `jobs.repository.ts`의 `resolveThumbUrl()`이 반환 시 `{API_BASE_URL}/jobs/{id}/thumbnail` 절대 URL로 변환
-- sync-videos 이후 YouTube URL(`https://i.ytimg.com/vi/{id}/hqdefault.jpg`)로 대체될 수 있음
 
 `auto-news` 요청 바디:
 ```json
