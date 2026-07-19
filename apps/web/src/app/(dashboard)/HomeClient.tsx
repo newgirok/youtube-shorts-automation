@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Video, Eye } from 'lucide-react';
-import { apiGet, apiPost } from '@/lib/api';
+import { apiGet, apiPost, ApiError } from '@/lib/api';
 import { useChannelStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { cn, toProxyThumbUrl } from '@/lib/utils';
@@ -222,6 +222,7 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [autoNewsLoading, setAutoNewsLoading] = useState(false);
+  const [dailyLimitHit, setDailyLimitHit] = useState(false);
 
   useEffect(() => {
     if (channels.length === 0) {
@@ -233,9 +234,11 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
 
   const activeChannelId = selectedChannelId ?? channels[0]?.id ?? '';
 
-  // 채널 변경 시 sync 호출 → 조회수 DB 갱신 후 Jobs 목록 refetch
+  // 채널 변경 시 sync 호출 + 한도 상태 초기화
   useEffect(() => {
     if (!activeChannelId) return;
+    setDailyLimitHit(false);
+    setSubmitError(null);
     apiPost(`/channels/${activeChannelId}/sync`, {}, userHeaders)
       .then(() => queryClient.invalidateQueries({ queryKey: ['jobs', activeChannelId] }))
       .catch(() => {});
@@ -314,7 +317,11 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
       await apiPost('/jobs/auto-news', { channelId: activeChannelId, category, count: 1 }, userHeaders);
       queryClient.invalidateQueries({ queryKey: ['jobs', activeChannelId] });
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : '자동 수집 오류');
+      if (err instanceof ApiError && err.status === 429) {
+        setDailyLimitHit(true);
+      } else {
+        setSubmitError(err instanceof Error ? err.message : '자동 수집 오류');
+      }
     } finally {
       setAutoNewsLoading(false);
     }
@@ -329,7 +336,11 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
       const data = await apiPost<JobType>('/jobs', { channelId: activeChannelId, topic: topic.trim() }, userHeaders);
       router.push(`/dashboard/${data.id}`);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : '오류가 발생했습니다.');
+      if (err instanceof ApiError && err.status === 429) {
+        setDailyLimitHit(true);
+      } else {
+        setSubmitError(err instanceof Error ? err.message : '오류가 발생했습니다.');
+      }
       setSubmitting(false);
     }
   }
@@ -354,7 +365,7 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
               }}
               rows={3}
               required
-              disabled={!activeChannelId}
+              disabled={!activeChannelId || dailyLimitHit}
               placeholder={`Shorts 주제를 입력하세요\n스크립트 · TTS · 자막 · 렌더링 · YouTube 업로드까지 자동으로 처리됩니다`}
               className="flex w-full bg-transparent px-5 pt-4 pb-2 text-sm md:text-base text-white placeholder:text-white/40 placeholder:text-xs md:placeholder:text-sm focus:outline-none resize-none [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-[3px] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/40"
             />
@@ -362,7 +373,7 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
               {submitError && <p className="text-sm text-red-400 mr-auto">{submitError}</p>}
               <Button
                 type="submit"
-                disabled={submitting || !activeChannelId || !topic.trim()}
+                disabled={submitting || !activeChannelId || !topic.trim() || dailyLimitHit}
                 className="bg-white hover:bg-white/90 text-gray-900 font-bold rounded-full px-5 h-8 text-sm"
               >
                 {submitting ? '생성 중...' : '생성하기'}
@@ -372,13 +383,28 @@ export function HomeClient({ channels, userId = '' }: { channels: Channel[]; use
         </form>
       </div>
 
+      {/* 일일 한도 안내 */}
+      {dailyLimitHit && (
+        <div className="w-full max-w-2xl px-4 mt-2">
+          <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 flex items-start gap-3">
+            <svg className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <p className="text-sm font-medium text-amber-300">오늘 생성 한도(3회)에 도달했습니다</p>
+              <p className="text-xs text-amber-300/60 mt-0.5">자정(00:00 KST)이 지나면 다시 생성할 수 있습니다</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 뉴스 자동 수집 */}
       <div className="w-full max-w-2xl px-4 mt-2 flex items-center gap-2 flex-wrap">
         {NEWS_CATEGORIES.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => handleAutoNews(key)}
-            disabled={autoNewsLoading || !activeChannelId}
+            disabled={autoNewsLoading || !activeChannelId || dailyLimitHit}
             className="text-xs px-3 py-1 rounded-full border border-white/20 text-white/50 hover:text-white hover:border-white/50 transition-colors disabled:opacity-30"
           >
             {label}
