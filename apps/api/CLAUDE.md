@@ -94,12 +94,12 @@ YouTube 채널 CRUD 및 동기화.
 ### `jobs/`
 Job 생성 및 상태 조회, 재시도.
 
-- `POST /jobs` — 채널 + 토픽으로 Job 생성 후 script-queue에 발행
+- `POST /jobs` — 채널 + 토픽으로 Job 생성 후 script-queue에 발행. 일일 한도(3회) 초과 시 429
 - `GET /jobs` — Job 목록 (channelId 쿼리로 필터링 가능)
 - `GET /jobs/:id` — Job 상세 조회 (없으면 404)
 - `GET /jobs/:id/thumbnail` — S3에서 썸네일 이미지(image/jpeg) 프록시 서빙 (없으면 404, `@Public()` 인증 제외)
-- `POST /jobs/auto-news` — Google News RSS 수집 후 뉴스 제목으로 Job 일괄 생성
-- `POST /jobs/:id/retry` — FAILED 상태 Job만 PENDING으로 초기화 후 script-queue 재발행
+- `POST /jobs/auto-news` — Google News RSS 수집 후 뉴스 제목으로 Job 순차 생성. 남은 한도만큼만 생성 후 중단 (한도 소진 시 429)
+- `POST /jobs/:id/retry` — FAILED 상태 Job만 PENDING으로 초기화 후 script-queue 재발행 (한도 미소모)
 
 `thumbnailUrl` 반환 형식:
 - render-worker가 `/jobs/{jobId}/thumbnail` 형태로 DB 저장
@@ -117,6 +117,13 @@ Job 생성 및 상태 조회, 재시도.
 뉴스 출처: Google News RSS (`news.google.com/rss`, 한국어/KR 로케일)
 
 `retry` 조건: `Job.status === 'FAILED'`만 허용. Job이 없으면 404 NotFound, 다른 상태에서 호출 시 400 BadRequest.
+
+**일일 한도 (`jobs.service.ts`)**
+- `DAILY_LIMIT = 3` (상수, 파일 상단)
+- `getTodayStartSeoul()`: `Intl.DateTimeFormat`으로 Asia/Seoul 기준 오늘 자정 UTC 반환
+- `jobs.repository.ts`의 `countCreatedToday(channelId, since)`: `createdAt >= since`인 Job 수 조회
+- 한도 초과 시 `DailyQuotaExceededError` → 컨트롤러에서 429 변환
+- `auto-news`는 `Promise.all` 대신 순차 생성(for…of), 한도 소진 시 `break`로 중단
 
 ### 인증 방식
 전역 `InternalKeyGuard` 적용 — 모든 요청에 `Authorization: Bearer {API_INTERNAL_SECRET}` 헤더 필요.

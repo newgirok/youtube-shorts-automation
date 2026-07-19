@@ -77,7 +77,7 @@ src/
 │   └── ui/                       — shadcn/ui 기본 컴포넌트
 ├── lib/
 │   ├── types.ts                  — Job, Channel, AnalyticsRow, JobStatus 타입
-│   ├── api.ts                    — apiGet / apiPost / apiPatch / apiDelete 헬퍼. 두 번째 인자로 extraHeaders?: Record<string, string> 수용 (x-user-id 전달용). API_INTERNAL_URL → NEXT_PUBLIC_API_URL 폴백, NEXT_PUBLIC_API_SECRET Bearer 헤더 자동 첨부
+│   ├── api.ts                    — apiGet / apiPost / apiPatch / apiDelete 헬퍼 + ApiError 클래스. 응답 실패 시 body.message 추출해 ApiError(status, message) throw. API_INTERNAL_URL → NEXT_PUBLIC_API_URL 폴백, NEXT_PUBLIC_API_SECRET Bearer 헤더 자동 첨부
 │   ├── store.ts                  — Zustand: selectedChannelId, setSelectedChannelId, clearSelectedChannelId
 │   └── utils.ts                  — cn() 유틸 + toProxyThumbUrl() S3 썸네일 → 프록시 URL 변환
 ├── auth.ts                       — NextAuth v5 (GoogleProvider + JWT + Prisma). signIn·jwt·session 콜백 포함
@@ -164,9 +164,16 @@ interface AnalyticsRow {
 - `ChannelClient.tsx`: 마운트 시 `setSelectedChannelId(initial.id)` 호출 — OAuth 후 `/channels/:id`로 직접 랜딩해도 GNB 즉시 표시
 
 ### 토픽 입력 textarea 동작
-- `disabled={!activeChannelId}` — 채널 미연결 시 입력 불가
+- `disabled={!activeChannelId || dailyLimitHit}` — 채널 미연결 또는 일일 한도 소진 시 입력 불가
 - `cursor-not-allowed` 등 커서 스타일 변경 금지 (Tailwind `disabled:cursor-not-allowed` 미적용)
 - **Enter** → form submit (생성하기). **Shift+Enter** → 개행. `onKeyDown`에서 `!e.shiftKey` 조건으로 분기.
+
+### 일일 한도 UI (`HomeClient.tsx`)
+- `dailyLimitHit: boolean` 상태로 관리. POST /jobs 또는 auto-news에서 `ApiError.status === 429` 감지 시 `true`로 설정
+- 채널 전환(`activeChannelId` 변경) 시 `false`로 초기화
+- `dailyLimitHit === true`이면: textarea·제출 버튼·뉴스 자동 수집 버튼 모두 disabled
+- 폼과 뉴스 버튼 사이에 앰버 톤 안내 블록 렌더링: "오늘 생성 한도(3회)에 도달했습니다 / 자정(00:00 KST)이 지나면 다시 생성할 수 있습니다"
+- 에러(빨강)가 아닌 안내(앰버) 톤 — `border-amber-500/30 bg-amber-500/10 text-amber-300`
 
 ### 홈 갤러리 표시 조건
 - 갤러리는 채널 연결 여부와 무관하게 항상 렌더링 (`activeChannelId` 조건 없음)
