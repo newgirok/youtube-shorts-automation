@@ -8,7 +8,7 @@ import { ChevronLeft, ChevronRight, Video, Eye } from 'lucide-react';
 import { apiGet, apiPost, ApiError } from '@/lib/api';
 import { useChannelStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
-import { cn, toProxyThumbUrl } from '@/lib/utils';
+import { cn, effectiveThumbUrl } from '@/lib/utils';
 import type { Channel, Job as JobType } from '@/lib/types';
 
 function useCarouselSize() {
@@ -30,7 +30,7 @@ function useCarouselSize() {
 function GalleryCard({ job }: { job: JobType }) {
   const [hovered, setHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const rawThumb = job.status !== 'FAILED' ? toProxyThumbUrl(job.thumbnailUrl) : null;
+  const rawThumb = job.status !== 'FAILED' ? effectiveThumbUrl(job.youtubeVideoId, job.thumbnailUrl) : null;
   const thumb = rawThumb && !imgError ? rawThumb : null;
 
   useEffect(() => {
