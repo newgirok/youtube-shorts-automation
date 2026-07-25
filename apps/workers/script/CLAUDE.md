@@ -25,9 +25,10 @@ const toSafeMsg = (err: unknown) =>
 ## 모델 및 SDK
 
 - 모델: `gemini-2.5-flash` (`@google/generative-ai` SDK)
-- 503 응답, `SCRIPT_TOO_LONG`, `SCRIPT_FORMAL_ENDING`, `SCRIPT_QUESTION_OPENING` 오류 시 최대 3회 재시도, 재시도 간 지연 5초 × (시도 횟수)
+- 503 응답, `SCRIPT_TOO_LONG`, `SCRIPT_FORMAL_ENDING`, `SCRIPT_QUESTION_OPENING`, `SCRIPT_CONSECUTIVE_ENDING` 오류 시 최대 3회 재시도, 재시도 간 지연 5초 × (시도 횟수)
 - `SCRIPT_FORMAL_ENDING`: script 필드에 `~습니다|~입니다` 패턴이 포함된 경우 (`parseOutput` 내 코드 검증)
 - `SCRIPT_QUESTION_OPENING`: script의 마지막 문장(comment_bait) 제외 나머지 문장 중 `~니까|~십니까` 의문형이 있는 경우 — hook 의문형이 script 본문에 혼입되는 패턴 차단
+- `SCRIPT_CONSECUTIVE_ENDING`: A 계열(`~[다라]고 함`) 또는 B 계열(`~라고`) 종결어가 인접한 두 문장에 연속으로 등장한 경우 — `parseOutput`이 문장 분리 후 계열 분류로 감지
 
 ## 출력 JSON 구조 (ScriptOutput)
 
@@ -67,7 +68,7 @@ interface Scene {
 
 | 단계 | 역할 | 종결어 |
 |---|---|---|
-| [기] | 인물명·기관명·수치 2~3개를 한 호흡으로 연결 | 반드시 `~다고 함.` 또는 `~됐다고 함.`으로 끊을 것 (선택 아님) |
+| [기] | 인물명·기관명·수치 2~3개를 한 호흡으로 연결, **반드시 1개 문장으로만 작성** | 반드시 `~다고 함.` 또는 `~됐다고 함.`으로 끊을 것 (선택 아님) |
 | [승] | 감정 최고조 문장 1개 | 6개 표현 중 하나: `진짜 어이가 없는 상황이라고` / `기가 막힌 상황이라고` / `분통이 터지는 상황이라고` / `경악스러운 상황이라고` / `말도 안 되는 상황이라고` / `진짜 개빡친 상황이라고` |
 | [전] | `하지만`으로 시작, 반전 팩트 1문장 | `~상황이라고 하는데.` 마침표로 끊어 [결]과 분리된 독립 문장 |
 | [결] | `여러분은 ...`으로 시작 | `~십니까?` 격식체 의문문. [전] 다음 독립 문장. 구체적 이슈·주체 언급 필수 |

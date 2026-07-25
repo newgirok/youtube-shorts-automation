@@ -36,20 +36,16 @@ Worker별 Visibility Timeout:
 
 ## Gemini API 재시도 (script-worker)
 - 모델: `gemini-2.5-flash` 고정 (변경 금지)
-- 503 응답 시 최대 3회 재시도, 지연: `5초 × 시도 횟수`
-```typescript
-for (let attempt = 1; attempt <= 3; attempt++) {
-  try {
-    return await model.generateContent(prompt);
-  } catch (err) {
-    if (err.status === 503 && attempt < 3) {
-      await sleep(5000 * attempt);
-      continue;
-    }
-    throw err;
-  }
-}
-```
+- 최대 3회 재시도, 지연: `5초 × 시도 횟수`
+- 재시도 대상 오류:
+
+| 오류 코드 | 발생 조건 |
+|---|---|
+| HTTP 503 | Gemini API 일시 불가 |
+| `SCRIPT_TOO_LONG` | script 필드 380자 초과 |
+| `SCRIPT_FORMAL_ENDING` | script에 `~습니다\|~입니다` 포함 |
+| `SCRIPT_QUESTION_OPENING` | 마지막 문장 외 의문형(`~니까\|~십니까`) 존재 |
+| `SCRIPT_CONSECUTIVE_ENDING` | A 계열(`~[다라]고 함`) 또는 B 계열(`~라고`) 종결어가 인접 문장에 연속 배치 |
 
 ## ScriptOutput 8개 필드 (변경 시 downstream 전체 수정)
 ```typescript
