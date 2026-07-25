@@ -52,13 +52,12 @@ const SYSTEM_PROMPT = `당신은 한국 시사/사회 이슈 YouTube Shorts 전�
 - 핵심 팩트 3~4개 반드시 포함: 구체적 금액(하루 1억 원 등), 날짜, 인물명, 법적 조치명 등 실제 정보 기반 (막연한 감성 표현만 있는 스크립트 금지)
 - 짧은 문장으로 뚝뚝 끊지 말 것 — 레퍼런스처럼 콤마·접속사로 한 호흡이 길게 이어지는 구조
 - 감정 피크 문장: '~상황이라고' 로 끝나는 폭발적 표현 필수. 아래 6개 중 주제에 맞는 것 하나를 선택하되 같은 표현 반복 금지: '진짜 어이가 없는 상황이라고' / '기가 막힌 상황이라고' / '분통이 터지는 상황이라고' / '경악스러운 상황이라고' / '말도 안 되는 상황이라고' / '진짜 개빡친 상황이라고'
-- 반전 직후 '~상황이라고 함.' 처럼 간결하게 끊는 표현 1회 사용
 - comment_bait 질문으로 반드시 마무리
 - 말투: 강한 구어체 ("이게 말이 됩니까", "진짜 어이없는", "결국", "드디어", "개빡쳤다", "꼬여버렸다", "맞짱 뜨고", "인질삼아", "보다못한", "슬슬 꺾이기 시작한", "~해 버린", "~버리겠다면서")
 - 기관명·단체명 뒤 영문 약자 괄호 표기 금지 — TTS가 괄호와 영문을 그대로 읽어 어색해짐. 한국어 명칭만 사용할 것. (예: '주택도시보증공사(HUG)' → '주택도시보증공사')
 - 간접 인용 종결어 규칙 ('~합니다'·'~습니다'·'~었습니다'·'~했습니다'·'~해요'·'~하죠'·'~이죠'·'~입니다' 종결 절대 금지. 첫 문장 포함 스크립트 전체에 해당):
   기승전결 4박자 종결어 — 이 할당을 반드시 지킬 것:
-  [기]: 인물명·기관명·수치를 2~3개 한 호흡으로 연결한 뒤 반드시 '~다고 함.' 또는 '~됐다고 함.'으로 끊을 것. 종결어 없이 절이 끝나는 것 금지. '~이라고/~상황이라고/~거라고' 계열 사용 금지.
+  [기]: 인물명·기관명·수치를 2~3개 한 호흡으로 연결한 뒤 반드시 '~다고 함.' 또는 '~됐다고 함.'으로 끊을 것. 반드시 1개 문장으로만 작성할 것 — 2개 문장으로 나누지 말 것. 종결어 없이 절이 끝나는 것 금지. '~이라고/~상황이라고/~거라고' 계열 사용 금지.
   [승]: 아래 6개 중 하나로 끝나는 감정 최고조 문장 정확히 1개. 반복 금지. 설명 추가 없이 짧게 끊을 것.
         '진짜 어이가 없는 상황이라고' / '기가 막힌 상황이라고' / '분통이 터지는 상황이라고' / '경악스러운 상황이라고' / '말도 안 되는 상황이라고' / '진짜 개빡친 상황이라고'
   [전]: '하지만'으로 시작해 반전 팩트 1문장 후 반드시 '~상황이라고 하는데.'로 마침표를 찍어 끊을 것. [결]과 분리된 독립 문장.
@@ -141,6 +140,30 @@ function parseOutput(text: string): ScriptOutput {
     }
   }
 
+  // 같은 계열 종결어 연속 배치 금지
+  // A 계열: ~[다라]고 함  (있다고 함 / 했다고 함 / 이라고 함 등)
+  // B 계열: ~라고          (상황이라고 / 이라고 — 단 '하는데'·'함'이 뒤에 없는 직접 종결)
+  if (parsed.script) {
+    const sentences = parsed.script
+      .split(/(?<=[.!?])\s+/)
+      .map(s => s.replace(/[.!?]+$/, '').trim())
+      .filter(Boolean);
+
+    const classify = (s: string): 'A' | 'B' | 'other' => {
+      if (/[다라]고 함$/.test(s)) return 'A';
+      if (/라고$/.test(s)) return 'B';
+      return 'other';
+    };
+
+    for (let i = 0; i < sentences.length - 1; i++) {
+      const curr = classify(sentences[i]);
+      const next = classify(sentences[i + 1]);
+      if (curr !== 'other' && curr === next) {
+        throw new Error('SCRIPT_CONSECUTIVE_ENDING');
+      }
+    }
+  }
+
   if (parsed.title) {
     parsed.title = stripTitleSpecialChars(parsed.title);
   }
@@ -168,7 +191,7 @@ export async function generateScript(topic: string, channelId: string): Promise<
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       const status = typeof err === 'object' && err !== null ? (err as { status?: number }).status : undefined;
-      const isRetryable = status === 503 || msg.startsWith('SCRIPT_TOO_LONG') || msg === 'SCRIPT_FORMAL_ENDING' || msg === 'SCRIPT_QUESTION_OPENING';
+      const isRetryable = status === 503 || msg.startsWith('SCRIPT_TOO_LONG') || msg === 'SCRIPT_FORMAL_ENDING' || msg === 'SCRIPT_QUESTION_OPENING' || msg === 'SCRIPT_CONSECUTIVE_ENDING';
       if (isRetryable && attempt < MAX_RETRIES - 1) {
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1)));
         continue;
