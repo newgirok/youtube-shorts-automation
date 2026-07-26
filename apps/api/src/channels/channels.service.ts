@@ -107,7 +107,7 @@ export class ChannelsService {
     const startDate = start.toISOString().split('T')[0];
 
     const res = await ytAnalytics.reports.query({
-      ids: 'channel==MINE',
+      ids: `channel==${youtubeId}`,
       startDate,
       endDate,
       metrics: 'views,subscribersGained,estimatedMinutesWatched',
