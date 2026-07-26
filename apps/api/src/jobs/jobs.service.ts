@@ -6,7 +6,7 @@ import { JobNotFoundError, JobNotRetryableError, DailyQuotaExceededError } from 
 import { fetchNewsTopics } from './news-fetcher.js';
 import type { AutoNewsJobDto } from './dto/auto-news.dto.js';
 
-const DAILY_LIMIT = 3;
+const DAILY_LIMIT = 6;
 
 const sqs = new SQSClient({ region: process.env.AWS_REGION ?? 'ap-northeast-2' });
 const log = createLogger({});

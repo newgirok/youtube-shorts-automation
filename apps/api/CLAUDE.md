@@ -115,7 +115,7 @@ Job 생성 및 상태 조회, 재시도.
 `retry` 조건: `Job.status === 'FAILED'`만 허용. Job이 없으면 404 NotFound, 다른 상태에서 호출 시 400 BadRequest.
 
 **일일 한도 (`jobs.service.ts`)**
-- `DAILY_LIMIT = 3` (상수, 파일 상단)
+- `DAILY_LIMIT = 6` (상수, 파일 상단)
 - `getTodayStartSeoul()`: `Intl.DateTimeFormat`으로 Asia/Seoul 기준 오늘 자정 UTC 반환
 - `jobs.repository.ts`의 `countCreatedToday(channelId, since)`: `createdAt >= since`인 Job 수 조회
 - 한도 초과 시 `DailyQuotaExceededError` → 컨트롤러에서 429 변환
