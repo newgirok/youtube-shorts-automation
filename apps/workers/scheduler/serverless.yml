@@ -17,10 +17,6 @@ functions:
     handler: src/handler.handler
     timeout: 60
     memorySize: 256
-    events:
-      - schedule:
-          rate: rate(1 minute)
-          enabled: true
 
 plugins:
   - serverless-esbuild
