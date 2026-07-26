@@ -60,6 +60,7 @@ const SYSTEM_PROMPT = `당신은 한국 시사/사회 이슈 YouTube Shorts 전�
   [기]: 인물명·기관명·수치를 2~3개 한 호흡으로 연결한 뒤 반드시 '~다고 함.' 또는 '~됐다고 함.'으로 끊을 것. 반드시 1개 문장으로만 작성할 것 — 2개 문장으로 나누지 말 것. 종결어 없이 절이 끝나는 것 금지. '~이라고/~상황이라고/~거라고' 계열 사용 금지.
   [승]: 아래 6개 중 하나로 끝나는 감정 최고조 문장 정확히 1개. 반복 금지. 설명 추가 없이 짧게 끊을 것.
         '진짜 어이가 없는 상황이라고' / '기가 막힌 상황이라고' / '분통이 터지는 상황이라고' / '경악스러운 상황이라고' / '말도 안 되는 상황이라고' / '진짜 개빡친 상황이라고'
+        ※ 관형절 어미(~는/~다는/~이라는/~있다는/~없다는) 직후 쉼표 절대 금지 — '~다는, 상황이라고' / '~이라는, 상황이라고' 형태 불가. 반드시 쉼표 없이 '~다는 [감정어] 상황이라고'로 작성.
   [전]: '하지만'으로 시작해 반전 팩트 1문장 후 반드시 '~상황이라고 하는데.'로 마침표를 찍어 끊을 것. [결]과 분리된 독립 문장.
   [결]: '여러분은 ...'으로 시작하는 의문형 질문 1개. [전] 다음 독립 문장으로 배치. 영상의 구체적 이슈·주체·사건 언급 필수. 25자 이내.
 
@@ -140,6 +141,11 @@ function parseOutput(text: string): ScriptOutput {
     }
   }
 
+  // 관형절 어미 직후 쉼표 금지 — '~다는, 상황이라고' 류의 문법 오류 패턴 차단
+  if (parsed.script && /(다는|이라는|있다는|없다는|한다는|됐다는),/.test(parsed.script)) {
+    throw new Error('SCRIPT_AWKWARD_COMMA');
+  }
+
   // 같은 계열 종결어 연속 배치 금지
   // A 계열: ~[다라]고 함  (있다고 함 / 했다고 함 / 이라고 함 등)
   // B 계열: ~라고          (상황이라고 / 이라고 — 단 '하는데'·'함'이 뒤에 없는 직접 종결)
@@ -191,7 +197,7 @@ export async function generateScript(topic: string, channelId: string): Promise<
     } catch (err) {
       const msg = err instanceof Error ? err.message : '';
       const status = typeof err === 'object' && err !== null ? (err as { status?: number }).status : undefined;
-      const isRetryable = status === 503 || msg.startsWith('SCRIPT_TOO_LONG') || msg === 'SCRIPT_FORMAL_ENDING' || msg === 'SCRIPT_QUESTION_OPENING' || msg === 'SCRIPT_CONSECUTIVE_ENDING';
+      const isRetryable = status === 503 || msg.startsWith('SCRIPT_TOO_LONG') || msg === 'SCRIPT_FORMAL_ENDING' || msg === 'SCRIPT_QUESTION_OPENING' || msg === 'SCRIPT_CONSECUTIVE_ENDING' || msg === 'SCRIPT_AWKWARD_COMMA';
       if (isRetryable && attempt < MAX_RETRIES - 1) {
         await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS * (attempt + 1)));
         continue;
