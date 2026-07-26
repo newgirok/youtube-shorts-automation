@@ -26,7 +26,7 @@ const toSafeMsg = (err: unknown) =>
 ## TTS 설정
 
 - 엔진: `msedge-tts` npm 패키지 (Azure Edge TTS WebSocket API 직접 호출)
-- 음성: `ko-KR-SunHiNeural`
+- 음성: `ko-KR-InJoonNeural`
 - 재생속도: `+20%` (YouTube Shorts 60초 제한 대응)
 - 입력: `title` + `script` 필드 (ScriptOutput)
 - 출력: `/tmp/{jobId}-audio.mp3` → S3 `jobs/{jobId}/audio.mp3`
