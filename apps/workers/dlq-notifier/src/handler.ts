@@ -52,7 +52,8 @@ export const handler: SQSHandler = async (event) => {
       channelId = String(parsed['channelId'] ?? '알 수 없음');
       rawBody = JSON.stringify(parsed, null, 2);
     } catch {
-      // 파싱 실패 시 원본 body 유지
+      jobId = record.body.match(/jobId[:"' ]*([^,}\s'"]+)/)?.[1] ?? '알 수 없음';
+      channelId = record.body.match(/channelId[:"' ]*([^,}\s'"]+)/)?.[1] ?? '알 수 없음';
     }
 
     const text = [
