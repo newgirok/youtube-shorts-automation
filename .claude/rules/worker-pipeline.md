@@ -46,6 +46,7 @@ Worker별 Visibility Timeout:
 | `SCRIPT_FORMAL_ENDING` | script에 `~습니다\|~입니다` 포함 |
 | `SCRIPT_QUESTION_OPENING` | 마지막 문장 외 의문형(`~니까\|~십니까`) 존재 |
 | `SCRIPT_CONSECUTIVE_ENDING` | A 계열(`~[다라]고 함`) 또는 B 계열(`~라고`) 종결어가 인접 문장에 연속 배치 |
+| `SCRIPT_AWKWARD_COMMA` | 관형절 어미(`다는\|이라는\|있다는` 등) 직후 쉼표 — `~다는, 상황이라고` 류 문법 오류 |
 
 ## ScriptOutput 8개 필드 (변경 시 downstream 전체 수정)
 ```typescript

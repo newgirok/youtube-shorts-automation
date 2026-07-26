@@ -29,6 +29,7 @@ const toSafeMsg = (err: unknown) =>
 - `SCRIPT_FORMAL_ENDING`: script 필드에 `~습니다|~입니다` 패턴이 포함된 경우 (`parseOutput` 내 코드 검증)
 - `SCRIPT_QUESTION_OPENING`: script의 마지막 문장(comment_bait) 제외 나머지 문장 중 `~니까|~십니까` 의문형이 있는 경우 — hook 의문형이 script 본문에 혼입되는 패턴 차단
 - `SCRIPT_CONSECUTIVE_ENDING`: A 계열(`~[다라]고 함`) 또는 B 계열(`~라고`) 종결어가 인접한 두 문장에 연속으로 등장한 경우 — `parseOutput`이 문장 분리 후 계열 분류로 감지
+- `SCRIPT_AWKWARD_COMMA`: 관형절 어미(`다는|이라는|있다는|없다는|한다는|됐다는`) 직후 쉼표가 존재하는 경우 — `"~다는, 상황이라고"` 류의 문법 오류 패턴 차단
 
 ## 출력 JSON 구조 (ScriptOutput)
 
