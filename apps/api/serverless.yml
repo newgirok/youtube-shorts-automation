@@ -18,6 +18,7 @@ provider:
     API_INTERNAL_SECRET: ${ssm:shorts.prod.API_INTERNAL_SECRET}
     WEB_ORIGIN: ${ssm:shorts.prod.WEB_ORIGIN}
     API_BASE_URL: ${ssm:shorts.prod.API_BASE_URL}
+    SCHEDULER_LAMBDA_ARN: arn:aws:lambda:ap-northeast-2:682251233572:function:shorts-scheduler-worker-prod-handler
     PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
 
 functions:
