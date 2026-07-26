@@ -48,3 +48,15 @@ jobs:
         run: |
           cd apps/api
           npx serverless@3 deploy --stage prod
+
+      - name: Slack 배포 결과 알림
+        if: always()
+        env:
+          STATUS: ${{ job.status }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref_name }}
+        run: |
+          if [ "$STATUS" = "success" ]; then ICON="✅"; else ICON="❌"; fi
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\":\"$ICON *Deploy API* \`$STATUS\`\n• Ref: \`$REF\` @ \`${SHA::7}\`\"}"

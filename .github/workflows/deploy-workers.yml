@@ -102,3 +102,25 @@ jobs:
         run: |
           cd apps/workers/render
           npx serverless@3 deploy --stage prod
+
+  # ── Slack 배포 결과 알림 ──────────────────────────────────────────────────
+  notify:
+    runs-on: ubuntu-latest
+    needs: [deploy-lambda, deploy-render]
+    if: always()
+    steps:
+      - name: Slack 배포 결과 알림
+        env:
+          LAMBDA_STATUS: ${{ needs.deploy-lambda.result }}
+          RENDER_STATUS: ${{ needs.deploy-render.result }}
+          SHA: ${{ github.sha }}
+          REF: ${{ github.ref_name }}
+        run: |
+          if [ "$LAMBDA_STATUS" = "success" ] && [ "$RENDER_STATUS" = "success" ]; then
+            ICON="✅"; STATUS="success"
+          else
+            ICON="❌"; STATUS="failure (lambda=$LAMBDA_STATUS, render=$RENDER_STATUS)"
+          fi
+          curl -s -X POST "${{ secrets.SLACK_WEBHOOK_URL }}" \
+            -H "Content-Type: application/json" \
+            -d "{\"text\":\"$ICON *Deploy Workers* \`$STATUS\`\n• Ref: \`$REF\` @ \`${SHA::7}\`\"}"
