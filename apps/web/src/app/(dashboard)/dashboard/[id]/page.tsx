@@ -355,71 +355,66 @@ export default function JobDetailPage() {
         {/* 우: 스크립트 — 모바일 3순위 */}
         <div className="lg:col-span-5 rounded-2xl border border-white/10 bg-white/10 backdrop-blur-sm p-5 overflow-y-auto min-h-[200px] lg:min-h-0">
           <p className="text-sm font-semibold text-white mb-4">스크립트 내용</p>
-          {sc ? (
-            <div className="space-y-4">
-              {sc.hook && (
-                <div>
-                  <p className="text-xs text-white/40 mb-1.5">후크 문구</p>
-                  <p className="text-sm font-medium text-white italic">&ldquo;{sc.hook}&rdquo;</p>
-                </div>
-              )}
-              {sc.thumbnail_text && (
-                <div>
-                  <p className="text-xs text-white/40 mb-1.5">썸네일 텍스트</p>
-                  <span className="inline-block rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80">
-                    {sc.thumbnail_text}
-                  </span>
-                </div>
-              )}
-              {sc.hashtags && sc.hashtags.length > 0 && (
-                <div>
-                  <p className="text-xs text-white/40 mb-1.5">해시태그</p>
-                  <div className="flex flex-wrap gap-1.5">
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-white/40 mb-1.5">후크 문구</p>
+              {sc?.hook
+                ? <p className="text-sm font-medium text-white italic">&ldquo;{sc.hook}&rdquo;</p>
+                : <div className="h-4 rounded bg-white/5 w-4/5" />
+              }
+            </div>
+            <div>
+              <p className="text-xs text-white/40 mb-1.5">썸네일 텍스트</p>
+              {sc?.thumbnail_text
+                ? <span className="inline-block rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs text-white/80">{sc.thumbnail_text}</span>
+                : <span className="inline-block rounded-full border border-white/10 bg-white/5 w-20 h-6" />
+              }
+            </div>
+            <div>
+              <p className="text-xs text-white/40 mb-1.5">해시태그</p>
+              {sc?.hashtags && sc.hashtags.length > 0
+                ? <div className="flex flex-wrap gap-1.5">
                     {sc.hashtags.map((tag) => (
                       <span key={tag} className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-white/70">
                         {tag.startsWith('#') ? tag : `#${tag}`}
                       </span>
                     ))}
                   </div>
-                </div>
-              )}
-              {sc.script && (
-                <div>
-                  <p className="text-xs text-white/40 mb-1.5">스크립트</p>
-                  <div className="rounded-xl bg-white/5 p-3">
+                : <div className="flex flex-wrap gap-1.5">
+                    {['w-14', 'w-10', 'w-16', 'w-12', 'w-14'].map((w, i) => (
+                      <span key={i} className={`${w} h-5 rounded-full bg-white/5`} />
+                    ))}
+                  </div>
+              }
+            </div>
+            <div>
+              <p className="text-xs text-white/40 mb-1.5">스크립트</p>
+              {sc?.script
+                ? <div className="rounded-xl bg-white/5 p-3">
                     <p className="text-xs text-white/60 leading-relaxed whitespace-pre-wrap">{sc.script}</p>
                   </div>
-                </div>
-              )}
-              {sc.comment_bait && (
-                <div>
-                  <p className="text-xs text-white/40 mb-1.5">댓글 유도</p>
-                  <p className="text-xs text-white/60">{sc.comment_bait}</p>
-                </div>
-              )}
+                : <div className="rounded-xl bg-white/5 p-3 space-y-1.5">
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <div key={i} className={`h-2.5 rounded bg-white/5 ${i === 4 ? 'w-3/5' : 'w-full'}`} />
+                    ))}
+                  </div>
+              }
             </div>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <div className="rounded-xl bg-white/5 p-4">
-                <p className="text-xs text-white/40 mb-1.5">주제</p>
-                <p className="text-sm text-white/80 leading-relaxed">{job.topic}</p>
+            <div>
+              <p className="text-xs text-white/40 mb-1.5">댓글 유도</p>
+              {sc?.comment_bait
+                ? <p className="text-xs text-white/60">{sc.comment_bait}</p>
+                : <div className="h-3 rounded bg-white/5 w-3/4" />
+              }
+            </div>
+            {!sc && job.status !== 'FAILED' && (
+              <div className="flex gap-1 pt-1">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/30 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
+                ))}
               </div>
-              {job.status !== 'FAILED' && (
-                <div className="rounded-xl bg-white/5 p-4 flex flex-col gap-2">
-                  <p className="text-xs text-white/30">
-                    {job.status === 'PENDING' ? '처리 대기 중입니다.' : '스크립트를 생성하고 있습니다...'}
-                  </p>
-                  {job.status !== 'PENDING' && (
-                    <div className="flex gap-1">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="w-1.5 h-1.5 rounded-full bg-white/30 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
