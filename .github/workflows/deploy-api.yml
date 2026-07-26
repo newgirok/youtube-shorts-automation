@@ -87,9 +87,9 @@ jobs:
               {type:"section",fields:[
                 {type:"mrkdwn",text:("*브랜치*\n`"+$branch+"`")},
                 {type:"mrkdwn",text:("*커밋*\n`"+$sha+"`")},
-                {type:"mrkdwn",text:("*작성자*\n"+$actor)},
-                {type:"mrkdwn",text:("*변경사항*\n"+$msg)}
+                {type:"mrkdwn",text:("*작성자*\n"+$actor)}
               ]},
+              {type:"section",text:{type:"mrkdwn",text:("*변경사항* "+$msg)}},
               {type:"actions",elements:[
                 {type:"button",text:{type:"plain_text",text:"Actions 보기 →"},url:$run},
                 {type:"button",text:{type:"plain_text",text:"커밋 보기 →"},url:$commit}
