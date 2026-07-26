@@ -49,6 +49,51 @@ aws lambda update-function-configuration \
 - LocalStack init: `infra/localstack/init/init-aws.sh`
 - 로컬 SQS URL 형식: `http://localhost:4566/000000000000/{queue-name}`
 
+## GitHub Actions CI/CD
+
+### 워크플로우 파일
+
+| 파일 | 트리거 대상 | 배포 방식 |
+|---|---|---|
+| `.github/workflows/deploy-api.yml` | `apps/api/src/**`, `apps/api/serverless.yml`, `apps/api/package.json`, `packages/shared/src/**`, `packages/shared/prisma/**` | `npx serverless@3 deploy --stage prod` |
+| `.github/workflows/deploy-workers.yml` | `apps/workers/**/src/**`, `apps/workers/**/serverless.yml`, `apps/workers/**/package.json`, `packages/shared/src/**`, `packages/shared/prisma/**` | Lambda: `sls deploy` / render-worker: ECR push + `sls deploy` |
+| `.github/workflows/deploy-web.yml` | `apps/web/**`, `packages/shared/**` | ECR push → EC2 `docker compose up -d` |
+
+**path filter 원칙**: `src/**`, `serverless.yml`, `package.json`, `prisma/**`만 포함.
+`*.md`, `CLAUDE.md` 등 문서 변경은 path filter 밖 → 불필요한 배포 방지.
+
+### Slack 배포 알림
+
+모든 워크플로우는 배포 완료·실패 시 Slack Block Kit 알림을 전송한다.
+
+```yaml
+- name: Slack 배포 결과 알림
+  if: always()
+  env:
+    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    STATUS: ${{ job.status }}   # deploy-workers는 needs.*.result 사용
+  run: |
+    FIRST_LINE=$(echo "$COMMIT_MSG" | head -1 | \
+      python3 -c "import sys; s=sys.stdin.read().strip(); print(s[:60]+'…' if len(s)>60 else s)")
+    # jq로 Block Kit payload 구성 → curl Webhook 전송
+```
+
+- 성공: 좌측 컬러바 `#2eb886` + `✅` 아이콘
+- 실패: 좌측 컬러바 `#e01e5a` + `❌` 아이콘
+- 필드: 브랜치 / 커밋 SHA / 작성자 / 변경사항(60자 Python Unicode 슬라이싱)
+- 버튼: Actions 보기 / 커밋 보기
+- `SLACK_WEBHOOK_URL`은 GitHub Secret으로 관리
+
+### deploy-workers 특이사항
+
+matrix + 별도 `notify` job 구조:
+```
+deploy-lambda (matrix: script/tts/subtitle/upload/scheduler/dlq-notifier)
+deploy-render (ECR build + push)
+    ↓ needs: [deploy-lambda, deploy-render], if: always()
+notify (Slack 알림 전송)
+```
+
 ## 참고 ADR
 - `docs/adr/001-lambda-vs-fargate.md` — 환경 결정 근거
 - `docs/adr/003-sqs-standard-queue.md` — SQS 설정 근거
