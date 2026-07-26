@@ -44,7 +44,7 @@
   - [ ] P6-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
   - [ ] P6-2. Analytics 다채널 수집 `[BE][DevOps]`
 - **Phase 7** — 프로덕션 준비
-  - [x] P7-1. GitHub Actions CI/CD `[DevOps]`
+  - [x] P7-1. GitHub Actions CI/CD + Slack 배포 알림 `[DevOps]`
   - [ ] P7-2. Sentry 연동 `[BE]`
   - [ ] P7-3. Edge-TTS → Clova Voice 교체 `[BE][AI]`
   - [ ] P7-4. AWS Budget Alert `[DevOps]`
@@ -94,7 +94,7 @@
     - `tts-queue` 발행 확인
 
 - **P1-5.** `apps/workers/tts` `[BE]`
-  - Edge-TTS `ko-KR-SunHiNeural` → `audio.mp3`
+  - `msedge-tts` npm 패키지, `ko-KR-SunHiNeural +20%` → `audio.mp3`
   - 검증
     - S3에 `audio.mp3` 생성, `ffprobe` 길이 35~45초
     - `subtitle-queue` 발행 확인
@@ -293,12 +293,14 @@
 
 - **P5-1.** EventBridge Scheduler — `rate(1 minute)` scheduler-worker `[DevOps][BE]`
   - EventBridge `rate(1 minute)` 규칙으로 scheduler-worker Lambda 매분 트리거
-  - 활성 채널의 `uploadSchedule` cron을 매분 평가 → 해당 시각이면 `POST /jobs/auto-news` 호출
+  - 활성 채널의 `uploadSchedule` cron을 매분 평가 → 해당 시각이면 Google News RSS에서 토픽 수집 후 직접 Job 생성 → `script-queue` 발행
+  - 정치 키워드 필터: 정당명·정치인·선거 관련 뉴스를 제외하고 사회·경제 이슈만 선택 (후보 20개 중 필터링)
   - 검증
     - CloudWatch 로그에서 매분 실행 확인
 
 - **P5-2.** DLQ 알림 Lambda `[BE][DevOps]`
   - 5개 DLQ 모두 동일 Lambda에 연결 → Slack Webhook
+  - 비정상 JSON 메시지에서도 regex로 jobId/channelId 추출
   - 검증
     - DLQ 적재 → Slack 알림 수신 확인
 
@@ -330,7 +332,10 @@
 
 > CI/CD, 에러 추적, TTS 업그레이드, 비용 관리.
 
-- **P7-1.** GitHub Actions CI/CD `[DevOps]`
+- **P7-1.** GitHub Actions CI/CD + Slack 배포 알림 `[DevOps]`
+  - push to main 시 변경된 앱만 자동 배포 (path filter)
+  - deploy-api / deploy-workers / deploy-web 각각 완료·실패 시 Slack 알림
+  - GitHub Secret `SLACK_WEBHOOK_URL` 등록 필요
 - **P7-2.** Sentry 연동 `[BE]`
 - **P7-3.** Edge-TTS → Clova Voice 교체 `[BE][AI]`
 - **P7-4.** AWS Budget Alert `[DevOps]`
