@@ -68,14 +68,14 @@ jobs:
           FIRST_LINE=$(echo "$COMMIT_MSG" | head -1 | cut -c1-60)
 
           if [ "$STATUS" = "success" ]; then
-            COLOR="#2eb886"; LABEL="배포 완료"
+            COLOR="#2eb886"; ICON="✅"; LABEL="배포 완료"
           else
-            COLOR="#e01e5a"; LABEL="배포 실패"
+            COLOR="#e01e5a"; ICON="❌"; LABEL="배포 실패"
           fi
 
           PAYLOAD=$(jq -n \
             --arg color  "$COLOR" \
-            --arg title  "$STATUS Deploy API — $LABEL" \
+            --arg title  "$ICON *Deploy API* — $LABEL" \
             --arg branch "$REF" \
             --arg sha    "$SHORT_SHA" \
             --arg actor  "$ACTOR" \
