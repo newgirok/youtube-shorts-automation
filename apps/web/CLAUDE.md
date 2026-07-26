@@ -143,17 +143,17 @@ interface AnalyticsRow {
 - YouTube CDN 썸네일 404(업로드 직후 미처리) 시 15초 후 자동 재시도 (`thumbnailError` + `setTimeout`)
 
 #### 상태별 썸네일 플레이스홀더 오버레이
-FAILED/삭제 Job은 `effectiveThumbUrl()` 결과가 null — 썸네일 없이 플레이스홀더만 렌더링 (`VideoCard.tsx` · `HomeClient.tsx` GalleryCard 공통):
+`VideoCard.tsx` · `HomeClient.tsx` GalleryCard · `/dashboard/[id]` 모두 동일한 규칙으로 썸네일을 플레이스홀더로 대체:
 
-| 상태 | 배경 | 텍스트 |
-|---|---|---|
-| 실패 (FAILED, 삭제 제외) | `bg-red-500/10` | `text-xs font-bold text-red-400/70` / "실패" |
-| 삭제 (`failReason === '유튜브에서 영상이 삭제되었습니다.'`) | `bg-white/5` | `text-xs font-bold text-white/30` / "삭제" |
+| 상태 | 조건 | 배경 | 텍스트 |
+|---|---|---|---|
+| 실패 | `status === 'FAILED'` (삭제 제외) | `bg-red-500/10` | `text-xs font-bold text-red-400/70` / "실패" |
+| 삭제 | `failReason === '유튜브에서 영상이 삭제되었습니다.'` | `bg-white/5` | `text-xs font-bold text-white/30` / "삭제" |
+| 비공개 | `privacyStatus === 'private'` | `bg-white/5` | `text-xs font-bold text-white/50` / "비공개" |
 
-Job 상세 페이지 비공개 오버레이 (`/dashboard/[id]/page.tsx`):
-- 조건: `privacyStatus === 'private' && !showPlayer && thumbnailUrl && !thumbnailError`
-- 썸네일 위 `absolute inset-0 bg-black/50 backdrop-blur-[2px] pointer-events-none`
-- 텍스트: "비공개" — `text-xs font-semibold text-white/60 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1 border border-white/10`
+- FAILED · 비공개는 `effectiveThumbUrl()` 결과를 null로 처리 — 썸네일 fetch 자체를 시도하지 않음
+- 비공개 영상은 YouTube CDN 썸네일이 항상 404이므로 15초 retry 루프도 스킵 (`privacyStatus === 'private'` 가드)
+- 상세 페이지: `isPrivate` 분기가 iframe·썸네일보다 먼저 평가 → 비공개이면 플레이스홀더만 렌더링
 
 ### 홈 초기 로딩 전략
 - `page.tsx`(서버): channels 조회 후 첫 채널의 jobs도 서버에서 즉시 조회 → `firstChannelId`, `initialJobs` props로 HomeClient에 전달
@@ -251,6 +251,12 @@ const NEWS_CATEGORIES = [
 ```
 - `politics` 카테고리 제거 — Pexels 소재 부족으로 자동화 파이프라인 부적합
 - Google News RSS: TECHNOLOGY · HEALTH · SCIENCE 카테고리 추가
+
+### 스크립트 패널 레이아웃 (`/dashboard/[id]`)
+- `sc ? fullLayout : fallback` 분기 없음 — `scriptContent` 유무와 무관하게 **항상 동일한 풀 레이아웃** 렌더링
+- 각 필드(`hook` · `thumbnail_text` · `hashtags` · `script` · `comment_bait`)는 값이 있으면 정상 표시, 없으면 `bg-white/5` dim 블록으로 높이 유지
+- 처리 중(`!sc && status !== 'FAILED'`) 상태는 패널 하단에 dots 애니메이션만 표시
+- FAILED 상태에서 `scriptContent`가 null이면 dim 블록만 — 별도 에러 메시지나 failReason 표시 없음
 
 ### YouTube 인라인 플레이어 (`/dashboard/[id]`)
 
