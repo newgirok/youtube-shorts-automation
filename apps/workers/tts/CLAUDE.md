@@ -7,7 +7,7 @@ SQS tts-queue를 폴링해 msedge-tts(npm 패키지)로 음성을 합성하는 �
 ## 주요 모듈
 
 - `TTSAdapter.ts` — TTS 인터페이스 (Phase 8 Clova Voice 교체 대비 추상화)
-- `EdgeTTSAdapter.ts` — `ko-KR-SunHiNeural` 구현체 (msedge-tts WebSocket API 사용)
+- `EdgeTTSAdapter.ts` — `ko-KR-InJoonNeural` 구현체 (msedge-tts WebSocket API 사용)
 - `handler.ts` — Lambda SQS 이벤트 핸들러
 - `local-runner.ts` — Docker Compose 환경용 SQS Long Polling 루프
 - `env.ts` — 환경변수 파싱 (`SQS_SUBTITLE_QUEUE_URL` 등)
@@ -26,7 +26,7 @@ const toSafeMsg = (err: unknown) =>
 ## TTS 설정
 
 - 엔진: `msedge-tts` npm 패키지 (Azure Edge TTS WebSocket API 직접 호출)
-- 음성: `ko-KR-SunHiNeural`
+- 음성: `ko-KR-InJoonNeural`
 - 재생속도: `+20%` (YouTube Shorts 60초 제한 대응)
 - 입력: `title` + `script` 필드 (ScriptOutput)
 - 출력: `/tmp/{jobId}-audio.mp3` → S3 `jobs/{jobId}/audio.mp3`
