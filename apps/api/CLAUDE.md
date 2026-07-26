@@ -68,20 +68,24 @@ YouTube 채널 CRUD 및 동기화.
 - `GET /channels/:id` — 채널 상세 + YPP 자격 실시간 계산 (`isYPPQualified`, `uploadCount90d`, `shortsViews90d`)
 - `DELETE /channels/:id` — 채널 연결 해제 (isActive=false, 데이터 보존)
 - `PATCH /channels/:id/schedule` — 스케줄 설정 업데이트 (cronExpression, schedulerEnabled, schedulerCategory 중 일부 또는 전체)
-- `GET /channels/:id/analytics` — 최근 30일 일별 analytics (views, subscribers, estimatedRevenue, watchTimeMinutes)
+- `GET /channels/:id/analytics` — DB에 저장된 최신 30일 일별 analytics 반환, 날짜 오름차순 (views, subscribers, estimatedRevenue, watchTimeMinutes)
 - `POST /channels/:id/sync` — 채널 통계 + Analytics + 영상 조회수 풀 동기화 (YouTube Data API + YouTube Analytics API)
 - `POST /channels/:id/sync-videos` — 영상 조회수·privacyStatus 동기화 + 삭제된 영상 FAILED 처리
 
 `sync` 흐름:
 1. `channels.list(part: statistics, snippet)` → subscriberCount, totalViews, **name** 갱신 (채널명 변경 반영)
-2. `youtubeAnalytics.reports.query(metrics: views,subscribersGained,estimatedMinutesWatched, dimensions: day)` → 최근 30일 일별 upsert
+2. `youtubeAnalytics.reports.query(ids: channel=={youtubeId}, metrics: views,subscribersGained,estimatedMinutesWatched, dimensions: day)` → 최근 30일 일별 upsert
 3. `videos.list(part: id,statistics,status)` → viewCount, likeCount, privacyStatus 갱신; YouTube에서 삭제된 영상은 status=FAILED, failReason='유튜브에서 영상이 삭제되었습니다.'
+
+응답 형식: `{ synced: number; deleted: number; analyticsError?: string }` — Analytics 동기화 에러가 있을 때만 `analyticsError` 필드 포함.
 
 > **GCP 사전 조건** — Analytics 동기화(2단계)가 동작하려면 GCP 프로젝트에서
 > **YouTube Analytics API**가 활성화되어 있어야 한다.
 > 비활성 상태면 403 `accessNotConfigured` 에러가 발생하고 `ChannelAnalytics` 테이블에 데이터가 쌓이지 않는다.
 > 활성화 URL: `https://console.developers.google.com/apis/api/youtubeanalytics.googleapis.com/overview?project={GCP_PROJECT_ID}`
-> 에러는 `.catch(warn)` 으로 무시하므로 나머지 sync(채널 통계·영상 조회수)는 정상 동작한다.
+> Analytics 에러는 캡처 후 sync 응답의 `analyticsError` 필드로 노출된다. 나머지 sync(채널 통계·영상 조회수)는 Analytics 에러와 무관하게 정상 동작한다.
+>
+> **신규 채널 Analytics 지연** — 생성된 지 2주 미만인 채널은 YouTube Analytics 데이터 수집 파이프라인이 초기화되지 않아 `views` 등 모든 값이 0으로 반환되는 것이 정상이다. 에러가 아니며 시간이 지나면 자동으로 채워진다. `Job.viewCount`(영상별 누적 조회수)는 YouTube Data API 경유이므로 이와 무관하게 정확히 동작한다.
 
 ### `scheduler/`
 1분마다 실행되는 자동 업로드 스케줄러 (`@Cron('* * * * *')`).

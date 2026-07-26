@@ -222,8 +222,9 @@ interface AnalyticsRow {
 
 `analytics` 누락 시: 채널 성과 추이 차트가 최초 진입 시 빈 상태로 표시되다가 새로고침 후에야 나타나는 버그 발생
 - 채널 상세 페이지의 **채널 성과 추이** 차트는 `ChannelAnalytics` 테이블 데이터를 사용한다.
-  - 데이터는 sync 시 YouTube Analytics API로 채운다.
+  - 데이터는 sync 시 YouTube Analytics API로 채운다 (`GET /channels/:id/analytics` → DB 최신 30행 반환).
   - GCP 프로젝트에서 YouTube Analytics API가 비활성화되어 있으면 차트가 skeleton placeholder로 표시된다. (→ `apps/api/CLAUDE.md` GCP 사전 조건 참고)
+  - **신규 채널(생성 2주 미만)** 은 YouTube Analytics 수집 파이프라인 초기화 전이라 차트 값이 0으로 표시될 수 있다. 영상 카드의 누적 조회수(`Job.viewCount`)와는 무관하며 시간이 지나면 자동으로 채워진다.
 
 ### 채널 상세 페이지 (`ChannelClient.tsx`)
 
