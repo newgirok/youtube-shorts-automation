@@ -94,7 +94,7 @@
     - `tts-queue` 발행 확인
 
 - **P1-5.** `apps/workers/tts` `[BE]`
-  - `msedge-tts` npm 패키지, `ko-KR-SunHiNeural +20%` → `audio.mp3`
+  - `msedge-tts` npm 패키지, `ko-KR-InJoonNeural +20%` → `audio.mp3`
   - 검증
     - S3에 `audio.mp3` 생성, `ffprobe` 길이 35~45초
     - `subtitle-queue` 발행 확인

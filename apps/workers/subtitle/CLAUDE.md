@@ -45,7 +45,7 @@ function skipTitleEntries(entries: VttEntry[], title: string): VttEntry[] {
 1. `music-metadata` (`parseBuffer`)로 audio.mp3 길이 측정 (ms) — 플랫폼 바이너리 의존성 없는 순수 JS
 2. S3에서 `jobs/{jobId}/script.json` → `title`, `script` 필드 추출
 3. 타이밍 보정값 계산:
-   - `titleSpeechMs` = `title` 공백제거 글자 수 / 7.2(글자/초) × 1000 (ko-KR-SunHiNeural +20% 기준)
+   - `titleSpeechMs` = `title` 공백제거 글자 수 / 7.2(글자/초) × 1000 (ko-KR-InJoonNeural +20% 기준)
    - `titleOffsetMs` = titleSpeechMs + 1000 (제목 후 `\n\n` 브레이크 1초)
    - `scriptBreakCount` = script 내 문장 경계(`[.!?]` + 한국어 시작) 수 → `scriptBreaksMs` = count × 1000
    - `effectiveScriptMs` = totalMs − titleOffsetMs − scriptBreaksMs (순수 스크립트 발화 구간)
