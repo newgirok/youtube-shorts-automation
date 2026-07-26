@@ -66,22 +66,25 @@ aws lambda update-function-configuration \
 
 모든 워크플로우는 배포 완료·실패 시 Slack Block Kit 알림을 전송한다.
 
-```yaml
-- name: Slack 배포 결과 알림
-  if: always()
-  env:
-    SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
-    STATUS: ${{ job.status }}   # deploy-workers는 needs.*.result 사용
-  run: |
-    FIRST_LINE=$(echo "$COMMIT_MSG" | head -1 | \
-      python3 -c "import sys; s=sys.stdin.read().strip(); print(s[:60]+'…' if len(s)>60 else s)")
-    # jq로 Block Kit payload 구성 → curl Webhook 전송
+**레이아웃 (3블록)**:
+```
+✅ Deploy API — 배포 완료
+fix(ci): 커밋 메시지 한 줄
+──────────────────────────────────
+브랜치: `main`  ·  커밋: `abc1234`  ·  작성자: newgirok
+──────────────────────────────────
+[Actions 보기 →]  [커밋 보기 →]
 ```
 
-- 성공: 좌측 컬러바 `#2eb886` + `✅` 아이콘
-- 실패: 좌측 컬러바 `#e01e5a` + `❌` 아이콘
-- 필드: 브랜치 / 커밋 SHA / 작성자 / 변경사항(60자 Python Unicode 슬라이싱)
-- 버튼: Actions 보기 / 커밋 보기
+**블록 구조**:
+- `section` — 제목(`✅/❌ *Deploy {앱}* — 완료/실패`) + 커밋 메시지 2줄
+- `context` — 브랜치 / 커밋 SHA / 작성자 인라인 (Slack이 `·`로 자동 구분)
+- `actions` — Actions 보기 / 커밋 보기 버튼
+
+**구현 요점**:
+- 커밋 메시지: `python3 -c "... s[:60]+'…'"` — Unicode 슬라이싱으로 60자 초과 시 `…` 처리
+- 성공: 컬러바 `#2eb886` / 실패: `#e01e5a`
+- payload는 `jq -n --arg ...` 로 구성 (특수문자 안전 처리)
 - `SLACK_WEBHOOK_URL`은 GitHub Secret으로 관리
 
 ### deploy-workers 특이사항
