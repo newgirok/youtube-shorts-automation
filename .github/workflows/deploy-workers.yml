@@ -15,7 +15,6 @@ on:
       - apps/workers/**/package.json
       - packages/shared/src/**
       - packages/shared/prisma/**
-      - .github/workflows/deploy-workers.yml
 
 env:
   AWS_REGION: ap-northeast-2

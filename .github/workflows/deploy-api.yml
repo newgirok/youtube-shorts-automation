@@ -10,7 +10,6 @@ on:
       - apps/api/package.json
       - packages/shared/src/**
       - packages/shared/prisma/**
-      - .github/workflows/deploy-api.yml
 
 env:
   AWS_REGION: ap-northeast-2
