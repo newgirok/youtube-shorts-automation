@@ -5,8 +5,16 @@ on:
   push:
     branches: [main]
     paths:
-      - apps/web/**
-      - packages/shared/**
+      - apps/web/app/**
+      - apps/web/src/**
+      - apps/web/components/**
+      - apps/web/lib/**
+      - apps/web/middleware.ts
+      - apps/web/next.config.ts
+      - apps/web/package.json
+      - apps/web/Dockerfile
+      - packages/shared/src/**
+      - packages/shared/prisma/**
 
 env:
   AWS_REGION: ap-northeast-2
