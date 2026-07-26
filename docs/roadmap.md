@@ -44,7 +44,7 @@
   - [ ] P6-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
   - [ ] P6-2. Analytics 다채널 수집 `[BE][DevOps]`
 - **Phase 7** — 프로덕션 준비
-  - [x] P7-1. GitHub Actions CI/CD + Slack 배포 알림 `[DevOps]`
+  - [x] P7-1. GitHub Actions CI/CD + Slack 배포 알림 (Block Kit 포맷) `[DevOps]`
   - [ ] P7-2. Sentry 연동 `[BE]`
   - [ ] P7-3. Edge-TTS → Clova Voice 교체 `[BE][AI]`
   - [ ] P7-4. AWS Budget Alert `[DevOps]`
@@ -332,10 +332,12 @@
 
 > CI/CD, 에러 추적, TTS 업그레이드, 비용 관리.
 
-- **P7-1.** GitHub Actions CI/CD + Slack 배포 알림 `[DevOps]`
-  - push to main 시 변경된 앱만 자동 배포 (path filter)
-  - deploy-api / deploy-workers / deploy-web 각각 완료·실패 시 Slack 알림
-  - GitHub Secret `SLACK_WEBHOOK_URL` 등록 필요
+- **P7-1.** GitHub Actions CI/CD + Slack 배포 알림 `[DevOps]` ✅
+  - push to main 시 변경된 앱만 자동 배포 (path filter: `src/**`, `serverless.yml`, `package.json`, `prisma/**`)
+  - deploy-api / deploy-workers / deploy-web 각각 완료·실패 시 Slack Block Kit 알림
+    - 컬러 사이드바(성공 #2eb886 / 실패 #e01e5a), 4-field 그리드(브랜치·커밋·작성자·변경사항), Actions/커밋 링크 버튼
+    - 변경사항 필드: `python3` Unicode 슬라이싱으로 60자 초과 시 `…` 처리 (한글 잘림 없음)
+  - GitHub Secret `SLACK_WEBHOOK_URL` 등록 완료
 - **P7-2.** Sentry 연동 `[BE]`
 - **P7-3.** Edge-TTS → Clova Voice 교체 `[BE][AI]`
 - **P7-4.** AWS Budget Alert `[DevOps]`
