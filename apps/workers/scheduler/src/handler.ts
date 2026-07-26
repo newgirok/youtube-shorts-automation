@@ -48,7 +48,7 @@ export const handler: ScheduledHandler = async () => {
     const topics = await fetchNewsTopics(category, 1);
 
     if (topics.length === 0) {
-      log.warn({ channelId: ch.id, category }, '뉴스 수집 실패: 토픽 없음');
+      log.warn({ channelId: ch.id, category }, '뉴스 수집 실패: 정치 키워드 필터 후 유효 토픽 없음');
       continue;
     }
 

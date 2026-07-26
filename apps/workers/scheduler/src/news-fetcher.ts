@@ -40,6 +40,25 @@ function decodeEntities(text: string): string {
     .replace(/&#39;/g, "'");
 }
 
+const BLOCK_KEYWORDS = [
+  // 정당
+  '민주당', '국민의힘', '정의당', '개혁신당', '조국혁신당',
+  // 주요 정치인
+  '이재명', '한동훈', '윤석열',
+  // 여야 관계
+  '여당', '야당',
+  // 선거
+  '총선', '대선', '지방선거',
+  // 당직·의회 정치
+  '당대표', '원내대표', '국회의원',
+  // 정치 사법 절차
+  '탄핵', '특검',
+];
+
+function isPolitical(title: string): boolean {
+  return BLOCK_KEYWORDS.some((kw) => title.includes(kw));
+}
+
 function parseRssItems(xml: string, count: number): NewsItem[] {
   const items: NewsItem[] = [];
   const itemRe = /<item>([\s\S]*?)<\/item>/g;
@@ -60,8 +79,11 @@ function parseRssItems(xml: string, count: number): NewsItem[] {
   return items;
 }
 
+const CANDIDATES_PER_FETCH = 20;
+
 export async function fetchNewsTopics(category: NewsCategory, count: number): Promise<NewsItem[]> {
   const url = CATEGORY_URLS[category];
   const xml = await fetchUrl(url);
-  return parseRssItems(xml, count);
+  const candidates = parseRssItems(xml, CANDIDATES_PER_FETCH);
+  return candidates.filter((item) => !isPolitical(item.title)).slice(0, count);
 }
