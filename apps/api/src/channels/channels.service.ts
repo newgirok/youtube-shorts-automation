@@ -64,7 +64,7 @@ export class ChannelsService {
     return this.repo.updateSchedule(id, data);
   }
 
-  async syncChannel(channelId: string): Promise<{ synced: number; deleted: number }> {
+  async syncChannel(channelId: string): Promise<{ synced: number; deleted: number; analyticsError?: string }> {
     log.info({ channelId }, '채널 통계 + 동영상 동기화 시작');
 
     const channelRow = await this.repo.findRefreshToken(channelId);
@@ -91,11 +91,14 @@ export class ChannelsService {
       log.info({ channelId, subscriberCount: stats.subscriberCount, viewCount: stats.viewCount, name: snippet?.title }, '채널 통계 갱신 완료');
     }
 
+    let analyticsError: string | undefined;
     await this.syncAnalytics(channelId, channelRow.youtubeId, client).catch((err) => {
-      log.warn({ channelId, err }, 'Analytics 동기화 실패 (scope 없음 — 채널 재연결 필요)');
+      analyticsError = err?.message ?? String(err);
+      log.warn({ channelId, err }, 'Analytics 동기화 실패');
     });
 
-    return this.syncVideos(channelId);
+    const videoResult = await this.syncVideos(channelId);
+    return { ...videoResult, ...(analyticsError ? { analyticsError } : {}) };
   }
 
   private async syncAnalytics(channelId: string, youtubeId: string, client: OAuth2Client): Promise<void> {
