@@ -160,9 +160,16 @@ interface AnalyticsRow {
 - `HomeClient` `useQuery`: `activeChannelId === firstChannelId`이면 `initialData`로 SSR 데이터 사용 → 클라이언트 첫 렌더에 jobs 즉시 표시, Lambda 추가 호출 없음
 - 다른 채널 선택 시(Zustand `selectedChannelId` 불일치) 해당 채널 jobs는 클라이언트 fetch
 
-### 폴링
-- 홈(`/`): 진행 중 Job이 있으면 2초, 모두 완료/실패면 30초
-- Job 상세(`/dashboard/[id]`): 완료/실패 시 30초, 진행 중 2초
+### 데이터 갱신 전략
+
+| 상황 | 방식 | 주기 |
+|---|---|---|
+| 활성 Job 존재 (PROCESSING 상태) | DB 폴링 | 2초 |
+| 활성 Job 없음 | 폴링 끄기 (`refetchInterval: false`) → 탭 포커스 시 자동 재조회 | TanStack Query `refetchOnWindowFocus` 기본값 |
+| 조회수·비공개·삭제 상태 갱신 | `POST /channels/:id/sync-videos` 주기 호출 | 10분 |
+
+- `refetchInterval: false` 상태에서 TanStack Query는 `refetchOnWindowFocus: true`(기본값)로 동작 → 사용자가 탭을 포커스하면 즉시 DB 재조회
+- 10분 주기 sync-videos는 `setInterval`로 홈·상세 페이지 마운트 시 독립적으로 실행, 완료 후 쿼리 invalidate
 
 ### 삭제된 YouTube 영상 감지
 - `job.status === 'FAILED' && job.failReason === '유튜브에서 영상이 삭제되었습니다.'`
@@ -200,9 +207,10 @@ interface AnalyticsRow {
 - `close/page.tsx`: `useSearchParams`로 `channelId` / `auth_error` 파싱 → 올바른 대상 URL로 이동 후 팝업 닫기 (`Suspense` 필수)
 
 ### 채널 sync
-- 홈·채널 페이지 마운트 시 `POST /channels/:id/sync` 호출 → Jobs 목록/채널 정보 refetch
-- 홈 페이지: 잡이 완료되는 순간(`hasProcessing: true → false` 전환) `POST /channels/:id/sync-videos` 자동 호출 → 갤러리 갱신
-- `/dashboard/[id]` 페이지: `youtubeVideoId` 최초 감지 시 `sync-videos` 즉시 호출 후 10초·40초 뒤 재호출 (`syncedRef` 패턴으로 중복 실행 방지)
+- 홈·채널 페이지 마운트(`activeChannelId` 변경) 시 `POST /channels/:id/sync` 호출 → Jobs 목록/채널 정보 refetch
+- 홈 페이지: Job이 완료되는 순간(`hasProcessing: true → false` 전환) `sync-videos` 즉시 호출 + 마운트 후 10분마다 주기 호출 → 조회수·비공개·삭제 상태 갱신
+- `/dashboard/[id]` 페이지: `youtubeVideoId` 최초 감지 시 `sync-videos` 즉시·10초·40초 뒤 재호출 (`syncedRef` 패턴으로 중복 실행 방지) + `youtubeVideoId` 존재하는 동안 10분마다 주기 호출
+- 채널 상세 페이지(`/channels/:id`): `POST /channels/:id/sync` 마운트 1회 → 구독자 수·Analytics 차트 갱신 (Analytics 데이터는 YouTube에서 24~48시간 지연 제공되므로 1회로 충분)
 
 #### invalidate 범위 (쿼리 누락 방지)
 | sync 호출 위치 | invalidate 대상 |
