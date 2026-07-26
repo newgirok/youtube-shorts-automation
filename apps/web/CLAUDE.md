@@ -142,6 +142,19 @@ interface AnalyticsRow {
 - `/api/thumbnail/[id]` route: `API_INTERNAL_URL/jobs/{id}/thumbnail` 경유로 S3 콘텐츠를 same-origin으로 프록시. `Cache-Control: public, max-age=3600` (youtubeVideoId 없는 경우에만 경유)
 - YouTube CDN 썸네일 404(업로드 직후 미처리) 시 15초 후 자동 재시도 (`thumbnailError` + `setTimeout`)
 
+#### 상태별 썸네일 플레이스홀더 오버레이
+FAILED/삭제 Job은 `effectiveThumbUrl()` 결과가 null — 썸네일 없이 플레이스홀더만 렌더링 (`VideoCard.tsx` · `HomeClient.tsx` GalleryCard 공통):
+
+| 상태 | 배경 | 텍스트 |
+|---|---|---|
+| 실패 (FAILED, 삭제 제외) | `bg-red-500/10` | `text-xs font-bold text-red-400/70` / "실패" |
+| 삭제 (`failReason === '유튜브에서 영상이 삭제되었습니다.'`) | `bg-white/5` | `text-xs font-bold text-white/30` / "삭제" |
+
+Job 상세 페이지 비공개 오버레이 (`/dashboard/[id]/page.tsx`):
+- 조건: `privacyStatus === 'private' && !showPlayer && thumbnailUrl && !thumbnailError`
+- 썸네일 위 `absolute inset-0 bg-black/50 backdrop-blur-[2px] pointer-events-none`
+- 텍스트: "비공개" — `text-xs font-semibold text-white/60 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1 border border-white/10`
+
 ### 홈 초기 로딩 전략
 - `page.tsx`(서버): channels 조회 후 첫 채널의 jobs도 서버에서 즉시 조회 → `firstChannelId`, `initialJobs` props로 HomeClient에 전달
 - `HomeClient` `useQuery`: `activeChannelId === firstChannelId`이면 `initialData`로 SSR 데이터 사용 → 클라이언트 첫 렌더에 jobs 즉시 표시, Lambda 추가 호출 없음
@@ -178,7 +191,7 @@ interface AnalyticsRow {
 - `dailyLimitHit: boolean` 상태로 관리. POST /jobs 또는 auto-news에서 `ApiError.status === 429` 감지 시 `true`로 설정
 - 채널 전환(`activeChannelId` 변경) 시 `false`로 초기화
 - `dailyLimitHit === true`이면: textarea·제출 버튼·뉴스 자동 수집 버튼 모두 disabled
-- 폼과 뉴스 버튼 사이에 앰버 톤 안내 블록 렌더링: "오늘 생성 한도(3회)에 도달했습니다 / 자정(00:00 KST)이 지나면 다시 생성할 수 있습니다"
+- 폼과 뉴스 버튼 사이에 앰버 톤 안내 블록 렌더링: "오늘 생성 한도(6회)에 도달했습니다 / 자정(00:00 KST)이 지나면 다시 생성할 수 있습니다"
 - 에러(빨강)가 아닌 안내(앰버) 톤 — `border-amber-500/30 bg-amber-500/10 text-amber-300`
 
 ### 홈 갤러리 표시 조건
