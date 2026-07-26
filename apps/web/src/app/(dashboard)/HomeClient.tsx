@@ -71,7 +71,7 @@ function GalleryCard({ job }: { job: JobType }) {
           <div className={`w-full h-full flex items-center justify-center ${
             job.status === 'FAILED'
               ? job.failReason === '유튜브에서 영상이 삭제되었습니다.'
-                ? 'bg-black/60'
+                ? 'bg-black/40'
                 : 'bg-red-500/10'
               : 'bg-white/5'
           }`}>
@@ -94,7 +94,7 @@ function GalleryCard({ job }: { job: JobType }) {
           </div>
         )}
         {job.status === 'COMPLETED' && (job.viewCount ?? 0) > 0 && (
-          <div className="absolute bottom-1 right-1 flex items-center gap-0.5 bg-black/60 backdrop-blur-sm rounded px-1.5 py-0.5">
+          <div className="absolute bottom-1 right-1 flex items-center gap-0.5 bg-black/40 backdrop-blur-sm rounded px-1.5 py-0.5">
             <Eye className="w-2.5 h-2.5 text-white/70" />
             <span className="text-[9px] text-white/80 font-medium">{(job.viewCount ?? 0).toLocaleString()}</span>
           </div>

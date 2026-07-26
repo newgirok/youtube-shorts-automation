@@ -52,7 +52,7 @@ export function VideoCard({ video }: { video: JobType }) {
       <div className="relative aspect-[9/16] max-h-36 bg-muted">
         {video.status === 'FAILED' ? (
           <div className={`w-full h-full flex items-center justify-center ${
-            isDeleted ? 'bg-black/60' : 'bg-red-500/10'
+            isDeleted ? 'bg-black/40' : 'bg-red-500/10'
           }`}>
             <span className={`text-xs font-bold ${
               isDeleted ? 'text-white/20' : 'text-red-400/70'

@@ -149,7 +149,7 @@ interface AnalyticsRow {
 |---|---|---|---|
 | 실패 | `status === 'FAILED'` (삭제 제외) | `bg-red-500/10` | `text-xs font-bold text-red-400/70` / "실패" |
 | 비공개 | `privacyStatus === 'private'` | `bg-white/5` | `text-xs font-bold text-white/30` / "비공개" |
-| 삭제 | `failReason === '유튜브에서 영상이 삭제되었습니다.'` | `bg-black/60` | `text-xs font-bold text-white/20` / "삭제" |
+| 삭제 | `failReason === '유튜브에서 영상이 삭제되었습니다.'` | `bg-black/40` | `text-xs font-bold text-white/20` / "삭제" |
 
 - FAILED · 비공개는 `effectiveThumbUrl()` 결과를 null로 처리 — 썸네일 fetch 자체를 시도하지 않음
 - 비공개 영상은 YouTube CDN 썸네일이 항상 404이므로 15초 retry 루프도 스킵 (`privacyStatus === 'private'` 가드)
