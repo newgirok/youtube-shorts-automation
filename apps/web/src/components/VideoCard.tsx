@@ -50,7 +50,17 @@ export function VideoCard({ video }: { video: JobType }) {
   return (
     <Card className="overflow-hidden cursor-pointer hover:ring-1 hover:ring-border transition-all">
       <div className="relative aspect-[9/16] max-h-36 bg-muted">
-        {!isDeleted && thumbnailSrc ? (
+        {video.status === 'FAILED' ? (
+          <div className={`w-full h-full flex items-center justify-center ${
+            isDeleted ? 'bg-white/5' : 'bg-red-500/10'
+          }`}>
+            <span className={`text-xs font-bold ${
+              isDeleted ? 'text-white/30' : 'text-red-400/70'
+            }`}>
+              {isDeleted ? '삭제' : '실패'}
+            </span>
+          </div>
+        ) : thumbnailSrc ? (
           <img
             src={thumbnailSrc}
             alt={title}
@@ -61,15 +71,11 @@ export function VideoCard({ video }: { video: JobType }) {
             <Video className="w-8 h-8 text-muted-foreground" />
           </div>
         )}
-        {/* 삭제된 영상 오버레이 */}
-        {isDeleted && (
-          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-            <span className="text-xs font-semibold text-white tracking-widest">삭제</span>
+        {video.status !== 'FAILED' && (
+          <div className="absolute top-1.5 right-1.5">
+            <StatusBadge status={video.status} />
           </div>
         )}
-        <div className="absolute top-1.5 right-1.5">
-          {!isDeleted && <StatusBadge status={video.status} />}
-        </div>
       </div>
 
       <CardContent className="p-2 min-w-0">

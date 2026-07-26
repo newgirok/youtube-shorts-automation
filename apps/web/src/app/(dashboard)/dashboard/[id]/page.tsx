@@ -287,6 +287,13 @@ export default function JobDetailPage() {
                 <span className="text-xs text-white/30">썸네일 없음</span>
               </div>
             )}
+            {job.privacyStatus === 'private' && !showPlayer && thumbnailUrl && !thumbnailError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px] pointer-events-none">
+                <span className="text-xs font-semibold text-white/60 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1 border border-white/10">
+                  비공개
+                </span>
+              </div>
+            )}
             {showPlayer && job.youtubeVideoId && (
               <button
                 onClick={() => setShowPlayer(false)}
