@@ -79,7 +79,7 @@ jobs:
         run: |
           SHORT_SHA="${SHA:0:7}"
           COMMIT_URL="https://github.com/${{ github.repository }}/commit/$SHA"
-          FIRST_LINE=$(echo "$COMMIT_MSG" | head -1 | cut -c1-60)
+          FIRST_LINE=$(echo "$COMMIT_MSG" | head -1 | python3 -c "import sys; s=sys.stdin.read().strip(); print(s[:60]+'…' if len(s)>60 else s)")
 
           if [ "$STATUS" = "success" ]; then
             COLOR="#2eb886"; ICON="✅"; LABEL="배포 완료"
