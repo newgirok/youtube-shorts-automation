@@ -71,18 +71,18 @@ function GalleryCard({ job }: { job: JobType }) {
           <div className={`w-full h-full flex items-center justify-center ${
             job.status === 'FAILED'
               ? job.failReason === '유튜브에서 영상이 삭제되었습니다.'
-                ? 'bg-white/5'
+                ? 'bg-black/60'
                 : 'bg-red-500/10'
               : 'bg-white/5'
           }`}>
             {job.status === 'FAILED' ? (
               <span className={`text-xs font-bold ${
-                job.failReason === '유튜브에서 영상이 삭제되었습니다.' ? 'text-white/30' : 'text-red-400/70'
+                job.failReason === '유튜브에서 영상이 삭제되었습니다.' ? 'text-white/20' : 'text-red-400/70'
               }`}>
                 {job.failReason === '유튜브에서 영상이 삭제되었습니다.' ? '삭제' : '실패'}
               </span>
             ) : job.privacyStatus === 'private' ? (
-              <span className="text-xs font-bold text-white/50">비공개</span>
+              <span className="text-xs font-bold text-white/30">비공개</span>
             ) : (
               <Video className="w-4 h-4 text-white/30" />
             )}

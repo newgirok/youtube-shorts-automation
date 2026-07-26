@@ -52,17 +52,17 @@ export function VideoCard({ video }: { video: JobType }) {
       <div className="relative aspect-[9/16] max-h-36 bg-muted">
         {video.status === 'FAILED' ? (
           <div className={`w-full h-full flex items-center justify-center ${
-            isDeleted ? 'bg-white/5' : 'bg-red-500/10'
+            isDeleted ? 'bg-black/60' : 'bg-red-500/10'
           }`}>
             <span className={`text-xs font-bold ${
-              isDeleted ? 'text-white/30' : 'text-red-400/70'
+              isDeleted ? 'text-white/20' : 'text-red-400/70'
             }`}>
               {isDeleted ? '삭제' : '실패'}
             </span>
           </div>
         ) : video.privacyStatus === 'private' ? (
           <div className="w-full h-full flex items-center justify-center bg-white/5">
-            <span className="text-xs font-bold text-white/50">비공개</span>
+            <span className="text-xs font-bold text-white/30">비공개</span>
           </div>
         ) : thumbnailSrc ? (
           <img

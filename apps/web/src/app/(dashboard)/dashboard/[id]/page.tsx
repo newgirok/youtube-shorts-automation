@@ -266,7 +266,7 @@ export default function JobDetailPage() {
               />
             ) : isPrivate ? (
               <div className="absolute inset-0 flex items-center justify-center bg-white/5">
-                <span className="text-xs font-bold text-white/50">비공개</span>
+                <span className="text-xs font-bold text-white/30">비공개</span>
               </div>
             ) : thumbnailUrl && !thumbnailError ? (
               <div
