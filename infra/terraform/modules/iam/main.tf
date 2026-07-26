@@ -48,6 +48,17 @@ resource "aws_iam_role_policy" "lambda_inline" {
         Action   = ["ssm:GetParameter"]
         Resource = "*"
       },
+      {
+        Effect = "Allow"
+        Action = [
+          "events:PutRule",
+          "events:PutTargets",
+          "events:RemoveTargets",
+          "events:DeleteRule",
+          "events:DescribeRule",
+        ]
+        Resource = "*"
+      },
     ]
   })
 }

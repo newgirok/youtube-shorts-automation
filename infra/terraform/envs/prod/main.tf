@@ -311,3 +311,14 @@ output "alerts_sns_arn" {
   value       = aws_sns_topic.alerts.arn
   description = "CloudWatch 알람 SNS 토픽 ARN"
 }
+
+# ── P6-1: 채널별 EventBridge → scheduler-worker Lambda 실행 권한 ──────────────
+# 계정 내 임의의 EventBridge 규칙이 scheduler-worker를 invoke할 수 있도록 허용.
+# API가 채널별로 EventBridge 규칙을 동적 생성하므로 source_arn을 와일드카드로 설정.
+resource "aws_lambda_permission" "eventbridge_invoke_scheduler" {
+  statement_id  = "AllowEventBridgeInvokeScheduler"
+  action        = "lambda:InvokeFunction"
+  function_name = "shorts-scheduler-worker-prod-handler"
+  principal     = "events.amazonaws.com"
+  source_arn    = "arn:aws:events:ap-northeast-2:682251233572:rule/*"
+}
