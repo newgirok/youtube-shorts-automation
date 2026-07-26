@@ -57,10 +57,11 @@ aws lambda update-function-configuration \
 |---|---|---|
 | `.github/workflows/deploy-api.yml` | `apps/api/src/**`, `apps/api/serverless.yml`, `apps/api/package.json`, `packages/shared/src/**`, `packages/shared/prisma/**` | `npx serverless@3 deploy --stage prod` |
 | `.github/workflows/deploy-workers.yml` | `apps/workers/**/src/**`, `apps/workers/**/serverless.yml`, `apps/workers/**/package.json`, `packages/shared/src/**`, `packages/shared/prisma/**` | Lambda: `sls deploy` / render-worker: ECR push + `sls deploy` |
-| `.github/workflows/deploy-web.yml` | `apps/web/**`, `packages/shared/**` | ECR push → EC2 `docker compose up -d` |
+| `.github/workflows/deploy-web.yml` | `apps/web/app/**`, `apps/web/src/**`, `apps/web/components/**`, `apps/web/lib/**`, `apps/web/middleware.ts`, `apps/web/next.config.ts`, `apps/web/package.json`, `apps/web/Dockerfile`, `packages/shared/src/**`, `packages/shared/prisma/**` | ECR push → EC2 `docker compose up -d` |
 
-**path filter 원칙**: `src/**`, `serverless.yml`, `package.json`, `prisma/**`만 포함.
-`*.md`, `CLAUDE.md` 등 문서 변경은 path filter 밖 → 불필요한 배포 방지.
+**path filter 원칙**: 소스 코드(`src/**`, `app/**`, `components/**`, `lib/**`)와 배포 설정(`serverless.yml`, `Dockerfile`, `package.json`, `prisma/**`)만 포함.
+`*.md`, `CLAUDE.md`, `docs/` 등 문서 변경은 path filter 밖 → 불필요한 배포 방지.
+workflow 파일 자체도 제외 — CI 수정 테스트는 `workflow_dispatch` 수동 실행으로 진행.
 
 ### Slack 배포 알림
 

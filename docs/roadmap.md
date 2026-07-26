@@ -335,8 +335,10 @@
 - **P7-1.** GitHub Actions CI/CD + Slack 배포 알림 `[DevOps]` ✅
   - push to main 시 변경된 앱만 자동 배포 (path filter: `src/**`, `serverless.yml`, `package.json`, `prisma/**`)
   - deploy-api / deploy-workers / deploy-web 각각 완료·실패 시 Slack Block Kit 알림
-    - 컬러 사이드바(성공 #2eb886 / 실패 #e01e5a), 4-field 그리드(브랜치·커밋·작성자·변경사항), Actions/커밋 링크 버튼
-    - 변경사항 필드: `python3` Unicode 슬라이싱으로 60자 초과 시 `…` 처리 (한글 잘림 없음)
+    - section(제목+커밋메시지) + context(브랜치·커밋·작성자 인라인) + actions(버튼) 3블록 구조
+    - 컬러 사이드바: 성공 `#2eb886` / 실패 `#e01e5a`
+    - 커밋 메시지: `python3` Unicode 슬라이싱으로 60자 초과 시 `…` 처리
+  - path filter: 소스·배포 설정 파일만 포함, `*.md`·workflow 파일 자체 제외
   - GitHub Secret `SLACK_WEBHOOK_URL` 등록 완료
 - **P7-2.** Sentry 연동 `[BE]`
 - **P7-3.** Edge-TTS → Clova Voice 교체 `[BE][AI]`
