@@ -10,8 +10,11 @@ on:
   push:
     branches: [main]
     paths:
-      - apps/workers/**
-      - packages/shared/**
+      - apps/workers/**/src/**
+      - apps/workers/**/serverless.yml
+      - apps/workers/**/package.json
+      - packages/shared/src/**
+      - packages/shared/prisma/**
       - .github/workflows/deploy-workers.yml
 
 env:
