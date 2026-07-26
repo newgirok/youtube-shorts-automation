@@ -72,18 +72,19 @@ workflow 파일 자체도 제외 — CI 수정 테스트는 `workflow_dispatch` 
 ✅ Deploy API — 배포 완료
 fix(ci): 커밋 메시지 한 줄
 ──────────────────────────────────
-브랜치: `main`  ·  커밋: `abc1234`  ·  작성자: newgirok
+브랜치: `main`  ·  커밋: `abc1234`  ·  작성자: newgirok <newgirok@gmail.com>
 ──────────────────────────────────
 [Actions 보기 →]  [커밋 보기 →]
 ```
 
 **블록 구조**:
-- `section` — 제목(`✅/❌ *Deploy {앱}* — 완료/실패`) + 커밋 메시지 2줄
+- `section` — 제목(`✅/❌ *Deploy {앱}* — 완료/실패`) + 커밋 메시지 첫 줄
 - `context` — 브랜치 / 커밋 SHA / 작성자 인라인 (Slack이 `·`로 자동 구분)
 - `actions` — Actions 보기 / 커밋 보기 버튼
 
 **구현 요점**:
-- 커밋 메시지: `python3 -c "... s[:60]+'…'"` — Unicode 슬라이싱으로 60자 초과 시 `…` 처리
+- 커밋 메시지: `head -1`으로 첫 줄만 추출 (truncation 없음)
+- 작성자: `AUTHOR_NAME: ${{ github.event.head_commit.author.name }}` + `AUTHOR_EMAIL: ${{ github.event.head_commit.author.email }}` → `"${AUTHOR_NAME} <${AUTHOR_EMAIL}>"` 조합
 - 성공: 컬러바 `#2eb886` / 실패: `#e01e5a`
 - payload는 `jq -n --arg ...` 로 구성 (특수문자 안전 처리)
 - `SLACK_WEBHOOK_URL`은 GitHub Secret으로 관리

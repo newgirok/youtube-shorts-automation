@@ -1,19 +1,26 @@
 # @shorts/scheduler-worker
 
-EventBridge rate(1 min) 트리거로 채널별 업로드 스케줄을 점검하고, 조건 충족 시 Google News RSS에서 토픽을 수집해 script-queue에 Job을 발행하는 워커.
+채널별 EventBridge 규칙에서 직접 호출되는 Lambda. 호출 시 이벤트 페이로드에 `channelId`가 포함되며, 해당 채널의 활성 여부 확인 후 Google News RSS에서 토픽을 수집해 script-queue에 Job을 발행한다.
 
-파이프라인: EventBridge → [스케줄 점검] → [뉴스 수집 + 필터] → Job 생성 → script-queue 발행
+파이프라인: 채널 EventBridge 규칙 → handler(`{ channelId }`) → [채널 상태 확인] → [뉴스 수집 + 필터] → Job 생성 → script-queue 발행
 
 ## 주요 모듈
 
-- `handler.ts` — Lambda ScheduledHandler; 채널 순회·스케줄 평가·Job 생성
+- `handler.ts` — Lambda ScheduledHandler; 채널 단건 확인·Job 생성
 - `news-fetcher.ts` — Google News RSS 파싱 및 정치 키워드 필터
-- `env.ts` — 환경변수 파싱
 
-## 스케줄 실행 조건 (모두 충족해야 Job 생성)
+## EventBridge 규칙 구조
 
-1. `Channel.schedulerEnabled = true` AND `isActive = true`
-2. `uploadSchedule` cron 표현식이 현재 분(Asia/Seoul) 내에 포함
+각 채널마다 독립 EventBridge 규칙이 존재하며, API가 `PATCH /channels/:id/schedule` 호출 시 자동으로 생성/삭제한다 (`apps/api/src/channels/eventbridge.ts`).
+
+- 규칙 이름: `shorts-channel-{channelId}-scheduler`
+- 타겟 페이로드: `{ channelId: string }`
+- cron 변환: 표준 5필드 → EventBridge 6필드 (`toEventBridgeCron`, dom/dow `?` 규칙 적용)
+
+## Job 생성 조건 (모두 충족해야 Job 생성)
+
+1. 이벤트에 `channelId` 포함 (없으면 스킵)
+2. `Channel.schedulerEnabled = true` AND `isActive = true`
 3. 해당 채널에 `PENDING`~`UPLOAD_PROCESSING` 상태 Job이 없음
 
 ## 뉴스 수집 로직 (news-fetcher.ts)
@@ -52,7 +59,7 @@ const BLOCK_KEYWORDS = [
 ];
 ```
 
-필터 후 유효 토픽이 0개이면 해당 분기 스케줄을 스킵하고 다음 분기에 재시도한다.
+필터 후 유효 토픽이 0개이면 해당 실행을 스킵하고 다음 스케줄 시각에 재시도한다.
 
 ## SQS 메시지 구조
 

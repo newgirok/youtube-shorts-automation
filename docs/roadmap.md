@@ -37,11 +37,11 @@
   - [x] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
   - [x] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]`
 - **Phase 5** — 스케줄링 + 운영 안정화 ✅ 완료
-  - [x] P5-1. EventBridge Scheduler — `rate(1 minute)` 트리거 scheduler-worker `[DevOps][BE]`
+  - [x] P5-1. EventBridge `rate(1 minute)` → scheduler-worker Lambda 트리거 `[DevOps][BE]`
   - [x] P5-2. DLQ 알림 Lambda `[BE][DevOps]`
   - [x] P5-3. CloudWatch 알람 설정 (Lambda 에러율 + DLQ 깊이 → SNS 이메일) `[DevOps]`
 - **Phase 6** — 멀티채널 + 스케일링
-  - [ ] P6-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
+  - [~] P6-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]` *(코드 완료, 인프라 적용 대기)*
   - [ ] P6-2. Analytics 다채널 수집 `[BE][DevOps]`
 - **Phase 7** — 프로덕션 준비
   - [x] P7-1. GitHub Actions CI/CD + Slack 배포 알림 (Block Kit 포맷) `[DevOps]`
@@ -320,7 +320,17 @@
 
 > 채널 10개를 추가 인프라 변경 없이 독립적으로 운영할 수 있다.
 
-- **P6-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
+- **P6-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]` *(인프라 적용 대기)*
+  - 각 채널에 독립 EventBridge 규칙 생성 — 채널 cron이 EventBridge 표현식으로 직접 전환
+  - `PATCH /channels/:id/schedule` 호출 시 규칙 자동 생성/삭제 (`apps/api/src/channels/eventbridge.ts`)
+  - scheduler-worker는 `rate(1 min)` 폴링 제거 — EventBridge 규칙이 `{ channelId }` 페이로드를 직접 전달
+  - `Channel.eventBridgeRuleArn` 필드로 규칙 ARN 관리 (마이그레이션: `20260726000000_add_eventbridge_rule_arn`)
+  - IAM: LambdaWorkerRole에 `events:PutRule/PutTargets/RemoveTargets/DeleteRule/DescribeRule` 추가
+  - Terraform: `aws_lambda_permission.eventbridge_invoke_scheduler` (EventBridge → scheduler-worker invoke 허용)
+  - 검증
+    - `PATCH /channels/:id/schedule` 호출 후 AWS EventBridge 콘솔에서 규칙 생성 확인
+    - 스케줄 시각에 scheduler-worker CloudWatch 로그 실행 확인
+  - ⚠️ 보류: `terraform apply` + `prisma migrate deploy` 수동 실행 필요
 - **P6-2.** Analytics 다채널 수집 `[BE][DevOps]`
 
 **완료 기준**
@@ -337,7 +347,8 @@
   - deploy-api / deploy-workers / deploy-web 각각 완료·실패 시 Slack Block Kit 알림
     - section(제목+커밋메시지) + context(브랜치·커밋·작성자 인라인) + actions(버튼) 3블록 구조
     - 컬러 사이드바: 성공 `#2eb886` / 실패 `#e01e5a`
-    - 커밋 메시지: `python3` Unicode 슬라이싱으로 60자 초과 시 `…` 처리
+    - 커밋 메시지: `head -1`으로 첫 줄만 추출 (truncation 없음)
+    - 작성자: `github.event.head_commit.author.name <email>` 형식
   - path filter: 소스·배포 설정 파일만 포함, `*.md`·workflow 파일 자체 제외
   - GitHub Secret `SLACK_WEBHOOK_URL` 등록 완료
 - **P7-2.** Sentry 연동 `[BE]`
