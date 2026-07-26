@@ -178,8 +178,8 @@ YouTube Data API 접근에 필요한 OAuth2 토큰 쌍입니다.
 
 AWS EventBridge의 스케줄러 기능으로, 채널별 지정 시간에 Job을 자동 생성합니다.
 
-- `rate(1 minute)` 규칙으로 scheduler-worker Lambda를 매분 트리거
-- `Channel.uploadSchedule` cron을 매분 평가해 해당 시각이면 `POST /jobs/auto-news` 호출
+- `PATCH /channels/:id/schedule` 호출 시 채널 전용 EventBridge 규칙이 자동 생성됩니다 (`shorts-channel-{channelId}-scheduler`).
+- 지정 cron 시각에 scheduler-worker Lambda를 직접 호출 (페이로드: `{ channelId }`)
 - 예시: `"0 9 * * *"` = 매일 UTC 오전 9시 Job 자동 생성
 
 ---

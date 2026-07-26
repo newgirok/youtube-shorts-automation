@@ -9,8 +9,7 @@
 ### 1. 채널당 매일 1개 쇼츠 업로드
 
 - `Channel.schedulerEnabled = true`인 채널에 대해 `uploadSchedule` (cron 형식)에 따라 Job을 자동 생성합니다.
-- Phase 1~2 (로컬): NestJS `@Cron('* * * * *')` 스케줄러가 1분마다 cron 표현식을 평가해 Job 생성.
-- Phase 4+ (AWS): EventBridge Scheduler로 채널별 cron 스케줄 이관 예정 (P5-1).
+- AWS: 채널마다 독립 EventBridge 규칙이 생성되며 (`PATCH /channels/:id/schedule`), 해당 cron 시각에 scheduler-worker Lambda가 직접 호출됩니다.
 - `Channel.isActive = false`인 채널은 스케줄에서 제외됩니다.
 - 스케줄 기본값: `"0 9 * * *"` (UTC 오전 9시, KST 오후 6시)
 - 채널별로 독립적인 스케줄 설정이 가능합니다.
@@ -19,7 +18,7 @@
 
 - 스케줄러가 Job을 자동 생성할 때 `Channel.schedulerCategory`(기본: `top`)를 기준으로 Google News RSS에서 뉴스 제목을 topic으로 사용합니다.
 - `POST /jobs/auto-news` 엔드포인트를 통해 수동으로도 카테고리별 뉴스 Job을 일괄 생성할 수 있습니다.
-- 카테고리: `top`(종합) / `politics`(정치) / `business`(경제) / `nation`(사회)
+- 카테고리: `top`(종합) / `business`(경제) / `technology`(기술) / `health`(의료) / `science`(과학) / `nation`(사회)
 
 ### 3. 보안 규칙
 

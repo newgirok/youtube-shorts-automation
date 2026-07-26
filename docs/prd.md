@@ -77,7 +77,7 @@ Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라
 ### 4-2. 뉴스 자동 수집
 
 - `POST /jobs/auto-news`: Google News RSS (`news.google.com/rss`, 한국어/KR) 수집 → 뉴스 제목으로 Job 일괄 생성
-- 카테고리: `top | politics | business | nation` (기본값: `top`)
+- 카테고리: `top | business | technology | health | science | nation` (기본값: `top`)
 - count: 1~5개 (기본값: 3)
 
 ### 4-3. 스케줄링
