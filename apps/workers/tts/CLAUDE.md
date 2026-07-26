@@ -7,7 +7,7 @@ SQS tts-queue를 폴링해 msedge-tts(npm 패키지)로 음성을 합성하는 �
 ## 주요 모듈
 
 - `TTSAdapter.ts` — TTS 인터페이스 (Phase 8 Clova Voice 교체 대비 추상화)
-- `EdgeTTSAdapter.ts` — `ko-KR-SunHiNeural` 구현체 (msedge-tts WebSocket API 사용)
+- `EdgeTTSAdapter.ts` — `ko-KR-InJoonNeural` 구현체 (msedge-tts WebSocket API 사용)
 - `handler.ts` — Lambda SQS 이벤트 핸들러
 - `local-runner.ts` — Docker Compose 환경용 SQS Long Polling 루프
 - `env.ts` — 환경변수 파싱 (`SQS_SUBTITLE_QUEUE_URL` 등)
@@ -31,8 +31,7 @@ const toSafeMsg = (err: unknown) =>
 - 입력: `title` + `script` 필드 (ScriptOutput)
 - 출력: `/tmp/{jobId}-audio.mp3` → S3 `jobs/{jobId}/audio.mp3`
 
-> **Lambda Layer 불필요**: msedge-tts는 순수 Node.js npm 패키지이므로 Python이나 Lambda Layer가 필요 없다.
-> Python CLI 방식(`edge-tts`)은 Lambda nodejs22.x에 python3가 없어 exit code 127로 실패했다.
+> **Lambda Layer 불필요**: msedge-tts는 순수 Node.js npm 패키지이므로 별도 Layer 없이 배포된다.
 
 ## TTS 입력 전처리 (handler.ts)
 
