@@ -16,7 +16,7 @@ export class EdgeTTSAdapter implements TTSAdapter {
 
     const tts = new MsEdgeTTS();
     await tts.setMetadata(
-      'ko-KR-InJoonNeural',
+      'ko-KR-SunHiNeural',
       OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3,
     );
 
