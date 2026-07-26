@@ -39,7 +39,7 @@ export default function JobDetailPage() {
     refetchInterval: (query) => {
       const job = query.state.data;
       if (!job) return 2000;
-      if (job.status === 'COMPLETED' || job.status === 'FAILED') return 30000;
+      if (job.status === 'COMPLETED' || job.status === 'FAILED') return false;
       return 2000;
     },
   });
@@ -62,6 +62,21 @@ export default function JobDetailPage() {
     const t1 = setTimeout(doSync, 10_000);
     const t2 = setTimeout(doSync, 40_000);
     return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [job?.channelId, job?.youtubeVideoId, id, queryClient]);
+
+  // 10분마다 sync-videos — 조회수·비공개·삭제 상태 갱신
+  useEffect(() => {
+    if (!job?.channelId || !job?.youtubeVideoId) return;
+    const channelId = job.channelId;
+    const timer = setInterval(() => {
+      apiPost(`/channels/${channelId}/sync-videos`, {})
+        .then(() => {
+          queryClient.invalidateQueries({ queryKey: ['job', id] });
+          queryClient.invalidateQueries({ queryKey: ['jobs', channelId] });
+        })
+        .catch(() => {});
+    }, 10 * 60 * 1000);
+    return () => clearInterval(timer);
   }, [job?.channelId, job?.youtubeVideoId, id, queryClient]);
 
   // youtubeVideoId가 새로 생기면 썸네일 에러 상태 리셋

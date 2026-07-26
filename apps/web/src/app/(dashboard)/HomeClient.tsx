@@ -264,7 +264,7 @@ export function HomeClient({ channels, userId = '', firstChannelId = '', initial
       const data = query.state.data ?? [];
       if (data.length === 0) return 2000;
       const hasProcessing = data.some((s) => s.status !== 'COMPLETED' && s.status !== 'FAILED');
-      return hasProcessing ? 2000 : 30000;
+      return hasProcessing ? 2000 : false;
     },
   });
 
@@ -279,6 +279,17 @@ export function HomeClient({ channels, userId = '', firstChannelId = '', initial
     }
     hadProcessingRef.current = hasProcessing;
   }, [realJobs, activeChannelId, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 10분마다 sync-videos — 조회수·비공개·삭제 상태 갱신
+  useEffect(() => {
+    if (!activeChannelId) return;
+    const timer = setInterval(() => {
+      apiPost(`/channels/${activeChannelId}/sync-videos`, {}, userHeaders)
+        .then(() => queryClient.invalidateQueries({ queryKey: ['jobs', activeChannelId] }))
+        .catch(() => {});
+    }, 10 * 60 * 1000);
+    return () => clearInterval(timer);
+  }, [activeChannelId, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const jobs = realJobs;
 
@@ -401,7 +412,7 @@ export function HomeClient({ channels, userId = '', firstChannelId = '', initial
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <div>
-              <p className="text-sm font-medium text-amber-300">오늘 생성 한도(3회)에 도달했습니다</p>
+              <p className="text-sm font-medium text-amber-300">오늘 생성 한도(6회)에 도달했습니다</p>
               <p className="text-xs text-amber-300/60 mt-0.5">자정(00:00 KST)이 지나면 다시 생성할 수 있습니다</p>
             </div>
           </div>
