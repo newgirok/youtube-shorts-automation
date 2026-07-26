@@ -73,12 +73,12 @@ export default function JobDetailPage() {
     prevThumbUrlRef.current = newId;
   }, [job?.youtubeVideoId]);
 
-  // YouTube CDN 썸네일 미처리(404) 시 15초 후 자동 재시도
+  // YouTube CDN 썸네일 미처리(404) 시 15초 후 자동 재시도 (비공개 영상은 항상 404이므로 스킵)
   useEffect(() => {
-    if (!thumbnailError || !job?.youtubeVideoId) return;
+    if (!thumbnailError || !job?.youtubeVideoId || job?.privacyStatus === 'private') return;
     const timer = setTimeout(() => setThumbnailError(false), 15_000);
     return () => clearTimeout(timer);
-  }, [thumbnailError, job?.youtubeVideoId]);
+  }, [thumbnailError, job?.youtubeVideoId, job?.privacyStatus]);
 
   if (isLoading) {
     return (
@@ -188,6 +188,7 @@ export default function JobDetailPage() {
   const title = job.scriptContent?.title ?? job.topic;
   const processingTime = calcProcessingTime(job.startedAt, job.completedAt);
   const isYoutubeDeleted = job.status === 'FAILED' && job.failReason === '유튜브에서 영상이 삭제되었습니다.';
+  const isPrivate = job.privacyStatus === 'private';
   const thumbnailUrl = effectiveThumbUrl(job.youtubeVideoId, job.thumbnailUrl);
   const sc = job.scriptContent;
 
@@ -263,6 +264,10 @@ export default function JobDetailPage() {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 allowFullScreen
               />
+            ) : isPrivate ? (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/5">
+                <span className="text-xs font-bold text-white/50">비공개</span>
+              </div>
             ) : thumbnailUrl && !thumbnailError ? (
               <div
                 className={`absolute inset-0 group ${job.youtubeVideoId ? 'cursor-pointer' : ''}`}
@@ -285,13 +290,6 @@ export default function JobDetailPage() {
             ) : (
               <div className="absolute inset-0 flex items-center justify-center">
                 <span className="text-xs text-white/30">썸네일 없음</span>
-              </div>
-            )}
-            {job.privacyStatus === 'private' && !showPlayer && thumbnailUrl && !thumbnailError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px] pointer-events-none">
-                <span className="text-xs font-semibold text-white/60 bg-black/40 backdrop-blur-sm rounded-full px-3 py-1 border border-white/10">
-                  비공개
-                </span>
               </div>
             )}
             {showPlayer && job.youtubeVideoId && (

@@ -60,6 +60,10 @@ export function VideoCard({ video }: { video: JobType }) {
               {isDeleted ? '삭제' : '실패'}
             </span>
           </div>
+        ) : video.privacyStatus === 'private' ? (
+          <div className="w-full h-full flex items-center justify-center bg-white/5">
+            <span className="text-xs font-bold text-white/50">비공개</span>
+          </div>
         ) : thumbnailSrc ? (
           <img
             src={thumbnailSrc}

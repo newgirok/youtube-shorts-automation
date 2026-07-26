@@ -30,7 +30,7 @@ function useCarouselSize() {
 function GalleryCard({ job }: { job: JobType }) {
   const [hovered, setHovered] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const rawThumb = job.status !== 'FAILED' ? effectiveThumbUrl(job.youtubeVideoId, job.thumbnailUrl) : null;
+  const rawThumb = (job.status !== 'FAILED' && job.privacyStatus !== 'private') ? effectiveThumbUrl(job.youtubeVideoId, job.thumbnailUrl) : null;
   const thumb = rawThumb && !imgError ? rawThumb : null;
 
   useEffect(() => {
@@ -81,6 +81,8 @@ function GalleryCard({ job }: { job: JobType }) {
               }`}>
                 {job.failReason === '유튜브에서 영상이 삭제되었습니다.' ? '삭제' : '실패'}
               </span>
+            ) : job.privacyStatus === 'private' ? (
+              <span className="text-xs font-bold text-white/50">비공개</span>
             ) : (
               <Video className="w-4 h-4 text-white/30" />
             )}
