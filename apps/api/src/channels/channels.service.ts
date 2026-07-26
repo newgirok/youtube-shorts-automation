@@ -119,6 +119,7 @@ export class ChannelsService {
     });
 
     const rows = res.data.rows ?? [];
+    log.info({ channelId, youtubeId, rowCount: rows.length, sampleRow: rows[0] ?? null }, 'Analytics API 응답');
     for (const row of rows) {
       const [dateStr, views, subscribers, watchTimeMinutes] = row as [string, number, number, number];
       await this.repo.upsertDailyAnalytics(channelId, {

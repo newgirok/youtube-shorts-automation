@@ -123,10 +123,10 @@ export class ChannelsRepository {
     const rows = await prisma.channelAnalytics.findMany({
       where: { channelId: id },
       select: { date: true, views: true, subscribers: true, estimatedRevenue: true, watchTimeMinutes: true },
-      orderBy: { date: 'asc' },
+      orderBy: { date: 'desc' },
       take: 30,
     });
-    return rows.map((r) => ({
+    return rows.reverse().map((r) => ({
       date: r.date.toISOString().split('T')[0],
       views: Number(r.views),
       subscribers: r.subscribers,
