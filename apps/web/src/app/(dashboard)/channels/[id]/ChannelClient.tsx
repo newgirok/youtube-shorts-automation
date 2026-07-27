@@ -81,6 +81,7 @@ function SchedulerPanel({ channelId, channel, userHeaders }: { channelId: string
 
   const stateRef = useRef({ enabled, freq, hour, day, category });
   stateRef.current = { enabled, freq, hour, day, category };
+  const prevEnabledRef = useRef(enabled);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -101,6 +102,9 @@ function SchedulerPanel({ channelId, channel, userHeaders }: { channelId: string
     },
     onError: () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      const prev = prevEnabledRef.current;
+      setEnabled(prev);
+      stateRef.current.enabled = prev;
       setSaveStatus('error');
       saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
     },
@@ -112,6 +116,7 @@ function SchedulerPanel({ channelId, channel, userHeaders }: { channelId: string
   }
 
   function handleToggle() {
+    prevEnabledRef.current = enabled;
     setEnabled((v) => {
       stateRef.current.enabled = !v;
       autoSave(true);
