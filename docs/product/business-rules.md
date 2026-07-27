@@ -9,7 +9,8 @@
 ### 1. 채널당 매일 1개 쇼츠 업로드
 
 - `Channel.schedulerEnabled = true`인 채널에 대해 `uploadSchedule` (cron 형식)에 따라 Job을 자동 생성합니다.
-- EventBridge `rate(1 minute)` 규칙으로 scheduler-worker Lambda가 매분 트리거됩니다. 활성 채널의 `uploadSchedule` cron을 평가해 해당 시각인 채널의 뉴스를 수집하고 Job을 생성합니다.
+- 채널별 독립 EventBridge 규칙(`shorts-channel-{channelId}-scheduler`)이 정확히 해당 시각에만 scheduler-worker Lambda를 트리거합니다. 스케줄 변경·활성화 시 기존 규칙을 삭제하고 새 규칙을 생성합니다(`PATCH /channels/:id/schedule`).
+- `Channel.eventBridgeRuleArn`에 연결된 EventBridge 규칙의 ARN이 저장됩니다.
 - `Channel.isActive = false`인 채널은 스케줄에서 제외됩니다.
 - 스케줄 기본값: `"0 9 * * *"` (UTC 오전 9시, KST 오후 6시)
 - 채널별로 독립적인 스케줄 설정이 가능합니다.

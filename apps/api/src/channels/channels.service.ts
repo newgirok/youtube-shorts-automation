@@ -4,6 +4,7 @@ import { google } from 'googleapis';
 import { createLogger } from '@shorts/shared';
 import { ChannelsRepository } from './channels.repository.js';
 import { decrypt } from '../auth/crypto.js';
+import { createChannelRule, deleteChannelRule } from './eventbridge.js';
 import type { UpdateScheduleDto } from './dto/update-schedule.dto.js';
 
 const log = createLogger({});
@@ -43,6 +44,19 @@ export class ChannelsService {
     if (dto.cronExpression !== undefined) data.uploadSchedule = dto.cronExpression;
     if (dto.schedulerEnabled !== undefined) data.schedulerEnabled = dto.schedulerEnabled;
     if (dto.schedulerCategory !== undefined) data.schedulerCategory = dto.schedulerCategory;
+
+    const willBeEnabled = dto.schedulerEnabled ?? exists.schedulerEnabled;
+    const newCron = dto.cronExpression ?? exists.uploadSchedule;
+    const cronChanged = dto.cronExpression !== undefined && dto.cronExpression !== exists.uploadSchedule;
+    const enabledChanged = dto.schedulerEnabled !== undefined && dto.schedulerEnabled !== exists.schedulerEnabled;
+
+    if (willBeEnabled && newCron && (cronChanged || enabledChanged)) {
+      if (exists.eventBridgeRuleArn) await deleteChannelRule(id);
+      data.eventBridgeRuleArn = await createChannelRule(id, newCron);
+    } else if (!willBeEnabled && enabledChanged) {
+      if (exists.eventBridgeRuleArn) await deleteChannelRule(id);
+      data.eventBridgeRuleArn = null;
+    }
 
     return this.repo.updateSchedule(id, data);
   }
