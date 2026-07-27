@@ -78,6 +78,7 @@ function SchedulerPanel({ channelId, channel, userHeaders }: { channelId: string
   const [day, setDay] = useState(init.day);
   const [category, setCategory] = useState<Category>((channel.schedulerCategory as Category) ?? 'top');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saved' | 'error'>('idle');
+  const lastSaveStatusRef = useRef<'saved' | 'error'>('saved');
 
   const stateRef = useRef({ enabled, freq, hour, day, category });
   stateRef.current = { enabled, freq, hour, day, category };
@@ -96,6 +97,7 @@ function SchedulerPanel({ channelId, channel, userHeaders }: { channelId: string
     },
     onSuccess: () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      lastSaveStatusRef.current = 'saved';
       setSaveStatus('saved');
       queryClient.invalidateQueries({ queryKey: ['channel', channelId] });
       saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2000);
@@ -105,6 +107,7 @@ function SchedulerPanel({ channelId, channel, userHeaders }: { channelId: string
       const prev = prevEnabledRef.current;
       setEnabled(prev);
       stateRef.current.enabled = prev;
+      lastSaveStatusRef.current = 'error';
       setSaveStatus('error');
       saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 3000);
     },
@@ -140,7 +143,7 @@ function SchedulerPanel({ channelId, channel, userHeaders }: { channelId: string
               {enabled ? scheduleLabel(freq, hour, day) : '비활성화됨'}
             </p>
             <p className={cn('text-[10px] mt-1 transition-opacity', saveStatus !== 'idle' ? 'opacity-100' : 'opacity-0', saveStatus === 'error' ? 'text-red-400' : 'text-green-400')}>
-              {saveStatus === 'error' ? '저장 실패' : '✓ 저장됨'}
+              {lastSaveStatusRef.current === 'error' ? '저장 실패' : '✓ 저장됨'}
             </p>
           </div>
           <button
