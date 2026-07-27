@@ -315,6 +315,35 @@ output "alerts_sns_arn" {
 # ── P6-1: 채널별 EventBridge → scheduler-worker Lambda 실행 권한 ──────────────
 # 계정 내 임의의 EventBridge 규칙이 scheduler-worker를 invoke할 수 있도록 허용.
 # API가 채널별로 EventBridge 규칙을 동적 생성하므로 source_arn을 와일드카드로 설정.
+# ── P7-4: AWS Budget Alert ────────────────────────────────────────────────────
+
+resource "aws_budgets_budget" "monthly" {
+  name         = "prod-shorts-monthly"
+  budget_type  = "COST"
+  limit_amount = "10"
+  limit_unit   = "USD"
+  time_unit    = "MONTHLY"
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 80
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = ["newgirok@gmail.com"]
+  }
+
+  notification {
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 100
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = ["newgirok@gmail.com"]
+  }
+}
+
+# ── P6-1: 채널별 EventBridge → scheduler-worker Lambda 실행 권한 ──────────────
+# 계정 내 임의의 EventBridge 규칙이 scheduler-worker를 invoke할 수 있도록 허용.
+# API가 채널별로 EventBridge 규칙을 동적 생성하므로 source_arn을 와일드카드로 설정.
 resource "aws_lambda_permission" "eventbridge_invoke_scheduler" {
   statement_id  = "AllowEventBridgeInvokeScheduler"
   action        = "lambda:InvokeFunction"

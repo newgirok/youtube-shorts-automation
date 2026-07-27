@@ -41,13 +41,13 @@
   - [x] P5-2. DLQ 알림 Lambda `[BE][DevOps]`
   - [x] P5-3. CloudWatch 알람 설정 (Lambda 에러율 + DLQ 깊이 → SNS 이메일) `[DevOps]`
 - **Phase 6** — 멀티채널 + 스케일링
-  - [~] P6-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]` *(코드 완료, 인프라 적용 대기)*
+  - [x] P6-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
   - [ ] P6-2. Analytics 다채널 수집 `[BE][DevOps]`
 - **Phase 7** — 프로덕션 준비
   - [x] P7-1. GitHub Actions CI/CD + Slack 배포 알림 (Block Kit 포맷) `[DevOps]`
   - [ ] P7-2. Sentry 연동 `[BE]`
   - [ ] P7-3. Edge-TTS → Clova Voice 교체 `[BE][AI]`
-  - [ ] P7-4. AWS Budget Alert `[DevOps]`
+  - [x] P7-4. AWS Budget Alert `[DevOps]`
 
 ---
 
@@ -320,7 +320,7 @@
 
 > 채널 10개를 추가 인프라 변경 없이 독립적으로 운영할 수 있다.
 
-- **P6-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]` *(인프라 적용 대기)*
+- **P6-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]` ✅
   - 각 채널에 독립 EventBridge 규칙 생성 — 채널 cron이 EventBridge 표현식으로 직접 전환
   - `PATCH /channels/:id/schedule` 호출 시 규칙 자동 생성/삭제 (`apps/api/src/channels/eventbridge.ts`)
   - scheduler-worker는 `rate(1 min)` 폴링 제거 — EventBridge 규칙이 `{ channelId }` 페이로드를 직접 전달
@@ -330,7 +330,6 @@
   - 검증
     - `PATCH /channels/:id/schedule` 호출 후 AWS EventBridge 콘솔에서 규칙 생성 확인
     - 스케줄 시각에 scheduler-worker CloudWatch 로그 실행 확인
-  - ⚠️ 보류: `terraform apply` + `prisma migrate deploy` 수동 실행 필요
 - **P6-2.** Analytics 다채널 수집 `[BE][DevOps]`
 
 **완료 기준**
