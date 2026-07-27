@@ -4,7 +4,6 @@ import { google } from 'googleapis';
 import { createLogger } from '@shorts/shared';
 import { ChannelsRepository } from './channels.repository.js';
 import { decrypt } from '../auth/crypto.js';
-import { createChannelRule, deleteChannelRule } from './eventbridge.js';
 import type { UpdateScheduleDto } from './dto/update-schedule.dto.js';
 
 const log = createLogger({});
@@ -37,29 +36,13 @@ export class ChannelsService {
   }
 
   async updateSchedule(id: string, dto: UpdateScheduleDto) {
-    const current = await this.repo.findSchedulerConfig(id);
-    if (!current) throw new NotFoundException('채널을 찾을 수 없습니다.');
+    const exists = await this.repo.findSchedulerConfig(id);
+    if (!exists) throw new NotFoundException('채널을 찾을 수 없습니다.');
 
     const data: Parameters<typeof this.repo.updateSchedule>[1] = {};
     if (dto.cronExpression !== undefined) data.uploadSchedule = dto.cronExpression;
     if (dto.schedulerEnabled !== undefined) data.schedulerEnabled = dto.schedulerEnabled;
     if (dto.schedulerCategory !== undefined) data.schedulerCategory = dto.schedulerCategory;
-
-    // 스케줄 활성화 상태 계산
-    const nextEnabled = data.schedulerEnabled ?? current.schedulerEnabled;
-    const nextCron = data.uploadSchedule ?? current.uploadSchedule;
-
-    if (nextEnabled && nextCron) {
-      // 기존 규칙이 있으면 삭제 후 재생성 (cron 변경 대응)
-      if (current.eventBridgeRuleArn) {
-        await deleteChannelRule(id);
-      }
-      const ruleArn = await createChannelRule(id, nextCron);
-      data.eventBridgeRuleArn = ruleArn;
-    } else if (!nextEnabled && current.eventBridgeRuleArn) {
-      await deleteChannelRule(id);
-      data.eventBridgeRuleArn = null;
-    }
 
     return this.repo.updateSchedule(id, data);
   }

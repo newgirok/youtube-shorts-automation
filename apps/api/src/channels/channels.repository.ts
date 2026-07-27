@@ -38,20 +38,19 @@ export class ChannelsRepository {
       uploadSchedule?: string | null;
       schedulerEnabled?: boolean;
       schedulerCategory?: string;
-      eventBridgeRuleArn?: string | null;
     },
   ) {
     return prisma.channel.update({
       where: { id },
       data,
-      select: { id: true, uploadSchedule: true, schedulerEnabled: true, schedulerCategory: true, eventBridgeRuleArn: true },
+      select: { id: true, uploadSchedule: true, schedulerEnabled: true, schedulerCategory: true },
     });
   }
 
   findSchedulerConfig(id: string) {
     return prisma.channel.findUnique({
       where: { id },
-      select: { id: true, uploadSchedule: true, schedulerEnabled: true, eventBridgeRuleArn: true },
+      select: { id: true, uploadSchedule: true, schedulerEnabled: true },
     });
   }
 
