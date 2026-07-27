@@ -72,9 +72,11 @@ src/
 ├── components/
 │   ├── StatusTimeline.tsx        — Job 처리 단계 타임라인 + 재시도 버튼
 │   ├── VideoCard.tsx             — Job 카드 (썸네일·상태 배지·삭제 오버레이, aspect-[9/16] max-h-36, effectiveThumbUrl()로 YouTube 또는 프록시 URL 선택)
-│   ├── Sidebar.tsx               — 데스크톱 사이드 내비게이션
-│   ├── BottomNav.tsx             — 모바일 하단 내비게이션
+│   ├── Sidebar.tsx               — 데스크톱 사이드 내비게이션 (useYoutubeConnect 사용)
+│   ├── BottomNav.tsx             — 모바일 하단 내비게이션 (useYoutubeConnect 사용)
 │   └── ui/                       — shadcn/ui 기본 컴포넌트
+├── hooks/
+│   └── useYoutubeConnect.ts      — YouTube 채널 연결/해제 로직 (Sidebar·BottomNav 공용). isConnected + handleYoutubeClick 반환
 ├── lib/
 │   ├── types.ts                  — Job, Channel, AnalyticsRow, JobStatus 타입
 │   ├── api.ts                    — apiGet / apiPost / apiPatch / apiDelete 헬퍼 + ApiError 클래스. 응답 실패 시 body.message 추출해 ApiError(status, message) throw. API_INTERNAL_URL → NEXT_PUBLIC_API_URL 폴백, NEXT_PUBLIC_API_SECRET Bearer 헤더 자동 첨부
@@ -184,7 +186,8 @@ interface AnalyticsRow {
   - 예: `"2분 34초"`, `"1시간 5분 12초"`
 
 ### 채널 연결 해제
-- `Sidebar.tsx` YouTube 버튼: 연결 상태에서 클릭 → confirm → `DELETE /channels/:id` → `clearSelectedChannelId()` → `/` 이동
+- `useYoutubeConnect` 훅 (`src/hooks/useYoutubeConnect.ts`): YouTube 연결/해제 로직을 단일 훅으로 통합. `Sidebar.tsx`와 `BottomNav.tsx` 모두 이 훅을 사용. **향후 연결/해제 로직을 두 컴포넌트에 각각 구현하지 말 것.**
+- YouTube 버튼 클릭: 미연결 → `userId` 파라미터 포함 `window.open()` 팝업 열기, 연결 → confirm → `DELETE /channels/:id` → `clearSelectedChannelId()` → `/` 이동
 - 순서 중요: API 호출 완료 후 store 초기화 → 홈 이동 (순서 바뀌면 홈 서버 fetch 시점에 DB가 아직 active라 재설정됨)
 - `HomeClient.tsx`: 서버에서 받은 `channels` 목록에 `selectedChannelId`가 없으면 자동 초기화 (`clearSelectedChannelId`)
 - `ChannelClient.tsx`: 마운트 시 `setSelectedChannelId(initial.id)` 호출 — OAuth 후 `/channels/:id`로 직접 랜딩해도 GNB 즉시 표시
@@ -287,7 +290,7 @@ const NEWS_CATEGORIES = [
 - **jwt 콜백**: 로그인 시(`user` 파라미터 있을 때) Prisma DB 조회 → `token.userId = user.id` 저장. JWT 갱신마다 재조회하지 않음.
 - **session 콜백**: `token.userId` → `session.user.id` 노출. `Session` 타입에 `user.id: string` 확장 선언(`declare module 'next-auth'`).
 - 웹 서버 컴포넌트에서 `await auth()` → `session.user.id` 추출 → API 호출 시 `x-user-id` 헤더로 전달.
-- **Sidebar**: `useSession()` hook으로 `session.user.id` 읽어 YouTube OAuth 연결 팝업 URL(`/auth/youtube?userId=...`)에 포함.
+- **Sidebar·BottomNav**: `useYoutubeConnect` 훅이 내부적으로 `useSession()` hook으로 `session.user.id` 읽어 YouTube OAuth 연결 팝업 URL(`/auth/youtube?userId=...`)에 포함.
 - `src/middleware.ts`: `api|_next/static|_next/image|_next|login|close|popup|favicon.ico|이미지·영상 확장자(.jpg/.jpeg/.png/.gif/.svg/.webp/.ico/.mp4/.webm/.ogg)` 경로 제외 후 미인증 접근을 `/login`으로 리다이렉트
 
 ### YouTube OAuth 채널 연결 흐름
@@ -297,7 +300,7 @@ const NEWS_CATEGORIES = [
 
 ```
 [팝업 열기]
-Sidebar → GET /auth/youtube?userId=... (API Lambda)
+Sidebar·BottomNav → useYoutubeConnect.handleYoutubeClick → window.open() → GET /auth/youtube?userId=... (API Lambda)
         → 302 accounts.google.com/o/oauth2/v2/auth?redirect_uri=https://shortsautomation.com/api/auth/youtube/callback
 
 [동의 완료 후]
