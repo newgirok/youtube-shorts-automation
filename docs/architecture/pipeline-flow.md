@@ -31,8 +31,8 @@
 │                                                         │
 │  SQS tts-queue 수신                                      │
 │  → S3에서 script.json 다운로드                            │
-│  → Edge-TTS (ko-KR-SunHiNeural) 음성 합성               │
-│  → S3 저장: jobs/{jobId}/audio.mp3, subtitle.vtt        │
+│  → msedge-tts (ko-KR-InJoonNeural +20%) 음성 합성        │
+│  → S3 저장: jobs/{jobId}/audio.mp3                       │
 │  → Job status: TTS_PROCESSING → (다음 단계)              │
 │  → SQS subtitle-queue 발행                               │
 └─────────────────────────────────────────────────────────┘
@@ -42,9 +42,10 @@
 │  3단계: subtitle-worker (Lambda)                         │
 │                                                         │
 │  SQS subtitle-queue 수신 (Event Source Mapping)          │
-│  → S3에서 audio.mp3, subtitle.vtt(선택) 다운로드          │
-│  → VTT 기반 SRT 생성 (vtt 없으면 ffprobe 길이 측정 후     │
-│     script.json 글자 비례 fallback), 20자 이하 청크 분할  │
+│  → S3에서 audio.mp3 다운로드                              │
+│  → ffprobe로 오디오 총 길이 측정                           │
+│  → script.json의 script 필드 글자 수 비례 타임스탬프 할당  │
+│  → 20자 이하 청크 분할 → SRT 생성                         │
 │  → S3 저장: jobs/{jobId}/subtitle.srt                   │
 │  → Job status: SUBTITLE_PROCESSING → (다음 단계)         │
 │  → SQS render-queue 발행                                 │
@@ -111,8 +112,8 @@ interface ScriptMessage {
 | **실행 환경** | AWS Lambda (Node.js 20) |
 | **SQS 큐** | `tts-queue` |
 | **입력** | `jobId`, `channelId`, `scriptS3Key` |
-| **처리** | Edge-TTS `ko-KR-SunHiNeural --rate +20%` 음성 합성 (60초 제한 대응) |
-| **출력** | `jobs/{jobId}/audio.mp3`, `jobs/{jobId}/subtitle.vtt` (S3) |
+| **처리** | msedge-tts `ko-KR-InJoonNeural --rate +20%` 음성 합성 |
+| **출력** | `jobs/{jobId}/audio.mp3` (S3) |
 | **다음 큐** | `subtitle-queue` |
 | **상태 전이** | `SCRIPT_PROCESSING` → `TTS_PROCESSING` |
 
@@ -132,7 +133,7 @@ interface TTSMessage {
 | **실행 환경** | AWS Lambda (Node.js 20, 512MB, 120s) |
 | **SQS 큐** | `subtitle-queue` |
 | **입력** | `jobId`, `channelId`, `audioS3Key` |
-| **처리** | S3에서 audio.mp3 + subtitle.vtt(선택) 다운로드 → VTT 기반 SRT 생성 (vtt 없으면 ffprobe 오디오 길이 측정 후 script.json 글자 비례 fallback), 20자 이하 청크 분할 |
+| **처리** | S3에서 audio.mp3 다운로드 → ffprobe로 오디오 총 길이 측정 → script.json의 `script` 필드 글자 수 비례 타임스탬프 할당, 20자 이하 청크 분할 |
 | **출력** | `jobs/{jobId}/subtitle.srt` (S3) |
 | **다음 큐** | `render-queue` |
 | **상태 전이** | `TTS_PROCESSING` → `SUBTITLE_PROCESSING` |
@@ -142,8 +143,7 @@ interface TTSMessage {
 interface SubtitleMessage {
   jobId: string;
   channelId: string;
-  audioS3Key: string;           // "jobs/{jobId}/audio.mp3"
-  subtitleVttS3Key?: string;    // "jobs/{jobId}/subtitle.vtt" (Edge-TTS 생성, 없으면 비례 fallback)
+  audioS3Key: string;  // "jobs/{jobId}/audio.mp3"
 }
 ```
 
@@ -200,7 +200,6 @@ interface UploadMessage {
 |---|---|---|
 | 스크립트 | `jobs/{jobId}/script.json` | 1단계 (script-worker) |
 | 오디오 | `jobs/{jobId}/audio.mp3` | 2단계 (tts-worker) |
-| 자막 VTT | `jobs/{jobId}/subtitle.vtt` | 2단계 (tts-worker, 선택적 — 없으면 subtitle-worker가 글자 비례 fallback) |
 | 자막 SRT | `jobs/{jobId}/subtitle.srt` | 3단계 (subtitle-worker) |
 | 최종 영상 | `jobs/{jobId}/output.mp4` | 4단계 (render-worker) |
 | 썸네일 | `jobs/{jobId}/thumbnail.jpg` | 4단계 (render-worker, FFmpeg `-vframes 1` 첫 프레임 추출 후 S3 저장) |

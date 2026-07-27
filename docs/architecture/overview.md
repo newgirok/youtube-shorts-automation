@@ -31,7 +31,7 @@
 └──────┬──────────────────────────┘
        │
        ├─── script-worker  (Lambda)  ──→ Gemini 2.5 Flash ──→ S3 script.json
-       ├─── tts-worker     (Lambda)  ──→ Edge-TTS          ──→ S3 audio.mp3
+       ├─── tts-worker     (Lambda)  ──→ msedge-tts        ──→ S3 audio.mp3
        ├─── subtitle-worker (Lambda)  ──→ 글자 비례 SRT       ──→ S3 subtitle.srt
        ├─── render-worker  (Lambda Container Image) ──→ Pexels + FFmpeg ──→ S3 output.mp4
        └─── upload-worker  (Lambda)  ──→ YouTube API        ──→ 업로드 완료
@@ -55,7 +55,7 @@ Lambda는 실행 시간 15분 이내, 메모리 3GB 이하인 경량 작업에 �
 | Worker | 위치 | 입력 | 처리 | 출력 |
 |---|---|---|---|---|
 | **script-worker** | `apps/workers/script` | 토픽, 채널 ID | Gemini 2.5 Flash API 호출 — 뉴스·시사 특화 35~45초 스크립트(210~350자, 최대 380자 검증) | `script.json` → S3 |
-| **tts-worker** | `apps/workers/tts` | `script.json` | Edge-TTS `ko-KR-SunHiNeural` | `audio.mp3` → S3 |
+| **tts-worker** | `apps/workers/tts` | `script.json` | msedge-tts `ko-KR-InJoonNeural +20%` | `audio.mp3` → S3 |
 | **upload-worker** | `apps/workers/upload` | `output.mp4` | YouTube Data API v3 업로드 (description+해시태그, categoryId=25, containsSyntheticMedia: true) | 업로드 완료, `youtubeVideoId` 저장 |
 
 ### Lambda Workers (추가)
@@ -87,7 +87,7 @@ render-worker는 Lambda Container Image로 패키징됩니다 (3008MB, 600s).
 | **Queue** | AWS SQS Standard Queue + DLQ | FIFO 불사용([ADR 003](../adr/003-sqs-standard-queue.md)) |
 | **스토리지** | AWS S3 | 모든 중간 산출물 저장 |
 | **AI (스크립트)** | Google Gemini 2.5 Flash | 무료 티어 사용([ADR 005](../adr/005-gemini-flash.md)) |
-| **TTS** | Edge-TTS `ko-KR-SunHiNeural` | Phase 7~: Clova Voice([ADR 002](../adr/002-tts-engine.md)) |
+| **TTS** | msedge-tts `ko-KR-InJoonNeural +20%` | Lambda Layer 불필요, VTT 미생성. Phase 7~: Clova Voice([ADR 002](../adr/002-tts-engine.md)) |
 | **자막** | 글자 비례 SRT 생성 | `ffprobe` 오디오 길이 측정 → `script` 필드 글자 수 비례 타임스탬프 |
 | **이미지** | Pexels API | scenes[].keyword 기반 배경 이미지 다운로드 |
 | **렌더링** | FFmpeg (zoompan 효과, ASS 자막 burn-in, 썸네일 추출) | [ADR 004](../adr/004-render-engine.md) |
@@ -172,7 +172,7 @@ packages/shared/
 | **YouTube Analytics API** | 일별 views, subscribersGained, estimatedMinutesWatched | youtube.readonly + yt-analytics.readonly |
 | **Google News RSS** | 뉴스 제목 자동 수집 (auto-news) | 무료 |
 | **Pexels API** | scene keyword 기반 배경 이미지 | 무료 플랜 |
-| **Edge-TTS** | 한국어 TTS | 무료 (Microsoft Edge 서버 사용) |
+| **msedge-tts** | 한국어 TTS (ko-KR-InJoonNeural +20%) | 무료, Lambda Layer 불필요, VTT 미생성 |
 | **Supabase** | PostgreSQL 호스팅 + pgBouncer | 무료 플랜 (Phase 3 이후 RDS 이전 고려) |
 | **AWS S3** | 중간 산출물 저장 | ~$0.023/GB/월 |
 | **AWS SQS** | Worker 간 비동기 메시지 큐 | 무료 티어 100만 요청/월 |
