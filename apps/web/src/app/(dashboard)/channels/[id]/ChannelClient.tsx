@@ -142,7 +142,7 @@ function SchedulerPanel({ channelId, channel, userHeaders }: { channelId: string
             <p className="text-xs text-white/40 mt-0.5">
               {enabled ? scheduleLabel(freq, hour, day) : '비활성화됨'}
             </p>
-            <p className={cn('text-[10px] mt-1 transition-opacity', saveStatus !== 'idle' ? 'opacity-100' : 'opacity-0', saveStatus === 'error' ? 'text-red-400' : 'text-green-400')}>
+            <p className={cn('text-[10px] mt-1 transition-opacity', saveStatus !== 'idle' ? 'opacity-100' : 'opacity-0', lastSaveStatusRef.current === 'error' ? 'text-red-400' : 'text-green-400')}>
               {lastSaveStatusRef.current === 'error' ? '저장 실패' : '✓ 저장됨'}
             </p>
           </div>
