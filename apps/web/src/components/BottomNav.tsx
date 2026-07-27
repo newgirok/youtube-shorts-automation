@@ -6,17 +6,12 @@ import { Home, Settings, Youtube, LogOut } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import { useChannelStore } from '@/lib/store';
-
-const YOUTUBE_CONNECT_URL = `${process.env.NEXT_PUBLIC_API_URL ?? ''}/auth/youtube`;
-
-function openYoutubeConnect() {
-  window.location.href = YOUTUBE_CONNECT_URL;
-}
+import { useYoutubeConnect } from '@/hooks/useYoutubeConnect';
 
 export function BottomNav() {
   const pathname = usePathname();
   const { selectedChannelId } = useChannelStore();
-  const isConnected = Boolean(selectedChannelId);
+  const { isConnected, handleYoutubeClick } = useYoutubeConnect();
 
   const items = [
     { href: '/', Icon: Home },
@@ -41,7 +36,7 @@ export function BottomNav() {
         );
       })}
       <button
-        onClick={openYoutubeConnect}
+        onClick={handleYoutubeClick}
         className={cn(
           'flex flex-1 items-center justify-center py-3 transition-all',
           isConnected
