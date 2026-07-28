@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip } from 'recharts';
-import { apiGet, apiPatch, apiPost } from '@/lib/api';
+import { apiGet, apiPatch } from '@/lib/api';
 import { useChannelStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import type { AnalyticsRow, Channel } from '@/lib/types';
@@ -281,15 +281,6 @@ export function ChannelClient({ channel: initial, userId = '' }: { channel: Chan
   useEffect(() => {
     setSelectedChannelId(initial.id);
   }, [initial.id, setSelectedChannelId]);
-
-  useEffect(() => {
-    apiPost(`/channels/${initial.id}/sync`, {}, userHeaders)
-      .then(() => {
-        queryClient.invalidateQueries({ queryKey: ['channel', initial.id] });
-        queryClient.invalidateQueries({ queryKey: ['analytics', initial.id] });
-      })
-      .catch(() => {});
-  }, [initial.id, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const { data: analytics = [] } = useQuery<AnalyticsRow[]>({
     queryKey: ['analytics', initial.id],

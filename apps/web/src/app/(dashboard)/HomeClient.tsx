@@ -243,15 +243,12 @@ export function HomeClient({ channels, userId = '', firstChannelId = '', initial
 
   const activeChannelId = selectedChannelId ?? channels[0]?.id ?? '';
 
-  // 채널 변경 시 sync 호출 + 한도 상태 초기화
+  // 채널 변경 시 한도 상태 초기화
   useEffect(() => {
     if (!activeChannelId) return;
     setDailyLimitHit(false);
     setSubmitError(null);
-    apiPost(`/channels/${activeChannelId}/sync`, {}, userHeaders)
-      .then(() => queryClient.invalidateQueries({ queryKey: ['jobs', activeChannelId] }))
-      .catch(() => {});
-  }, [activeChannelId, queryClient]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [activeChannelId]);
 
   const hadProcessingRef = useRef(false);
 
