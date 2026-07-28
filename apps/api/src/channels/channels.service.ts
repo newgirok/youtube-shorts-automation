@@ -129,6 +129,23 @@ export class ChannelsService {
     log.info({ channelId, rows: rows.length }, 'Analytics 동기화 완료');
   }
 
+  async syncAll(): Promise<Array<{ channelId: string; ok: boolean; analyticsError?: string; error?: string }>> {
+    const channels = await this.repo.findAllActiveIds();
+    log.info({ count: channels.length }, '전체 채널 Analytics 동기화 시작');
+
+    const results = await Promise.allSettled(
+      channels.map((ch) => this.syncChannel(ch.id)),
+    );
+
+    return channels.map((ch, i) => {
+      const r = results[i]!;
+      if (r.status === 'fulfilled') {
+        return { channelId: ch.id, ok: true, ...(r.value.analyticsError ? { analyticsError: r.value.analyticsError } : {}) };
+      }
+      return { channelId: ch.id, ok: false, error: r.reason?.message ?? String(r.reason) };
+    });
+  }
+
   async deactivate(id: string) {
     const channel = await this.repo.findById(id);
     if (!channel) throw new NotFoundException('채널을 찾을 수 없습니다.');

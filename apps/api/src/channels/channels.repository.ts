@@ -11,6 +11,13 @@ export class ChannelsRepository {
     });
   }
 
+  findAllActiveIds() {
+    return prisma.channel.findMany({
+      where: { isActive: true },
+      select: { id: true },
+    });
+  }
+
   async findById(id: string) {
     const row = await prisma.channel.findUnique({
       where: { id },

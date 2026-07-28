@@ -46,6 +46,11 @@ export class ChannelsController {
     return this.service.getAnalytics(id);
   }
 
+  @Post('sync-all')
+  syncAll() {
+    return this.service.syncAll();
+  }
+
   @Post(':id/sync-videos')
   syncVideos(@Param('id') id: string) {
     return this.service.syncVideos(id);
