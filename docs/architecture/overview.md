@@ -64,7 +64,7 @@ Lambda는 실행 시간 15분 이내, 메모리 3GB 이하인 경량 작업에 �
 |---|---|---|---|---|
 | **subtitle-worker** | `apps/workers/subtitle` | `audio.mp3`, `script.json` | `ffprobe`로 오디오 길이 측정 후 글자 비례 타임스탬프 할당, 20자 이하 청크 분할 | `subtitle.srt` → S3 |
 | **render-worker** | `apps/workers/render` | `audio.mp3`, `subtitle.srt`, scenes[] | Pexels 동영상/이미지 다운로드 → zoompan 클립 → FFmpeg concat + 헤더 오버레이 + ASS 자막 burn-in → FFmpeg `-vframes 1` 썸네일 추출 | `output.mp4`, `thumbnail.jpg` → S3 |
-| **scheduler-worker** | `apps/workers/scheduler` | EventBridge `rate(1 minute)` | 활성 채널의 `uploadSchedule` cron 평가 → 해당 시각이면 `POST /jobs/auto-news` 호출 | Job 일괄 생성 |
+| **scheduler-worker** | `apps/workers/scheduler` | EventBridge 채널별 규칙 `{ channelId }` 또는 일일 Analytics `{ type: 'daily-analytics-sync' }` | 채널 단건 Job 생성 또는 `POST /channels/sync-all` 호출 | Job 생성 / 전체 채널 Analytics 갱신 |
 | **dlq-notifier** | `apps/workers/dlq-notifier` | 5개 DLQ SQS 이벤트 | jobId·failReason 파싱 → Slack Webhook 알림 | Slack 알림 전송 |
 
 render-worker는 Lambda Container Image로 패키징됩니다 (3008MB, 600s).
@@ -111,7 +111,7 @@ youtube-shorts-automation/        ← Turborepo 루트
 │       ├── subtitle/             ← 글자 비례 SRT → subtitle.srt (Lambda)
 │       ├── render/               ← Pexels + FFmpeg → output.mp4 (Lambda Container Image)
 │       ├── upload/               ← YouTube Data API (Lambda)
-│       ├── scheduler/            ← EventBridge rate(1 min) → auto-news (Lambda)
+│       ├── scheduler/            ← EventBridge 채널별 규칙 → Job 생성 / daily-analytics-sync → sync-all (Lambda)
 │       └── dlq-notifier/         ← 5개 DLQ → Slack Webhook (Lambda)
 ├── packages/
 │   └── shared/                   ← Prisma 스키마, S3 클라이언트, logger, 공유 타입
@@ -154,12 +154,13 @@ packages/shared/
 | `PATCH` | `/channels/:id/schedule` | 업로드 cron 스케줄·`schedulerEnabled`·`schedulerCategory` 변경 |
 | `DELETE` | `/channels/:id` | 채널 연결 해제 (isActive=false, 데이터 보존) |
 | `GET` | `/channels/:id/analytics` | 최근 30일 일별 analytics |
+| `POST` | `/channels/sync-all` | 모든 활성 채널 병렬 풀 동기화 (매일 KST 06:00 EventBridge 자동 호출) |
 | `POST` | `/channels/:id/sync` | 채널 통계 + Analytics + 영상 조회수 풀 동기화 |
 | `POST` | `/channels/:id/sync-videos` | 영상 조회수·privacyStatus 동기화 + 삭제 영상 처리 |
 | `GET` | `/auth/youtube` | YouTube OAuth 인증 URL 리다이렉트 |
 | `GET` | `/auth/youtube/callback` | OAuth 코드 교환 + 채널 upsert |
 
-> **자동 스케줄러**: scheduler-worker가 매분 활성 채널의 `uploadSchedule` cron을 평가해 `POST /jobs/auto-news`를 호출한다.
+> **자동 스케줄러**: 채널별 독립 EventBridge 규칙이 `{ channelId }` 페이로드로 scheduler-worker를 직접 트리거해 Job을 생성한다. 별도 EventBridge 규칙(매일 KST 06:00)이 `{ type: 'daily-analytics-sync' }` 페이로드로 scheduler-worker를 호출해 `POST /channels/sync-all`로 전체 채널 Analytics를 갱신한다.
 
 ---
 

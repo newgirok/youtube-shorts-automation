@@ -69,6 +69,7 @@ YouTube 채널 CRUD 및 동기화.
 - `DELETE /channels/:id` — 채널 연결 해제 (isActive=false, 데이터 보존)
 - `PATCH /channels/:id/schedule` — 스케줄 설정 업데이트 (cronExpression, schedulerEnabled, schedulerCategory 중 일부 또는 전체)
 - `GET /channels/:id/analytics` — DB에 저장된 최신 30일 일별 analytics 반환, 날짜 오름차순 (views, subscribers, estimatedRevenue, watchTimeMinutes)
+- `POST /channels/sync-all` — 모든 활성 채널 병렬 동기화 (매일 KST 06:00 EventBridge가 자동 호출)
 - `POST /channels/:id/sync` — 채널 통계 + Analytics + 영상 조회수 풀 동기화 (YouTube Data API + YouTube Analytics API)
 - `POST /channels/:id/sync-videos` — 영상 조회수·privacyStatus 동기화 + 삭제된 영상 FAILED 처리
 
@@ -88,12 +89,11 @@ YouTube 채널 CRUD 및 동기화.
 > **신규 채널 Analytics 지연** — 생성된 지 2주 미만인 채널은 YouTube Analytics 데이터 수집 파이프라인이 초기화되지 않아 `views` 등 모든 값이 0으로 반환되는 것이 정상이다. 에러가 아니며 시간이 지나면 자동으로 채워진다. `Job.viewCount`(영상별 누적 조회수)는 YouTube Data API 경유이므로 이와 무관하게 정확히 동작한다.
 
 ### `scheduler/`
-1분마다 실행되는 자동 업로드 스케줄러 (`@Cron('* * * * *')`).
+채널별 EventBridge 규칙이 직접 scheduler-worker Lambda를 트리거하는 구조 (API 내부에 스케줄러 없음).
 
-- `schedulerEnabled=true`인 채널을 대상으로 `uploadSchedule` cron 표현식을 평가
-- 직전 1분 이내에 cron이 트리거됐으면 (`shouldRunNow`) `createFromNews`로 Job 1개 생성
-- 이미 진행 중인 Job이 있으면 스킵 (`hasActiveJob` 체크)
-- 타임존: `Asia/Seoul` (`cron-parser` 사용)
+- `PATCH /channels/:id/schedule` 호출 시 EventBridge 규칙 자동 생성/삭제 (`eventbridge.ts`)
+- scheduler-worker가 채널 단건 처리 (`{ channelId }` 페이로드)
+- 매일 KST 06:00 EventBridge가 `{ type: 'daily-analytics-sync' }` 페이로드로 scheduler-worker 호출 → `POST /channels/sync-all` 경유 전체 채널 Analytics 갱신
 
 ### `jobs/`
 Job 생성 및 상태 조회, 재시도.

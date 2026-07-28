@@ -35,8 +35,8 @@ youtube-shorts-automation/
 │   │       │   ├── auth.controller.ts  # Google OAuth 채널 연결 엔드포인트
 │   │       │   └── auth.service.ts     # OAuth 토큰 교환 + DB 저장 (yt-analytics.readonly 스코프 포함)
 │   │       ├── channels/
-│   │       │   ├── channels.controller.ts  # GET /channels, GET /channels/:id, PATCH /channels/:id/schedule, DELETE /channels/:id, GET /channels/:id/analytics, POST /channels/:id/sync, POST /channels/:id/sync-videos
-│   │       │   └── channels.service.ts     # YouTube Data API + Analytics API 동기화
+│   │       │   ├── channels.controller.ts  # GET /channels, GET /channels/:id, PATCH /channels/:id/schedule, DELETE /channels/:id, GET /channels/:id/analytics, POST /channels/sync-all, POST /channels/:id/sync, POST /channels/:id/sync-videos
+│   │       │   └── channels.service.ts     # YouTube Data API + Analytics API 동기화 (syncAll: Promise.allSettled 병렬)
 │   │       ├── jobs/
 │   │       │   ├── jobs.controller.ts  # POST /jobs, GET /jobs, GET /jobs/:id, GET /jobs/:id/thumbnail(@Public), POST /jobs/auto-news, POST /jobs/:id/retry
 │   │       │   ├── jobs.service.ts     # Job 생성 → SQS 발행, 뉴스 RSS 수집
@@ -66,7 +66,7 @@ youtube-shorts-automation/
 │       ├── upload/                   # SQS → YouTube Data API → COMPLETED
 │       │   └── src/
 │       │       └── uploader.ts       # description+해시태그 설명문, categoryId=25(뉴스), containsSyntheticMedia: true
-│       ├── scheduler/                # EventBridge rate(1 min) → uploadSchedule cron 평가 → auto-news 호출
+│       ├── scheduler/                # EventBridge 채널별 규칙({ channelId }) → Job 생성 / daily-analytics-sync → POST /channels/sync-all
 │       └── dlq-notifier/             # 5개 DLQ SQS Event Source → Slack Webhook 알림
 ├── packages/
 │   └── shared/                       # 전 앱 공통 — Prisma, 로거, S3, 환경변수

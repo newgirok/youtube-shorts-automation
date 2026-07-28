@@ -232,7 +232,7 @@ OAuth 연결 흐름: 웹 대시보드 → `GET /auth/youtube?userId={id}` → Go
 
 ### uploadSchedule cron 형식
 
-scheduler-worker가 매분 `uploadSchedule` cron을 평가해 해당 시각이면 `POST /jobs/auto-news`를 호출합니다.
+채널별 독립 EventBridge 규칙이 해당 채널의 `uploadSchedule` 시각에 scheduler-worker를 직접 트리거합니다. `PATCH /channels/:id/schedule` 호출 시 규칙이 자동 생성/삭제되며, scheduler-worker는 `{ channelId }` 페이로드를 수신해 Job을 생성합니다.
 
 ```
 "0 9 * * *"   → 매일 오전 9시 (UTC 기준)

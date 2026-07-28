@@ -1,23 +1,29 @@
 # @shorts/scheduler-worker
 
-채널별 EventBridge 규칙에서 직접 호출되는 Lambda. 호출 시 이벤트 페이로드에 `channelId`가 포함되며, 해당 채널의 활성 여부 확인 후 Google News RSS에서 토픽을 수집해 script-queue에 Job을 발행한다.
+두 가지 이벤트를 처리하는 Lambda.
 
-파이프라인: 채널 EventBridge 규칙 → handler(`{ channelId }`) → [채널 상태 확인] → [뉴스 수집 + 필터] → Job 생성 → script-queue 발행
+1. **채널 업로드 스케줄** — 채널별 EventBridge 규칙이 `{ channelId }` 페이로드로 호출. 해당 채널의 활성 여부 확인 후 Google News RSS에서 토픽을 수집해 script-queue에 Job을 발행한다.
+2. **일일 Analytics 동기화** — Terraform 관리 EventBridge 규칙이 매일 KST 06:00에 `{ type: 'daily-analytics-sync' }` 페이로드로 호출. `POST /channels/sync-all`을 통해 모든 활성 채널의 Analytics를 갱신한다.
 
 ## 주요 모듈
 
-- `handler.ts` — Lambda ScheduledHandler; 채널 단건 확인·Job 생성
+- `handler.ts` — Lambda ScheduledHandler; 페이로드 타입에 따라 채널 단건 Job 생성 또는 전체 Analytics sync 분기
 - `news-fetcher.ts` — Google News RSS 파싱 및 정치 키워드 필터
 
 ## EventBridge 규칙 구조
 
-각 채널마다 독립 EventBridge 규칙이 존재하며, API가 `PATCH /channels/:id/schedule` 호출 시 자동으로 생성/삭제한다 (`apps/api/src/channels/eventbridge.ts`).
-
+**채널 업로드 스케줄 규칙** (채널마다 독립, API가 동적 생성/삭제)
 - 규칙 이름: `shorts-channel-{channelId}-scheduler`
 - 타겟 페이로드: `{ channelId: string }`
 - cron 변환: 표준 5필드 → EventBridge 6필드 (`toEventBridgeCron`, dom/dow `?` 규칙 적용)
+- 생성/삭제: `apps/api/src/channels/eventbridge.ts`
 
-## Job 생성 조건 (모두 충족해야 Job 생성)
+**일일 Analytics 동기화 규칙** (Terraform 관리, 고정)
+- 규칙 이름: `shorts-daily-analytics-sync`
+- schedule: `cron(0 21 * * ? *)` (KST 06:00)
+- 타겟 페이로드: `{ type: 'daily-analytics-sync' }`
+
+## Job 생성 조건 (채널 업로드 스케줄, 모두 충족해야 Job 생성)
 
 1. 이벤트에 `channelId` 포함 (없으면 스킵)
 2. `Channel.schedulerEnabled = true` AND `isActive = true`
@@ -66,4 +72,13 @@ const BLOCK_KEYWORDS = [
 발행 (`script-queue`):
 ```typescript
 { jobId: string; channelId: string; topic: string }
+```
+
+## 필수 환경변수
+
+```
+DATABASE_URL           — Prisma (SSM: shorts.prod.DATABASE_URL)
+SQS_SCRIPT_QUEUE_URL   — script-queue URL
+API_BASE_URL           — daily-analytics-sync 시 sync-all 호출 대상 (SSM: shorts.prod.API_BASE_URL)
+API_INTERNAL_SECRET    — sync-all 인증 헤더 (SSM: shorts.prod.API_INTERNAL_SECRET)
 ```

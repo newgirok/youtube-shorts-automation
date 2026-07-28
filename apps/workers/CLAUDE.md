@@ -15,7 +15,7 @@
 | `subtitle/` | audio.mp3 + script.json | subtitle.srt | Lambda 512MB | 120s |
 | `render/` | audio.mp3 + subtitle.srt | output.mp4 | Lambda 3008MB | 600s |
 | `upload/` | output.mp4 | YouTube 업로드 | Lambda 256MB | 300s |
-| `scheduler/` | EventBridge rate(1 min) | auto-news 호출 | Lambda 256MB | 60s |
+| `scheduler/` | EventBridge (채널별 스케줄 또는 daily-analytics-sync) | Job 생성 또는 sync-all 호출 | Lambda 256MB | 60s |
 | `dlq-notifier/` | 5개 DLQ SQS 이벤트 | Slack Webhook 알림 | Lambda 128MB | 30s |
 
 ## 공통 Worker 패턴 (모든 Worker Lambda)

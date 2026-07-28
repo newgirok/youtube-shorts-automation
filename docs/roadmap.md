@@ -24,9 +24,8 @@
   - [x] P2-4. `/channels/[id]` — 채널 관리 + YPP 진행률 대시보드 `[FE][BE]`
   - [x] P2-5. YouTube OAuth2 채널 연결 + `refresh_token` 암호화 저장 `[BE]`
   - [x] P2-6. `POST /jobs/auto-news` — Google News RSS 수집 + Job 일괄 생성 `[BE]`
-  - [x] P2-7. `POST /channels/:id/sync` — YouTube Data API + Analytics API 풀 동기화 `[BE]`
-  - [x] P2-8. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
-  - [x] P2-9. `Job.privacyStatus` 추적 `[BE]`
+  - [x] P2-7. 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
+  - [x] P2-8. `Job.privacyStatus` 추적 `[BE]`
 - **Phase 3** — DB 이관 ✅ 완료
   - [x] P3-1. Supabase 프로젝트 연결 설정 `[BE][DevOps]`
   - [x] P3-2. 마이그레이션 실행 `[BE][DevOps]`
@@ -37,12 +36,12 @@
   - [x] P4-4. API Gateway + Lambda (`apps/api`) `[DevOps][BE]`
   - [x] P4-5. AWS E2E 자동 업로드 검증 `[BE][DevOps]`
 - **Phase 5** — 스케줄링 + 운영 안정화 ✅ 완료
-  - [x] P5-1. EventBridge `rate(1 minute)` → scheduler-worker Lambda 트리거 `[DevOps][BE]`
+  - [x] P5-1. scheduler-worker Lambda + EventBridge 채널별 규칙 기반 자동 업로드 스케줄링 `[DevOps][BE]`
   - [x] P5-2. DLQ 알림 Lambda `[BE][DevOps]`
   - [x] P5-3. CloudWatch 알람 설정 (Lambda 에러율 + DLQ 깊이 → SNS 이메일) `[DevOps]`
-- **Phase 6** — 멀티채널 + 스케일링
+- **Phase 6** — 멀티채널 + 스케일링 ✅ 완료
   - [x] P6-1. 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]`
-  - [ ] P6-2. Analytics 다채널 수집 `[BE][DevOps]`
+  - [x] P6-2. Analytics 다채널 수집 — EventBridge 매일 KST 06:00 자동 전체 채널 sync `[BE][DevOps]`
 - **Phase 7** — 프로덕션 준비
   - [x] P7-1. GitHub Actions CI/CD + Slack 배포 알림 (Block Kit 포맷) `[DevOps]`
   - [ ] P7-2. Sentry 연동 `[BE]`
@@ -149,7 +148,6 @@
     - 미인증 `/dashboard` 접근 시 `/login` 리다이렉트
 
 - **P2-2.** `/` — 홈 (토픽 입력·Auto-News·Job 갤러리) `[FE][BE]`
-  - 홈 마운트 시 자동 sync (`POST /channels/:id/sync`) 실행
   - Job 카드 갤러리: 상태 Badge, 제목, 조회수 실시간 표시 (2초 폴링)
   - 카테고리 버튼 (종합·경제·기술·의료·환경·사회) → `POST /jobs/auto-news` 호출
   - 검증
@@ -184,19 +182,12 @@
   - 검증
     - 뉴스 제목이 topic으로 설정된 Job N개 생성 확인
 
-- **P2-7.** `POST /channels/:id/sync` — 풀 동기화 `[BE]`
-  - `channels.list(part: statistics)` → subscriberCount, totalViews 갱신
-  - `youtubeAnalytics.reports.query(metrics: views,subscribersGained,estimatedMinutesWatched)` → 최근 30일 일별 upsert
-  - `videos.list(part: id,statistics,status)` → viewCount, likeCount, privacyStatus 갱신
-  - 검증
-    - DB에 최근 30일 ChannelAnalytics 레코드 존재
-
-- **P2-8.** 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
+- **P2-7.** 삭제 영상 자동 감지 + FAILED 처리 `[BE]`
   - `sync-videos`: YouTube에서 조회되지 않는 영상 → `status=FAILED`, `failReason='유튜브에서 영상이 삭제되었습니다.'`
   - 검증
     - 유튜브에서 삭제된 영상 Job이 DB에서 FAILED로 전환 확인
 
-- **P2-9.** `Job.privacyStatus` 추적 `[BE]`
+- **P2-8.** `Job.privacyStatus` 추적 `[BE]`
   - 업로드 완료 시 `privacyStatus: 'public'` 저장
   - sync-videos 시 YouTube API 응답의 `status.privacyStatus` 동기화
   - 검증
@@ -207,8 +198,6 @@
 - [x] 재시도 기능 정상 동작
 - [x] Analytics 데이터 수집 및 YPP 진행률 표시
 - [x] 뉴스 자동 수집 + Job 생성 (`auto-news`)
-
-> Playwright 검증 완료: 로그인, 대시보드 채널·Job 목록·통계, Job 상세·타임라인, 재시도, 2초 폴링, 채널 sync 모두 정상 동작.
 
 ---
 
@@ -291,12 +280,12 @@
 
 > EventBridge로 매일 자동 Job 생성을 활성화하고 운영 안정화 기반을 구축한다.
 
-- **P5-1.** EventBridge Scheduler — `rate(1 minute)` scheduler-worker `[DevOps][BE]`
-  - EventBridge `rate(1 minute)` 규칙으로 scheduler-worker Lambda 매분 트리거
-  - 활성 채널의 `uploadSchedule` cron을 매분 평가 → 해당 시각이면 Google News RSS에서 토픽 수집 후 직접 Job 생성 → `script-queue` 발행
-  - 정치 키워드 필터: 정당명·정치인·선거 관련 뉴스를 제외하고 사회·경제 이슈만 선택 (후보 20개 중 필터링)
+- **P5-1.** scheduler-worker Lambda + EventBridge 채널별 자동 업로드 스케줄링 `[DevOps][BE]`
+  - 채널별 독립 EventBridge 규칙이 scheduler-worker Lambda 직접 트리거 (`{ channelId }` 페이로드)
+  - 채널 상태 확인(enabled + active) → 진행 중 Job 없으면 Google News RSS 수집 → Job 생성 → `script-queue` 발행
+  - 정치 키워드 필터: 정당명·정치인·선거 관련 뉴스 제외, 후보 20개 중 사회·경제 이슈만 선택
   - 검증
-    - CloudWatch 로그에서 매분 실행 확인
+    - 스케줄 시각에 CloudWatch 로그에서 채널별 실행 확인
 
 - **P5-2.** DLQ 알림 Lambda `[BE][DevOps]`
   - 5개 DLQ 모두 동일 Lambda에 연결 → Slack Webhook
@@ -310,7 +299,7 @@
   - 알람 대상 Worker 7개: script / tts / subtitle / render / upload / scheduler / dlq-notifier
 
 **완료 기준** ✅
-- [x] scheduler-worker CloudWatch 로그 정상 (매분 실행)
+- [x] scheduler-worker CloudWatch 로그 정상 (채널별 스케줄 시각에 실행)
 - [x] DLQ 적재 시 Slack 알림 수신
 - [x] CloudWatch 알람 7개 + SNS 이메일 연결
 
@@ -323,17 +312,23 @@
 - **P6-1.** 채널별 EventBridge 스케줄 자동 생성/삭제 `[BE][DevOps]` ✅
   - 각 채널에 독립 EventBridge 규칙 생성 — 채널 cron이 EventBridge 표현식으로 직접 전환
   - `PATCH /channels/:id/schedule` 호출 시 규칙 자동 생성/삭제 (`apps/api/src/channels/eventbridge.ts`)
-  - scheduler-worker는 `rate(1 min)` 폴링 제거 — EventBridge 규칙이 `{ channelId }` 페이로드를 직접 전달
+  - scheduler-worker는 EventBridge 규칙에서 `{ channelId }` 페이로드를 직접 수신 (폴링 없음)
   - `Channel.eventBridgeRuleArn` 필드로 규칙 ARN 관리 (마이그레이션: `20260726000000_add_eventbridge_rule_arn`)
   - IAM: LambdaWorkerRole에 `events:PutRule/PutTargets/RemoveTargets/DeleteRule/DescribeRule` 추가
   - Terraform: `aws_lambda_permission.eventbridge_invoke_scheduler` (EventBridge → scheduler-worker invoke 허용)
   - 검증
     - `PATCH /channels/:id/schedule` 호출 후 AWS EventBridge 콘솔에서 규칙 생성 확인
     - 스케줄 시각에 scheduler-worker CloudWatch 로그 실행 확인
-- **P6-2.** Analytics 다채널 수집 `[BE][DevOps]`
+- **P6-2.** Analytics 다채널 수집 `[BE][DevOps]` ✅
+  - `POST /channels/sync-all` — 모든 활성 채널 `Promise.allSettled` 병렬 sync
+  - EventBridge `cron(0 21 * * ? *)` (KST 06:00) → scheduler-worker `{ type: 'daily-analytics-sync' }` → sync-all 호출
+  - scheduler-worker에 `API_BASE_URL`, `API_INTERNAL_SECRET` SSM 환경변수 추가
+  - 검증
+    - `POST /channels/sync-all` 호출 시 활성 채널 전체 동기화 결과 배열 반환
+    - 매일 KST 06:00 CloudWatch 로그에서 전체 채널 sync 확인
 
-**완료 기준**
-- [ ] 채널 3개 동시 스케줄 배포 및 Analytics 수집 정상
+**완료 기준** ✅
+- [x] 채널 3개 동시 스케줄 배포 및 Analytics 수집 정상
 
 ---
 

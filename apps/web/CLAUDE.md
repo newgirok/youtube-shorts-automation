@@ -210,16 +210,13 @@ interface AnalyticsRow {
 - `close/page.tsx`: `useSearchParams`로 `channelId` / `auth_error` 파싱 → 올바른 대상 URL로 이동 후 팝업 닫기 (`Suspense` 필수)
 
 ### 채널 sync
-- 홈·채널 페이지 마운트(`activeChannelId` 변경) 시 `POST /channels/:id/sync` 호출 → Jobs 목록/채널 정보 refetch
+- 채널·Analytics 통계는 매일 KST 06:00 EventBridge가 `POST /channels/sync-all`을 자동 호출해 갱신 — 웹에서 별도 sync 호출 없음
 - 홈 페이지: Job이 완료되는 순간(`hasProcessing: true → false` 전환) `sync-videos` 즉시 호출 + 마운트 후 10분마다 주기 호출 → 조회수·비공개·삭제 상태 갱신
 - `/dashboard/[id]` 페이지: `youtubeVideoId` 최초 감지 시 `sync-videos` 즉시·10초·40초 뒤 재호출 (`syncedRef` 패턴으로 중복 실행 방지) + `youtubeVideoId` 존재하는 동안 10분마다 주기 호출
-- 채널 상세 페이지(`/channels/:id`): `POST /channels/:id/sync` 마운트 1회 → 구독자 수·Analytics 차트 갱신 (Analytics 데이터는 YouTube에서 24~48시간 지연 제공되므로 1회로 충분)
 
 #### invalidate 범위 (쿼리 누락 방지)
 | sync 호출 위치 | invalidate 대상 |
 |---|---|
-| `ChannelClient` sync 완료 | `['channel', id]` + `['analytics', id]` 모두 |
-| `HomeClient` sync 완료 | `['jobs', channelId]` |
 | `HomeClient` sync-videos 완료 | `['jobs', channelId]` |
 | `JobDetailPage` sync-videos 완료 | `['job', id]` + `['jobs', channelId]` 모두 |
 
