@@ -351,3 +351,18 @@ resource "aws_lambda_permission" "eventbridge_invoke_scheduler" {
   principal     = "events.amazonaws.com"
   source_arn    = "arn:aws:events:ap-northeast-2:682251233572:rule/*"
 }
+
+# ── P6-2: 일일 Analytics 전체 동기화 ─────────────────────────────────────────
+# 매일 KST 06:00 (UTC 21:00 전날)에 scheduler-worker를 트리거해 모든 활성 채널 sync.
+resource "aws_cloudwatch_event_rule" "daily_analytics_sync" {
+  name                = "shorts-daily-analytics-sync"
+  description         = "매일 KST 06:00 전체 채널 Analytics 동기화"
+  schedule_expression = "cron(0 21 * * ? *)"
+}
+
+resource "aws_cloudwatch_event_target" "daily_analytics_sync" {
+  rule      = aws_cloudwatch_event_rule.daily_analytics_sync.name
+  target_id = "scheduler-worker"
+  arn       = "arn:aws:lambda:ap-northeast-2:682251233572:function:shorts-scheduler-worker-prod-handler"
+  input     = jsonencode({ type = "daily-analytics-sync" })
+}
