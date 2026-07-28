@@ -8,8 +8,39 @@ const sqs = new SQSClient({ region: process.env.AWS_REGION ?? 'ap-northeast-2' }
 
 type NewsCategory = 'top' | 'business' | 'technology' | 'health' | 'science' | 'nation';
 
+async function runDailyAnalyticsSync(): Promise<void> {
+  const apiBaseUrl = process.env.API_BASE_URL;
+  const secret = process.env.API_INTERNAL_SECRET;
+  if (!apiBaseUrl || !secret) {
+    log.error('API_BASE_URL 또는 API_INTERNAL_SECRET 누락 — 일일 동기화 스킵');
+    return;
+  }
+
+  log.info('일일 Analytics 전체 동기화 시작');
+  const res = await fetch(`${apiBaseUrl}/channels/sync-all`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${secret}` },
+  });
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`sync-all 실패: ${res.status} ${text}`);
+  }
+
+  const data = (await res.json()) as Array<{ channelId: string; ok: boolean }>;
+  const failed = data.filter((r) => !r.ok);
+  log.info({ total: data.length, failed: failed.length }, '일일 Analytics 전체 동기화 완료');
+}
+
 export const handler: ScheduledHandler = async (event) => {
-  const channelId = (event as unknown as { channelId?: string }).channelId;
+  const payload = event as unknown as { channelId?: string; type?: string };
+
+  if (payload.type === 'daily-analytics-sync') {
+    await runDailyAnalyticsSync();
+    return;
+  }
+
+  const channelId = payload.channelId;
   if (!channelId) {
     log.warn('channelId 없음 — 스킵');
     return;

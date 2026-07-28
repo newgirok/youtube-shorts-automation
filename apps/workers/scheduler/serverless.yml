@@ -10,6 +10,8 @@ provider:
   environment:
     DATABASE_URL: ${ssm:shorts.prod.DATABASE_URL}
     SQS_SCRIPT_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-script-queue
+    API_BASE_URL: ${ssm:shorts.prod.API_BASE_URL}
+    API_INTERNAL_SECRET: ${ssm:shorts.prod.API_INTERNAL_SECRET}
     PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
 
 functions:
