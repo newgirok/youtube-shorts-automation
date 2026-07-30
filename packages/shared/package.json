@@ -11,7 +11,8 @@
     "./s3.js": "./dist/s3.js",
     "./logger.js": "./dist/logger.js",
     "./env.js": "./dist/env.js",
-    "./types.js": "./dist/types.js"
+    "./types.js": "./dist/types.js",
+    "./sentry.js": "./dist/sentry.js"
   },
   "scripts": {
     "build": "tsc",
@@ -22,6 +23,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.0.0",
     "@prisma/client": "^5.0.0",
+    "@sentry/aws-serverless": "^8.0.0",
     "pino": "^9.0.0",
     "zod": "^4.0.0"
   },

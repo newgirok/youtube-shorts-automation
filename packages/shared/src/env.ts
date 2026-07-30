@@ -6,6 +6,7 @@ export const BaseEnvSchema = z.object({
   S3_BUCKET_NAME: z.string().min(1),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['trace', 'debug', 'info', 'warn', 'error', 'fatal']).default('info'),
+  SENTRY_DSN: z.string().url().optional(),
 });
 
 export type BaseEnv = z.infer<typeof BaseEnvSchema>;
