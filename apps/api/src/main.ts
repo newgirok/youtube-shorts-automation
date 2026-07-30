@@ -20,8 +20,9 @@ for (const key of REQUIRED_ENV_VARS) {
   }
 }
 
-import { parseBaseEnv } from '@shorts/shared';
+import { parseBaseEnv, initSentry } from '@shorts/shared';
 parseBaseEnv();
+initSentry();
 
 import { NestFactory } from '@nestjs/core';
 import {

@@ -20,6 +20,7 @@ provider:
     API_BASE_URL: ${ssm:shorts.prod.API_BASE_URL}
     SCHEDULER_LAMBDA_ARN: arn:aws:lambda:ap-northeast-2:682251233572:function:shorts-scheduler-worker-prod-handler
     PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
+    SENTRY_DSN: ${ssm:shorts.prod.SENTRY_DSN}
 
 functions:
   api:

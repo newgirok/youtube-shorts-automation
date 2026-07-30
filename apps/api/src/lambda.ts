@@ -20,8 +20,9 @@ for (const key of REQUIRED_ENV) {
   }
 }
 
-import { parseBaseEnv } from '@shorts/shared';
+import { parseBaseEnv, initSentry, Sentry } from '@shorts/shared';
 parseBaseEnv();
+initSentry();
 
 import awsLambdaFastify from '@fastify/aws-lambda';
 import { NestFactory } from '@nestjs/core';
@@ -48,9 +49,11 @@ async function bootstrap() {
   return awsLambdaFastify(fastify, { callbackWaitsForEmptyEventLoop: false });
 }
 
-export const handler: Handler = async (event, context) => {
+const _handler: Handler = async (event, context) => {
   if (!cachedProxy) {
     cachedProxy = await bootstrap();
   }
   return cachedProxy(event, context);
 };
+
+export const handler = Sentry.wrapHandler(_handler);
