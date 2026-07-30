@@ -13,6 +13,7 @@ provider:
     SQS_SUBTITLE_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-subtitle-queue
     SQS_RENDER_QUEUE_URL: https://sqs.ap-northeast-2.amazonaws.com/682251233572/prod-render-queue
     PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
+    SENTRY_DSN: ${ssm:shorts.prod.SENTRY_DSN}
 
 functions:
   handler:

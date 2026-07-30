@@ -21,6 +21,7 @@ functions:
       FFMPEG_PATH: ffmpeg
       FFPROBE_PATH: ffprobe
       FONTS_DIR: /app/fonts
+      SENTRY_DSN: ${ssm:shorts.prod.SENTRY_DSN}
     events:
       - sqs:
           arn: arn:aws:sqs:ap-northeast-2:682251233572:prod-render-queue

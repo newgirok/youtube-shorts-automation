@@ -16,6 +16,7 @@ provider:
     # FFPROBE_PATH — Lambda Layer의 ffprobe 바이너리 경로
     FFPROBE_PATH: /opt/bin/ffprobe
     PRISMA_QUERY_ENGINE_LIBRARY: /var/task/libquery_engine-rhel-openssl-3.0.x.so.node
+    SENTRY_DSN: ${ssm:shorts.prod.SENTRY_DSN}
 
 functions:
   handler:
