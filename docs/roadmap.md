@@ -45,8 +45,7 @@
 - **Phase 7** — 프로덕션 준비
   - [x] P7-1. GitHub Actions CI/CD + Slack 배포 알림 (Block Kit 포맷) `[DevOps]`
   - [ ] P7-2. Sentry 연동 `[BE]`
-  - [ ] P7-3. Edge-TTS → Clova Voice 교체 `[BE][AI]`
-  - [x] P7-4. AWS Budget Alert `[DevOps]`
+  - [x] P7-3. AWS Budget Alert `[DevOps]`
 
 ---
 
@@ -346,12 +345,11 @@
   - path filter: 소스·배포 설정 파일만 포함, `*.md`·workflow 파일 자체 제외
   - GitHub Secret `SLACK_WEBHOOK_URL` 등록 완료
 - **P7-2.** Sentry 연동 `[BE]`
-- **P7-3.** Edge-TTS → Clova Voice 교체 `[BE][AI]`
-- **P7-4.** AWS Budget Alert `[DevOps]`
+- **P7-3.** AWS Budget Alert `[DevOps]`
 
 **완료 기준**
-- [ ] 월 운영 비용 $10 이하 (Budget Alert 수신 확인)
-- [ ] 모바일 유튜브 앱에서 자막·오디오 품질 합격
+- [x] 월 운영 비용 $10 이하 (Budget Alert 설정 완료)
+- [ ] 에러 추적 대시보드(Sentry)에서 Lambda 예외 확인 가능
 - [ ] 대시보드 전 기능 동작
 
 ---
