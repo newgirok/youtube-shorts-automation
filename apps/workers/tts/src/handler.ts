@@ -7,7 +7,10 @@ import {
   uploadToS3,
   jobKey,
   createLogger,
+  initSentry,
+  Sentry,
 } from '@shorts/shared';
+initSentry();
 import { EdgeTTSAdapter } from './EdgeTTSAdapter.js';
 import { parseEnv } from './env.js';
 
@@ -33,7 +36,7 @@ function normalizeNumberUnits(text: string): string {
   return text.replace(/(\d+[만억조천백십])\s+([명원개월일년주배곳건채팀회차])/g, '$1$2');
 }
 
-export const handler: SQSHandler = async (event: SQSEvent) => {
+const _handler: SQSHandler = async (event: SQSEvent) => {
   const env = parseEnv();
 
   for (const record of event.Records) {
@@ -109,3 +112,5 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
     }
   }
 };
+
+export const handler = Sentry.wrapHandler(_handler);

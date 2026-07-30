@@ -1,6 +1,7 @@
 import type { SQSHandler, SQSEvent } from 'aws-lambda';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
-import { prisma, uploadToS3, jobKey, createLogger } from '@shorts/shared';
+import { prisma, uploadToS3, jobKey, createLogger, initSentry, Sentry } from '@shorts/shared';
+initSentry();
 import { generateScript } from './script-generator.js';
 import { parseEnv } from './env.js';
 
@@ -16,7 +17,7 @@ const sqs = new SQSClient({ region: process.env.AWS_REGION ?? 'ap-northeast-2' }
 const toSafeMsg = (err: unknown) =>
   (err instanceof Error ? err.message : String(err)).replace(/�/g, '?');
 
-export const handler: SQSHandler = async (event: SQSEvent) => {
+const _handler: SQSHandler = async (event: SQSEvent) => {
   const env = parseEnv();
 
   for (const record of event.Records) {
@@ -64,3 +65,5 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
     }
   }
 };
+
+export const handler = Sentry.wrapHandler(_handler);

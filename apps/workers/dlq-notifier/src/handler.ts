@@ -1,5 +1,14 @@
 import { request } from 'node:https';
 import type { SQSHandler } from 'aws-lambda';
+import * as Sentry from '@sentry/aws-serverless';
+
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV ?? 'development',
+    tracesSampleRate: 0,
+  });
+}
 
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL!;
 
@@ -36,7 +45,7 @@ function postSlack(url: string, text: string): Promise<void> {
   });
 }
 
-export const handler: SQSHandler = async (event) => {
+const _handler: SQSHandler = async (event) => {
   for (const record of event.Records) {
     const queueName = record.eventSourceARN.split(':').pop() ?? record.eventSourceARN;
     const label = QUEUE_LABELS[queueName] ?? queueName;
@@ -68,3 +77,5 @@ export const handler: SQSHandler = async (event) => {
     await postSlack(SLACK_WEBHOOK_URL, text);
   }
 };
+
+export const handler = Sentry.wrapHandler(_handler);

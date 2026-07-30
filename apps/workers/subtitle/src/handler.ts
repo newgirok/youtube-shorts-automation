@@ -1,12 +1,13 @@
 import type { SQSHandler, SQSEvent } from 'aws-lambda';
 import { SQSClient } from '@aws-sdk/client-sqs';
-import { createLogger } from '@shorts/shared';
+import { createLogger, initSentry, Sentry } from '@shorts/shared';
+initSentry();
 import { parseEnv } from './env.js';
 import { processMessage } from './processor.js';
 
 const sqs = new SQSClient({ region: process.env.AWS_REGION ?? 'ap-northeast-2' });
 
-export const handler: SQSHandler = async (event: SQSEvent) => {
+const _handler: SQSHandler = async (event: SQSEvent) => {
   const env = parseEnv();
   const log = createLogger({});
 
@@ -15,3 +16,5 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
     await processMessage(record.body, sqs, env);
   }
 };
+
+export const handler = Sentry.wrapHandler(_handler);

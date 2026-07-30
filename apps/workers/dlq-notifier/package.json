@@ -8,7 +8,9 @@
     "build": "tsc",
     "lint": "eslint src --ext .ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@sentry/aws-serverless": "^8.0.0"
+  },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.0",
     "@types/node": "^22.0.0",

@@ -1,7 +1,8 @@
 import type { SQSHandler, SQSEvent } from 'aws-lambda';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { prisma, downloadFromS3, createLogger } from '@shorts/shared';
+import { prisma, downloadFromS3, createLogger, initSentry, Sentry } from '@shorts/shared';
+initSentry();
 import { decrypt } from './crypto.js';
 import { uploadToYouTube } from './uploader.js';
 import { validateVideo } from './validator.js';
@@ -22,7 +23,7 @@ interface ScriptContent {
   hashtags: string[];
 }
 
-export const handler: SQSHandler = async (event: SQSEvent) => {
+const _handler: SQSHandler = async (event: SQSEvent) => {
   const env = parseEnv();
 
   for (const record of event.Records) {
@@ -100,3 +101,5 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
     }
   }
 };
+
+export const handler = Sentry.wrapHandler(_handler);

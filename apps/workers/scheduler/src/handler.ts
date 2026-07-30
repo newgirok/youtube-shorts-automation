@@ -1,4 +1,5 @@
-import { prisma, createLogger } from '@shorts/shared';
+import { prisma, createLogger, initSentry, Sentry } from '@shorts/shared';
+initSentry();
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { fetchNewsTopics } from './news-fetcher.js';
 import type { ScheduledHandler } from 'aws-lambda';
@@ -32,7 +33,7 @@ async function runDailyAnalyticsSync(): Promise<void> {
   log.info({ total: data.length, failed: failed.length }, '일일 Analytics 전체 동기화 완료');
 }
 
-export const handler: ScheduledHandler = async (event) => {
+const _handler: ScheduledHandler = async (event) => {
   const payload = event as unknown as { channelId?: string; type?: string };
 
   if (payload.type === 'daily-analytics-sync') {
@@ -89,3 +90,5 @@ export const handler: ScheduledHandler = async (event) => {
 
   log.info({ channelId, jobId: job.id, category }, '스케줄 Job 생성 완료');
 };
+
+export const handler = Sentry.wrapHandler(_handler);
