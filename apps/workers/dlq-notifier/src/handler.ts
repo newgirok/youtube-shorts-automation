@@ -14,7 +14,7 @@ const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL!;
 
 const QUEUE_LABELS: Record<string, string> = {
   'prod-script-queue-dlq': 'Script (Gemini)',
-  'prod-tts-queue-dlq': 'TTS (Edge-TTS)',
+  'prod-tts-queue-dlq': 'TTS (msedge-tts)',
   'prod-subtitle-queue-dlq': 'Subtitle',
   'prod-render-queue-dlq': 'Render (FFmpeg)',
   'prod-upload-queue-dlq': 'Upload (YouTube)',
