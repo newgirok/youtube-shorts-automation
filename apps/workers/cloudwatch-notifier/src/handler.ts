@@ -59,7 +59,7 @@ const _handler: SNSHandler = async (event) => {
     const isAlarm = alarm.NewStateValue === 'ALARM';
 
     const functionName =
-      alarm.Trigger.Dimensions.find((d) => d.name === 'FunctionName')?.value ?? '알 수 없음';
+      alarm.Trigger.Dimensions?.find((d) => d.name === 'FunctionName')?.value ?? '알 수 없음';
     const workerName = functionName.replace('shorts-', '').replace('-prod-handler', '');
     const time = new Date(alarm.StateChangeTime).toLocaleString('ko-KR', {
       timeZone: 'Asia/Seoul',

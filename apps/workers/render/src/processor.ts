@@ -26,7 +26,7 @@ export async function processMessage(
   const log = createLogger({ jobId, channelId });
 
   try {
-    await prisma.job.update({
+    await prisma.job.updateMany({
       where: { id: jobId },
       data: { status: 'RENDER_PROCESSING' },
     });
@@ -118,7 +118,7 @@ export async function processMessage(
     const videoS3Key = jobKey(jobId, 'output.mp4');
     await uploadToS3(videoS3Key, videoBuf);
 
-    await prisma.job.update({
+    await prisma.job.updateMany({
       where: { id: jobId },
       data: { videoS3Key },
     });
@@ -133,7 +133,7 @@ export async function processMessage(
     log.info({ videoS3Key }, 'render-worker 완료, upload-queue 발행');
   } catch (err) {
     log.error({ err }, 'render-worker 실패');
-    await prisma.job.update({
+    await prisma.job.updateMany({
       where: { id: jobId },
       data: {
         status: 'FAILED',

@@ -288,7 +288,7 @@ export async function processMessage(
   const log = createLogger({ jobId, channelId });
 
   try {
-    await prisma.job.update({
+    await prisma.job.updateMany({
       where: { id: jobId },
       data: { status: 'SUBTITLE_PROCESSING' },
     });
@@ -345,7 +345,7 @@ export async function processMessage(
     const subtitleS3Key = jobKey(jobId, 'subtitle.srt');
     await uploadToS3(subtitleS3Key, Buffer.from(srtContent, 'utf-8'));
 
-    await prisma.job.update({
+    await prisma.job.updateMany({
       where: { id: jobId },
       data: { subtitleS3Key },
     });
@@ -360,7 +360,7 @@ export async function processMessage(
     log.info({ subtitleS3Key }, 'subtitle-worker 완료, render-queue 발행');
   } catch (err) {
     log.error({ err }, 'subtitle-worker 실패');
-    await prisma.job.update({
+    await prisma.job.updateMany({
       where: { id: jobId },
       data: {
         status: 'FAILED',

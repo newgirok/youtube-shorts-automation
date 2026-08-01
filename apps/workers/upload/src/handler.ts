@@ -33,7 +33,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
     try {
       log.info('upload-worker 시작');
 
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { id: jobId },
         data: { status: 'UPLOAD_PROCESSING' },
       });
@@ -77,7 +77,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
         refreshToken
       );
 
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { id: jobId },
         data: {
           youtubeVideoId: videoId,
@@ -90,7 +90,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
       log.info({ videoId }, 'upload-worker 완료');
     } catch (err) {
       createLogger({ jobId, channelId }).error({ err }, 'upload-worker 실패');
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { id: jobId },
         data: {
           status: 'FAILED',

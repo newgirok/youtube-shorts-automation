@@ -46,7 +46,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
     try {
       log.info('tts-worker 시작');
 
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { id: jobId },
         data: { status: 'TTS_PROCESSING' },
       });
@@ -86,7 +86,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
         log.info({ subtitleVttS3Key }, 'VTT 자막 업로드 완료');
       }
 
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { id: jobId },
         data: { audioS3Key },
       });
@@ -101,7 +101,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
       log.info({ audioS3Key }, 'tts-worker 완료, subtitle-queue 발행');
     } catch (err) {
       createLogger({ jobId, channelId }).error({ err }, 'tts-worker 실패');
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { id: jobId },
         data: {
           status: 'FAILED',

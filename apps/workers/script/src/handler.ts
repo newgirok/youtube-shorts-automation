@@ -27,7 +27,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
     try {
       log.info({ topic }, 'script-worker 시작');
 
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { id: jobId },
         data: { status: 'SCRIPT_PROCESSING', startedAt: new Date() },
       });
@@ -38,7 +38,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
       const s3Key = jobKey(jobId, 'script.json');
       await uploadToS3(s3Key, JSON.stringify(script, null, 2));
 
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { id: jobId },
         data: { scriptContent: JSON.parse(JSON.stringify(script)) },
       });
@@ -54,7 +54,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
     } catch (err) {
       const log2 = createLogger({ jobId, channelId });
       log2.error({ err }, 'script-worker 실패');
-      await prisma.job.update({
+      await prisma.job.updateMany({
         where: { id: jobId },
         data: {
           status: 'FAILED',
