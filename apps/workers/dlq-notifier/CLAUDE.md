@@ -13,10 +13,18 @@
 ```typescript
 const QUEUE_LABELS: Record<string, string> = {
   'prod-script-queue-dlq':    'Script (Gemini)',
-  'prod-tts-queue-dlq':       'TTS (Edge-TTS)',
+  'prod-tts-queue-dlq':       'TTS (msedge-tts)',
   'prod-subtitle-queue-dlq':  'Subtitle',
   'prod-render-queue-dlq':    'Render (FFmpeg)',
   'prod-upload-queue-dlq':    'Upload (YouTube)',
+};
+
+const QUEUE_TO_FUNCTION: Record<string, string> = {
+  'prod-script-queue-dlq':    'shorts-script-worker-prod-handler',
+  'prod-tts-queue-dlq':       'shorts-tts-worker-prod-handler',
+  'prod-subtitle-queue-dlq':  'shorts-subtitle-worker-prod-handler',
+  'prod-render-queue-dlq':    'shorts-render-worker-prod-handler',
+  'prod-upload-queue-dlq':    'shorts-upload-worker-prod-handler',
 };
 ```
 
@@ -38,19 +46,23 @@ try {
 }
 ```
 
-## Slack 알림 형식
+## Slack 알림 형식 (Block Kit)
+
+`attachments` + `blocks` 구조 — 빨간 왼쪽 보더(`#e01e5a`).
 
 ```
-🚨 *DLQ 알림 — {큐 레이블}*
-• 큐: `{queueName}`
-• Job ID: `{jobId}`
-• 채널 ID: `{channelId}`
-• 수신 횟수: {n}회 (3회 초과 → DLQ 이동)
-• 메시지:
-```{원문 JSON}```
+🔴 *[PRD] {functionName} • {label}*
+DLQ 적재 | `{queueName}`
+─────────────────────────────
+🖥️ Server    | `{functionName}`     📦 Container | {label}
+⏰ Time      | {KST 시각}           🔧 Type      | `{queueName}`
+─────────────────────────────
+*Error Message*
+```jobId / channelId / 수신 횟수```
+*Message Body*
+```{원문 JSON (최대 2000자)}```
+`aws logs tail /aws/lambda/{functionName} --follow --since 1h`
 ```
-
-plain-text Webhook(`{ text: "..." }`) 형식 — Block Kit 불필요.
 
 ## 환경변수
 
