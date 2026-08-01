@@ -46,6 +46,20 @@ DIRECT_URL        → 마이그레이션 전용 (직접 연결)
 ```
 마이그레이션 실행 시 반드시 `DIRECT_URL` 사용 확인.
 
+## update vs updateMany (P2025 방지)
+
+Lambda Worker에서 Job 상태를 업데이트할 때는 반드시 `updateMany` 사용:
+
+```typescript
+//  금지 — jobId 레코드 없으면 PrismaClientKnownRequestError P2025 발생
+await prisma.job.update({ where: { id: jobId }, data: { status: 'PROCESSING' } });
+
+//  올바름 — 레코드 없으면 조용히 0건 업데이트 후 통과
+await prisma.job.updateMany({ where: { id: jobId }, data: { status: 'PROCESSING' } });
+```
+
+`update`는 단일 레코드가 반드시 존재해야 하는 경우(예: API 서비스 계층)에만 사용. SQS 재시도·수동 삭제 등으로 레코드가 없을 수 있는 Worker 환경에서는 `updateMany`가 기본.
+
 ## 연관 수정 체크리스트
 `schema.prisma` 변경 시 반드시 함께 수정:
 - [ ] 해당 Worker의 타입 참조 코드

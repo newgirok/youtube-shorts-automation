@@ -33,9 +33,16 @@ interface CloudWatchAlarm {
     Threshold: number;        // 5
     Period: number;           // 300
     Namespace: string;        // "AWS/Lambda"
-    Dimensions: Array<{ name: string; value: string }>;
+    Dimensions?: Array<{ name: string; value: string }>; // SNS 메시지에 따라 undefined 가능
   };
 }
+```
+
+`Dimensions`는 CloudWatch 알람 유형에 따라 전달되지 않을 수 있으므로 반드시 옵셔널 체이닝으로 접근한다:
+
+```typescript
+const functionName =
+  alarm.Trigger.Dimensions?.find((d) => d.name === 'FunctionName')?.value ?? '알 수 없음';
 ```
 
 ## Slack 알림 형식 (Block Kit)

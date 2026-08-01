@@ -33,13 +33,13 @@
 
 ### 알람 설정 (운영 중)
 
-**Lambda 에러율 > 5% 알람** — Worker 7개 개별 적용
+**Lambda 에러율 > 5% 알람** — Worker 8개 개별 적용
 
 ```
-prod-{worker}-error-rate  →  5분 윈도우 에러율 > 5%  →  SNS → 이메일
+prod-{worker}-error-rate  →  5분 윈도우 에러율 > 5%  →  SNS(prod-shorts-alerts) → cloudwatch-notifier Lambda → Slack #ops-alerts
 ```
 
-- 대상 Worker: script / tts / subtitle / render / upload / scheduler / dlq-notifier
+- 대상 Worker: script / tts / subtitle / render / upload / scheduler / dlq-notifier / cloudwatch-notifier
 - Metric Math: `IF(invocations > 0, errors / invocations * 100, 0)`
 - `treat_missing_data = notBreaching` (호출 없을 때 알람 억제)
 
@@ -63,13 +63,19 @@ prod-{worker}-error-rate  →  5분 윈도우 에러율 > 5%  →  SNS → 이�
 [upload-dlq]      ─┘
 ```
 
-### Webhook 알림 메시지 형식
+### Slack Block Kit 알림 형식
 
-```json
-{
-  "channel": "#ops-alerts",
-  "text": "[DLQ 알림] render-queue\njobId: job_abc123\nchannelId: ch_xyz\n실패 단계: render\n오류: FFmpeg exited with code 1"
-}
+```
+🔴 *[DLQ] render-queue*
+FAILED | shorts-render-worker-prod-handler
+──────────────────────────────────
+🖥️ Function  `shorts-render-worker-prod-handler`  📦 Queue  render-queue
+⏰ Time      2026-08-01 22:40:33                   🔧 Type   DLQ
+──────────────────────────────────
+*Error Message*
+```jobId: job_abc123\nchannelId: ch_xyz\n수신횟수: 3```
+*Raw Body* (생략됨)
+`aws logs tail /aws/lambda/shorts-render-worker-prod-handler --follow --since 1h`
 ```
 
 ### DLQ 설정 표준
@@ -156,14 +162,17 @@ API가 `status = PENDING`으로 초기화하고 script-queue에 메시지를 재
 
 Lambda 런타임 예외를 코드 레벨(스택 트레이스, 파일·라인 정보)로 추적하고 Slack으로 즉시 알린다.
 
-### Slack 연동 설정 (sentry.io UI)
+### Slack 연동 현황
 
-1. **sentry.io → Settings → Integrations → Slack → Install**
-2. Slack 워크스페이스 인증 후 `#ops-alerts` 채널 연결
-3. **Alerts → Alert Rules → Create Alert Rule**
-   - When: `A new issue is created`
-   - Filter: `Project: youtube-shorts-automation`
-   - Action: `Send a Slack notification to #ops-alerts`
+`newgirok.slack.com` 워크스페이스 연동 완료. Alert Rule 설정:
+
+| 항목 | 설정값 |
+|---|---|
+| Rule 이름 | Send a notification for high priority issues |
+| 트리거 | Sentry가 새 이슈를 high priority로 분류할 때 |
+| 필터 | youtube-shorts-automation 프로젝트 전체 |
+| 액션 | `#ops-alerts` 채널 Slack 메시지 전송 |
+| Throttling | Get notified on every trigger |
 
 ### 구현 위치
 

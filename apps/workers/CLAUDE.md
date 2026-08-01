@@ -24,13 +24,14 @@
 ```typescript
 export const handler = async (event: SQSEvent): Promise<void> => {
   const body = JSON.parse(event.Records[0].body);
-  await db.job.update({ where: { id: body.jobId }, data: { status: '{NAME}_PROCESSING' } });
+  // update 대신 updateMany — jobId 레코드가 없어도 P2025 예외 없이 통과
+  await db.job.updateMany({ where: { id: body.jobId }, data: { status: '{NAME}_PROCESSING' } });
   try {
     const result = await process(body);
     // S3 저장
     await sqs.send(new SendMessageCommand({ QueueUrl: NEXT_QUEUE, MessageBody: JSON.stringify(result) }));
   } catch (err) {
-    await db.job.update({ where: { id: body.jobId }, data: { status: 'FAILED', failReason: String(err) } });
+    await db.job.updateMany({ where: { id: body.jobId }, data: { status: 'FAILED', failReason: String(err) } });
     throw err; // SQS 재시도 유발
   }
 };
