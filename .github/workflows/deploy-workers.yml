@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       worker:
-        description: '배포할 Worker (all / script / tts / subtitle / render / upload / scheduler / dlq-notifier)'
+        description: '배포할 Worker (all / script / tts / subtitle / render / upload / scheduler / dlq-notifier / cloudwatch-notifier)'
         required: true
         default: all
   push:
@@ -29,7 +29,7 @@ jobs:
       contents: read
     strategy:
       matrix:
-        worker: [script, tts, subtitle, upload, scheduler, dlq-notifier]
+        worker: [script, tts, subtitle, upload, scheduler, dlq-notifier, cloudwatch-notifier]
     steps:
       - uses: actions/checkout@v4
 

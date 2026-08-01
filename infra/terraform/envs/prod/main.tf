@@ -221,13 +221,14 @@ output "web_public_ip" {
 
 locals {
   lambda_workers = {
-    script       = "shorts-script-worker-prod-handler"
-    tts          = "shorts-tts-worker-prod-handler"
-    subtitle     = "shorts-subtitle-worker-prod-handler"
-    render       = "shorts-render-worker-prod-handler"
-    upload       = "shorts-upload-worker-prod-handler"
-    scheduler    = "shorts-scheduler-worker-prod-handler"
-    dlq_notifier = "shorts-dlq-notifier-prod-handler"
+    script                = "shorts-script-worker-prod-handler"
+    tts                   = "shorts-tts-worker-prod-handler"
+    subtitle              = "shorts-subtitle-worker-prod-handler"
+    render                = "shorts-render-worker-prod-handler"
+    upload                = "shorts-upload-worker-prod-handler"
+    scheduler             = "shorts-scheduler-worker-prod-handler"
+    dlq_notifier          = "shorts-dlq-notifier-prod-handler"
+    cloudwatch_notifier   = "shorts-cloudwatch-notifier-prod-handler"
   }
 }
 
@@ -235,10 +236,18 @@ resource "aws_sns_topic" "alerts" {
   name = "prod-shorts-alerts"
 }
 
-resource "aws_sns_topic_subscription" "email" {
+resource "aws_lambda_permission" "sns_invoke_cloudwatch_notifier" {
+  statement_id  = "AllowSNSInvokeCloudwatchNotifier"
+  action        = "lambda:InvokeFunction"
+  function_name = "shorts-cloudwatch-notifier-prod-handler"
+  principal     = "sns.amazonaws.com"
+  source_arn    = aws_sns_topic.alerts.arn
+}
+
+resource "aws_sns_topic_subscription" "cloudwatch_notifier" {
   topic_arn = aws_sns_topic.alerts.arn
-  protocol  = "email"
-  endpoint  = "newgirok@gmail.com"
+  protocol  = "lambda"
+  endpoint  = "arn:aws:lambda:ap-northeast-2:682251233572:function:shorts-cloudwatch-notifier-prod-handler"
 }
 
 # Lambda 에러율 > 5% 알람 (5분 윈도우)

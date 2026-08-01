@@ -1,0 +1,35 @@
+service: shorts-cloudwatch-notifier
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  region: ap-northeast-2
+  role: arn:aws:iam::682251233572:role/prod-LambdaWorkerRole
+  environment:
+    SLACK_WEBHOOK_URL: ${ssm:shorts.prod.SLACK_WEBHOOK_URL}
+    SENTRY_DSN: ${ssm:shorts.prod.SENTRY_DSN}
+
+functions:
+  handler:
+    handler: src/handler.handler
+    timeout: 30
+    memorySize: 128
+
+plugins:
+  - serverless-esbuild
+
+package:
+  individually: true
+
+custom:
+  esbuild:
+    bundle: true
+    minify: true
+    format: cjs
+    target: node22
+    sourcemap: false
+    exclude:
+      - '@aws-sdk/*'
+    packager: pnpm

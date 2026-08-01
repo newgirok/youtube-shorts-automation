@@ -6,7 +6,7 @@
 |------|------|------|
 | **Slack** | dlq-notifier Lambda | DLQ 적재 — jobId·channelId 포함 |
 | **Slack** | Sentry | Lambda 런타임 예외 — 스택 트레이스 |
-| **이메일** | CloudWatch → SNS | Lambda 에러율 > 5% (타임아웃 등 Sentry 사각지대) |
+| **Slack** | CloudWatch → SNS → cloudwatch-notifier Lambda | Lambda 에러율 > 5% (타임아웃 등 Sentry 사각지대) |
 | **이메일** | AWS Budget Alert | 월 비용 $10 초과 |
 
 ---
@@ -45,7 +45,7 @@ prod-{worker}-error-rate  →  5분 윈도우 에러율 > 5%  →  SNS → 이�
 
 > **DLQ 깊이 알람 없음**: DLQ 적재 알림은 dlq-notifier Lambda → Slack이 담당하므로 CloudWatch DLQ 알람은 운영하지 않는다.
 
-**SNS 알림 대상**: `prod-shorts-alerts` 토픽 → `newgirok@gmail.com`
+**SNS 알림 대상**: `prod-shorts-alerts` 토픽 → `cloudwatch-notifier` Lambda → Slack `#ops-alerts`
 
 ---
 
