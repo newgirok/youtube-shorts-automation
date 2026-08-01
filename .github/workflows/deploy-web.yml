@@ -80,15 +80,24 @@ jobs:
           STATUS: ${{ job.status }}
           SHA: ${{ github.sha }}
           REF: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+          EVENT_NAME: ${{ github.event_name }}
           AUTHOR_NAME: ${{ github.event.head_commit.author.name }}
           AUTHOR_EMAIL: ${{ github.event.head_commit.author.email }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
           SHORT_SHA="${SHA:0:7}"
-          COMMIT_URL="https://github.com/${{ github.repository }}/commit/$SHA"
+          COMMIT_URL="https://github.com/$REPO/commit/$SHA"
           FIRST_LINE=$(echo "$COMMIT_MSG" | head -1)
           AUTHOR="${AUTHOR_NAME} <${AUTHOR_EMAIL}>"
+          TIME=$(TZ=Asia/Seoul date "+%Y-%m-%d %H:%M:%S")
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            TRIGGER="workflow_dispatch"
+          else
+            TRIGGER="push → $REF"
+          fi
 
           if [ "$STATUS" = "success" ]; then
             COLOR="#2eb886"; ICON="✅"; LABEL="배포 완료"
@@ -97,21 +106,28 @@ jobs:
           fi
 
           PAYLOAD=$(jq -n \
-            --arg color  "$COLOR" \
-            --arg title  "$ICON *Deploy Web* — $LABEL" \
-            --arg branch "$REF" \
-            --arg sha    "$SHORT_SHA" \
-            --arg actor  "$AUTHOR" \
-            --arg msg    "${FIRST_LINE:-커밋 메시지 없음}" \
-            --arg run    "$RUN_URL" \
-            --arg commit "$COMMIT_URL" \
+            --arg color   "$COLOR" \
+            --arg title   "${ICON} *[PRD] ${REPO} • Deploy Web — ${LABEL}*" \
+            --arg server  "$REPO" \
+            --arg app     "Web" \
+            --arg time    "$TIME" \
+            --arg trigger "$TRIGGER" \
+            --arg msg     "${FIRST_LINE:-커밋 메시지 없음}" \
+            --arg details "브랜치: $REF | 커밋: $SHORT_SHA | 작성자: $AUTHOR" \
+            --arg run     "$RUN_URL" \
+            --arg commit  "$COMMIT_URL" \
             '{attachments:[{color:$color,blocks:[
-              {type:"section",text:{type:"mrkdwn",text:($title+"\n"+$msg)}},
-              {type:"context",elements:[
-                {type:"mrkdwn",text:("브랜치: `"+$branch+"`")},
-                {type:"mrkdwn",text:("커밋: `"+$sha+"`")},
-                {type:"mrkdwn",text:("작성자: "+$actor)}
+              {type:"section",text:{type:"mrkdwn",text:$title}},
+              {type:"divider"},
+              {type:"section",fields:[
+                {type:"mrkdwn",text:("🖥️ *Server*\n`"+$server+"`")},
+                {type:"mrkdwn",text:("📦 *App*\n"+$app)},
+                {type:"mrkdwn",text:("⏰ *Time*\n"+$time)},
+                {type:"mrkdwn",text:("🔧 *Trigger*\n"+$trigger)}
               ]},
+              {type:"divider"},
+              {type:"section",text:{type:"mrkdwn",text:("*Commit Message*\n```"+$msg+"```")}},
+              {type:"section",text:{type:"mrkdwn",text:("*Details*\n```"+$details+"```")}},
               {type:"actions",elements:[
                 {type:"button",text:{type:"plain_text",text:"Actions 보기 →"},url:$run},
                 {type:"button",text:{type:"plain_text",text:"커밋 보기 →"},url:$commit}
