@@ -287,25 +287,6 @@ resource "aws_cloudwatch_metric_alarm" "lambda_error_rate" {
   }
 }
 
-# DLQ 메시지 누적 알람 — 1개 이상 쌓이면 즉시 알림
-resource "aws_cloudwatch_metric_alarm" "dlq_depth" {
-  for_each            = toset(["prod-script-queue-dlq", "prod-tts-queue-dlq", "prod-subtitle-queue-dlq", "prod-render-queue-dlq", "prod-upload-queue-dlq"])
-  alarm_name          = "${each.value}-depth"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "ApproximateNumberOfMessagesVisible"
-  namespace           = "AWS/SQS"
-  period              = 60
-  statistic           = "Sum"
-  threshold           = 0
-  alarm_description   = "${each.value} 메시지 누적 — DLQ 도달"
-  treat_missing_data  = "notBreaching"
-  alarm_actions       = [aws_sns_topic.alerts.arn]
-
-  dimensions = {
-    QueueName = each.value
-  }
-}
 
 output "alerts_sns_arn" {
   value       = aws_sns_topic.alerts.arn
