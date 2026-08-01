@@ -44,7 +44,7 @@
   - [x] P6-2. Analytics 다채널 수집 — EventBridge 매일 KST 06:00 자동 전체 채널 sync `[BE][DevOps]`
 - **Phase 7** — 프로덕션 준비
   - [x] P7-1. GitHub Actions CI/CD + Slack 배포 알림 (Block Kit 포맷) `[DevOps]`
-  - [ ] P7-2. Sentry 연동 `[BE]`
+  - [x] P7-2. Sentry 연동 `[BE]`
   - [x] P7-3. AWS Budget Alert `[DevOps]`
 
 ---
@@ -349,7 +349,7 @@
 
 **완료 기준**
 - [x] 월 운영 비용 $10 이하 (Budget Alert 설정 완료)
-- [ ] 에러 추적 대시보드(Sentry)에서 Lambda 예외 확인 가능
+- [x] 에러 추적 대시보드(Sentry)에서 Lambda 예외 확인 가능
 - [ ] 대시보드 전 기능 동작
 
 ---
