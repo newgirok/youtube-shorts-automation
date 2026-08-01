@@ -1,6 +1,6 @@
 # PRD — AI 유튜브 쇼츠 자동 생성/업로드 플랫폼
 
-> 최종 업데이트: 2026-05-20  
+> 최종 업데이트: 2026-08-01  
 > 기반 문서: docs/roadmap.md, shrimp-rules.md
 
 ---
@@ -9,7 +9,7 @@
 
 유튜브 쇼츠 채널을 운영하는 사용자가 **토픽 하나를 입력하거나 뉴스 RSS를 자동 수집**하면 스크립트 생성 → TTS 음성 → 자막 → 영상 합성 → 유튜브 업로드까지 전 과정이 자동으로 실행되는 플랫폼이다.
 
-한국 뉴스·시사 쇼츠 채널에 특화: Google News RSS에서 주제를 자동 수집하고, Gemini 2.5 Flash로 25~35초 시사 스크립트를 생성하며, 시사 키워드 하이라이트 자막과 Pexels 이미지 기반 zoompan 영상을 제작한다.
+한국 뉴스·시사 쇼츠 채널에 특화: Google News RSS에서 주제를 자동 수집하고, Gemini 2.5 Flash로 35~45초 시사 스크립트를 생성하며, 글자 비례 SRT 자막과 Pexels 동영상/이미지 기반 zoompan 영상을 제작한다.
 
 Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라인(Lambda + SQS)으로 각 처리 단계를 분리 실행한다. 웹 대시보드(Next.js)로 채널 관리, Job 상태 모니터링, YouTube Analytics 시각화, YPP 진행률 추적을 제공한다.
 
@@ -46,7 +46,7 @@ Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라
 | 단계 | 기능 | 구현 방식 |
 |---|---|---|
 | 스크립트 생성 | 뉴스·시사 주제 기반 쇼츠 스크립트 자동 작성 | Google Gemini 2.5 Flash |
-| TTS | 스크립트 → MP3 오디오 변환 | Edge-TTS `ko-KR-SunHiNeural +20%` → Phase 7: Clova Voice |
+| TTS | 스크립트 → MP3 오디오 변환 | msedge-tts `ko-KR-InJoonNeural +20%` |
 | 자막 | 오디오 길이 기반 글자 비례 SRT 생성 (20자 이하 청크) | `ffprobe` 측정 → `script` 필드 비례 타임스탬프 할당 |
 | 영상 합성 | Pexels 이미지 + zoompan 효과 + 오디오 + 자막 합성, 1080×1920 포맷 | FFmpeg (Lambda Container Image) |
 | 업로드 | YouTube Data API로 영상 업로드, 생성된 설명문·뉴스 카테고리 설정 (`containsSyntheticMedia: true`) | YouTube Data API v3 |
@@ -55,9 +55,9 @@ Google Gemini API로 스크립트를 생성하고, AWS 서버리스 파이프라
 
 ```json
 {
-  "title": "영상 제목 (20자 이내, 충격·클릭 유도)",
+  "title": "영상 제목 (22자 이내, 충격·클릭 유도)",
   "hook": "첫 2초 훅 문장 (의문형 또는 충격 선언)",
-  "script": "전체 낭독 스크립트 (180~250자, comment_bait 마무리)",
+  "script": "전체 낭독 스크립트 (210~350자, 최대 380자 검증, comment_bait 마무리)",
   "description": "YouTube 영상 설명문 (3~5문단, 400~800자). ~다고 합니다 중립 보도 문체. 마지막 문단 면책 공지 포함.",
   "scenes": [
     {
@@ -114,8 +114,8 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 
 - CloudWatch: Lambda 로그 수집, 에러율 5% 초과 시 알람
 - SQS DLQ: maxReceiveCount 3회 실패 시 DLQ 이동, DLQ 적재 시 Slack/Discord 알림
-- Sentry: 런타임 에러 트래킹, jobId·channelId 컨텍스트 포함
-- AWS Budget Alert: $20 초과 시 이메일 알람
+- Sentry: Lambda 런타임 에러 추적 (`@sentry/aws-serverless`, `initSentry()` + `Sentry.wrapHandler()`)
+- AWS Budget Alert: 월 $10 초과 시 이메일 알람 (80%/$10 임계)
 
 ### 4-7. 보안
 
@@ -153,7 +153,7 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 | Infra | AWS Lambda (Node.js 20), API Gateway, EventBridge, S3, CloudWatch, ECR, IAM, GitHub Actions |
 | Rendering | FFmpeg (zoompan 효과, ASS 자막, 썸네일 추출) |
 | AI | Google Gemini 2.5 Flash |
-| TTS | Edge-TTS `ko-KR-SunHiNeural` → Clova Voice (Phase 7) |
+| TTS | msedge-tts `ko-KR-InJoonNeural +20%` |
 | 자막 생성 | `ffprobe` 오디오 길이 측정 → `script` 필드 글자 수 비례 SRT 생성 |
 | 이미지 | Pexels API (scenes[].keyword 기반) |
 | 뉴스 수집 | Google News RSS |
@@ -171,19 +171,19 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 ## 7. 아키텍처 개요
 
 ```
-[Next.js — Vercel or AWS Amplify]
+[Next.js 15 — EC2 Docker Compose]
            ↓ HTTP
 [API Gateway + Lambda (NestJS)]
            ↓ SQS
 [script-worker]  → Gemini 2.5 Flash  → S3 (script.json)   ← Lambda
-[tts-worker]     → Edge-TTS           → S3 (audio.mp3)     ← Lambda
-[subtitle-worker]→ 스크립트 기반 SRT  → S3 (subtitle.srt)  ← Lambda
-[render-worker]  → Pexels + FFmpeg    → S3 (output.mp4)    ← Lambda Container Image
-[upload-worker]  → YouTube API        → 업로드 완료         ← Lambda
+[tts-worker]     → msedge-tts        → S3 (audio.mp3)     ← Lambda
+[subtitle-worker]→ 글자 비례 SRT     → S3 (subtitle.srt)  ← Lambda
+[render-worker]  → Pexels + FFmpeg   → S3 (output.mp4)    ← Lambda Container Image
+[upload-worker]  → YouTube API       → 업로드 완료         ← Lambda
            ↓
-[RDS PostgreSQL / Supabase]
-[EventBridge Scheduler] — 매일 채널별 지정 시간에 Job 생성
-[CloudWatch] — 로그, 알람
+[PostgreSQL (Supabase + pgBouncer)]
+[EventBridge Scheduler] — 채널별 독립 규칙, 매일 KST 06:00 Analytics sync
+[CloudWatch + Sentry] — 로그, 알람, 에러 추적
 ```
 
 **S3 키 규칙:**
@@ -302,7 +302,7 @@ enum JobStatus {
 | 항목 | 비용 |
 |---|---|
 | Google Gemini 2.5 Flash (무료 티어) | $0 |
-| Edge-TTS | $0 |
+| msedge-tts | $0 |
 | Pexels API (무료 플랜) | $0 |
 | Google News RSS | $0 |
 | AWS S3 (~9GB) | ~$0.21 |
@@ -335,16 +335,16 @@ enum JobStatus {
 | **3** | Supabase DB 이관 (연결 설정 + 마이그레이션) | 완료 |
 | **4** | AWS 서버리스 이관 (Lambda + SQS + S3), E2E 자동 업로드 | 완료 |
 | **5** | EventBridge 스케줄링, DLQ 알림, CloudWatch 알람 | 완료 |
-| **6** | 멀티채널 독립 스케줄, Analytics 다채널 수집 | 예정 |
-| **7** | GitHub Actions CI/CD, Sentry, Clova Voice 교체, Budget Alert | 진행 중 (P7-1 완료) |
+| **6** | 멀티채널 독립 스케줄, Analytics 다채널 수집 | 완료 |
+| **7** | GitHub Actions CI/CD, Sentry, Budget Alert | 완료 |
 
 ---
 
 ## 13. 완료 기준 (전체 플랫폼)
 
-- [ ] 월 운영 비용 $10 이하
-- [ ] 모바일 유튜브 앱에서 자막·오디오 품질 합격 판정
-- [ ] 대시보드에서 채널·Job 관리 전 기능 동작
+- [x] 월 운영 비용 $10 이하
+- [x] 모바일 유튜브 앱에서 자막·오디오 품질 합격 판정
+- [x] 대시보드에서 채널·Job 관리 전 기능 동작
 
 ---
 

@@ -9,7 +9,7 @@
 | Phase 4 | CloudWatch 로그 그룹 (각 Worker Lambda) | ✅ 완료 |
 | Phase 5-3 | Lambda 에러율 알람 + DLQ 깊이 알람 → SNS 이메일 | ✅ 완료 |
 | Phase 5-2 | SQS DLQ 알림 (dlq-notifier Lambda, Slack Webhook) | ✅ 완료 |
-| Phase 7 | Sentry, AWS Budget Alert | 미구현 |
+| Phase 7 | Sentry, AWS Budget Alert | ✅ 완료 |
 
 ---
 
@@ -64,7 +64,7 @@ prod-{queue}-dlq-depth  →  ApproximateNumberOfMessagesVisible > 0  →  SNS �
 ```
 [script-dlq]      ─┐
 [tts-dlq]         ─┤
-[subtitle-dlq]    ─┼─→ dlq-notifier Lambda → Slack/Discord Webhook
+[subtitle-dlq]    ─┼─→ dlq-notifier Lambda → Slack Webhook
 [render-dlq]      ─┤
 [upload-dlq]      ─┘
 ```
@@ -150,86 +150,96 @@ ORDER BY cnt DESC;
 대시보드 `/dashboard/[id]`에서 재시도 버튼을 클릭하거나, API를 직접 호출한다:
 
 ```bash
-curl -X POST http://localhost:3000/jobs/<job_id>/retry \
-  -H "x-internal-secret: <API_INTERNAL_SECRET>"
+curl -X POST https://wc2kcpa4k3.execute-api.ap-northeast-2.amazonaws.com/jobs/<job_id>/retry \
+  -H "Authorization: Bearer <API_INTERNAL_SECRET>"
 ```
 
 API가 `status = PENDING`으로 초기화하고 script-queue에 메시지를 재발행한다.
 
 ---
 
-## Sentry (Phase 7)
+## Sentry
 
-### 초기화
+Lambda 런타임 예외를 코드 레벨(스택 트레이스, 파일·라인 정보)로 추적한다.
+
+### 구현 위치
+
+`packages/shared/src/sentry.ts`에서 `initSentry`와 `Sentry` 인스턴스를 공통 제공한다.
 
 ```typescript
-// apps/workers/shared/sentry.ts
-import * as Sentry from '@sentry/node';
+// packages/shared/src/sentry.ts
+import * as Sentry from '@sentry/aws-serverless';
 
-export function initSentry() {
+export function initSentry(): void {
+  if (!process.env.SENTRY_DSN) return;
   Sentry.init({
     dsn: process.env.SENTRY_DSN,
-    environment: process.env.NODE_ENV,
+    environment: process.env.NODE_ENV ?? 'development',
+    tracesSampleRate: 0,
   });
 }
 
-export function setSentryContext(jobId: string, channelId: string) {
-  Sentry.setContext('job', { jobId, channelId });
-}
+export { Sentry };
 ```
 
-### Worker에서 사용
+### Worker 적용 패턴
+
+각 Worker handler 최상단에서 `initSentry()`를 호출하면 Lambda 실행 중 캐치되지 않은 예외가 자동으로 Sentry로 전송된다.
 
 ```typescript
-import { initSentry, setSentryContext } from '../shared/sentry';
-import * as Sentry from '@sentry/node';
-
+// apps/workers/*/src/handler.ts
+import { ..., initSentry, Sentry } from '@shorts/shared';
 initSentry();
 
-// SQS 핸들러 내
-try {
-  setSentryContext(jobId, channelId);
-  await processJob(jobId);
-} catch (error) {
-  Sentry.captureException(error);
-  throw error;
-}
+// 핸들러 내부 — 예외를 직접 캡처해야 할 경우
+Sentry.captureException(error);
 ```
 
-### CI/CD sourcemaps 업로드
+### API Lambda 적용
 
-GitHub Actions `deploy-workers.yml` 빌드 후 Sentry CLI로 sourcemaps 업로드.
+API Lambda(`apps/api/src/lambda.ts`)는 `Sentry.wrapHandler`로 핸들러를 감싸 예외를 자동 캡처한다.
+
+```typescript
+export const handler = Sentry.wrapHandler(_handler);
+```
+
+### DSN 설정
+
+`SENTRY_DSN` 환경변수는 SSM Parameter Store(`shorts.prod.SENTRY_DSN`)에서 주입된다.  
+Sentry 대시보드: `https://newgirok.sentry.io/organizations/newgirok/projects/youtube-shorts-automation/`
 
 ---
 
-## AWS Budget Alert (Phase 7)
+## AWS Budget Alert
 
-- **월 예산**: $20
-- **80% 도달 시**: 경고 알림 (SNS → 이메일)
-- **100% 도달 시**: 초과 알림 (SNS → 이메일)
+월 운영 비용 초과를 이메일로 사전 경고한다.
+
+- **월 예산**: $10
+- **80% 도달 시** ($8): 경고 알림 (SNS → 이메일)
+- **100% 도달 시** ($10): 초과 알림 (SNS → 이메일)
 
 ```hcl
 resource "aws_budgets_budget" "monthly" {
   name         = "shorts-monthly-budget"
   budget_type  = "COST"
-  limit_amount = "20"
+  limit_amount = "10"
   limit_unit   = "USD"
   time_unit    = "MONTHLY"
 
   notification {
-    comparison_operator = "GREATER_THAN"
-    threshold           = 80
-    threshold_type      = "PERCENTAGE"
-    notification_type   = "ACTUAL"
-    subscriber_email_addresses = ["tlswlsdnehd@gmail.com"]
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 80
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "ACTUAL"
+    subscriber_email_addresses = ["newgirok@gmail.com"]
   }
 
   notification {
-    comparison_operator = "GREATER_THAN"
-    threshold           = 100
-    threshold_type      = "PERCENTAGE"
-    notification_type   = "FORECASTED"
-    subscriber_email_addresses = ["tlswlsdnehd@gmail.com"]
+    comparison_operator        = "GREATER_THAN"
+    threshold                  = 100
+    threshold_type             = "PERCENTAGE"
+    notification_type          = "FORECASTED"
+    subscriber_email_addresses = ["newgirok@gmail.com"]
   }
 }
 ```
