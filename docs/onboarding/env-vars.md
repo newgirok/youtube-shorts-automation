@@ -86,7 +86,6 @@ cp apps/web/.env.example apps/web/.env.local
 | 변수명 | 필수 | 설명 |
 |--------|------|------|
 | `SQS_SUBTITLE_QUEUE_URL` |  | subtitle-worker SQS 큐 URL |
-| `EDGE_TTS_PATH` | - | edge-tts 실행 경로 (Docker: `edge-tts`, Windows: 절대 경로) |
 
 ### apps/workers/subtitle
 
@@ -94,7 +93,6 @@ cp apps/web/.env.example apps/web/.env.local
 |--------|------|------|
 | `SQS_SUBTITLE_QUEUE_URL` |  | 수신 큐 URL |
 | `SQS_RENDER_QUEUE_URL` |  | render-worker SQS 큐 URL |
-| `PYTHON_PATH` | - | Python 실행 경로 (기본값: `python`, 현재 미사용 — 향후 확장 대비) |
 
 ### apps/workers/render
 
@@ -149,6 +147,7 @@ Lambda는 `.env` 파일 없이 SSM Parameter Store에서 값을 가져온다.
 | `shorts.prod.YOUTUBE_REDIRECT_URI` | String | OAuth callback URL (`{api-gw-url}/auth/youtube/callback`) |
 | `shorts.prod.WEB_ORIGIN` | String | CORS 허용 오리진 (`https://shortsautomation.com`) — API Lambda |
 | `shorts.prod.API_BASE_URL` | String | thumbnailUrl 절대 URL 생성 (API Gateway URL) — API Lambda |
+| `shorts.prod.SENTRY_DSN` | SecureString | Sentry DSN (모든 Lambda 공통) |
 
 > **점 구분자 주의**: 파라미터 이름에 슬래시(`/`) 없이 점(`.`)을 사용합니다. SSM 경로 패턴이 아닌 일반 이름 형식입니다.
 

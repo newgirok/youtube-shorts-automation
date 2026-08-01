@@ -83,17 +83,17 @@ render-worker는 Lambda Container Image로 패키징됩니다 (3008MB, 600s).
 | **유효성 검사** | Zod | 환경변수, API 요청 검증 |
 | **로깅** | Pino | 구조적 로깅, `jobId`/`channelId` 컨텍스트 포함 |
 | **ORM** | Prisma v5 | Lambda 싱글턴 패턴 |
-| **DB** | PostgreSQL (Supabase → RDS) | pgBouncer로 연결 관리([ADR 007](../adr/007-database-strategy.md)) |
+| **DB** | PostgreSQL (Supabase) | pgBouncer로 연결 관리([ADR 007](../adr/007-database-strategy.md)) |
 | **Queue** | AWS SQS Standard Queue + DLQ | FIFO 불사용([ADR 003](../adr/003-sqs-standard-queue.md)) |
 | **스토리지** | AWS S3 | 모든 중간 산출물 저장 |
 | **AI (스크립트)** | Google Gemini 2.5 Flash | 무료 티어 사용([ADR 005](../adr/005-gemini-flash.md)) |
-| **TTS** | msedge-tts `ko-KR-InJoonNeural +20%` | Lambda Layer 불필요, VTT 미생성. Phase 7~: Clova Voice([ADR 002](../adr/002-tts-engine.md)) |
+| **TTS** | msedge-tts `ko-KR-InJoonNeural +20%` | Lambda Layer 불필요, VTT 미생성 |
 | **자막** | 글자 비례 SRT 생성 | `ffprobe` 오디오 길이 측정 → `script` 필드 글자 수 비례 타임스탬프 |
 | **이미지** | Pexels API | scenes[].keyword 기반 배경 이미지 다운로드 |
 | **렌더링** | FFmpeg (zoompan 효과, ASS 자막 burn-in, 썸네일 추출) | [ADR 004](../adr/004-render-engine.md) |
 | **뉴스 수집** | Google News RSS | `POST /jobs/auto-news` 엔드포인트 |
 | **IaC** | Terraform + Serverless Framework | [ADR 006](../adr/006-iac-terraform-serverless.md) |
-| **모니터링** | CloudWatch, Sentry (Phase 7) | |
+| **모니터링** | CloudWatch, Sentry | |
 | **스케줄러** | EventBridge Scheduler | 채널별 일일 Job 자동 생성 |
 
 ---
@@ -107,7 +107,7 @@ youtube-shorts-automation/        ← Turborepo 루트
 │   ├── web/                      ← Next.js 15 App Router 대시보드
 │   └── workers/
 │       ├── script/               ← Gemini 2.5 Flash → script.json (Lambda)
-│       ├── tts/                  ← Edge-TTS → audio.mp3 (Lambda)
+│       ├── tts/                  ← msedge-tts → audio.mp3 (Lambda)
 │       ├── subtitle/             ← 글자 비례 SRT → subtitle.srt (Lambda)
 │       ├── render/               ← Pexels + FFmpeg → output.mp4 (Lambda Container Image)
 │       ├── upload/               ← YouTube Data API (Lambda)
@@ -177,6 +177,7 @@ packages/shared/
 | **Supabase** | PostgreSQL 호스팅 + pgBouncer | 무료 플랜 (Phase 3 이후 RDS 이전 고려) |
 | **AWS S3** | 중간 산출물 저장 | ~$0.023/GB/월 |
 | **AWS SQS** | Worker 간 비동기 메시지 큐 | 무료 티어 100만 요청/월 |
+| **Sentry** | Lambda 런타임 에러 추적 | 무료 플랜 |
 | **AWS Lambda** | 모든 Worker(script/tts/subtitle/render/upload/scheduler/dlq-notifier) + api 실행 | 무료 티어 100만 호출/월 |
 | **AWS EventBridge** | 채널별 일일 스케줄 | 무료 |
 | **AWS Secrets Manager** | 암호화 키, API 시크릿 관리 | ~$0.40/시크릿/월 |
@@ -190,7 +191,7 @@ packages/shared/
 | 항목 | 예상 비용 |
 |---|---|
 | Google Gemini API (무료 티어) | $0 |
-| Edge-TTS | $0 |
+| msedge-tts | $0 |
 | Pexels API (무료 플랜) | $0 |
 | Google News RSS | $0 |
 | Supabase (무료 플랜) | $0 |
@@ -211,7 +212,7 @@ packages/shared/
 | **패키지 관리** | pnpm workspace, Turborepo | |
 | **인증** | NextAuth v5 (Google OAuth, JWT) | signIn: Prisma User 이메일 제한 / jwt: DB 조회 → `token.userId` 저장 / session: `session.user.id` 노출 → 웹이 `x-user-id` 헤더로 API에 전달 |
 | **로컬 개발** | Docker Compose, LocalStack v3 | |
-| **에러 추적** | Sentry | Phase 7 |
+| **에러 추적** | Sentry | `@sentry/aws-serverless`, `initSentry()` + `Sentry.wrapHandler()` |
 
 ---
 
