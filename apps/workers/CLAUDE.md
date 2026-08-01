@@ -16,7 +16,8 @@
 | `render/` | audio.mp3 + subtitle.srt | output.mp4 | Lambda 3008MB | 600s |
 | `upload/` | output.mp4 | YouTube 업로드 | Lambda 256MB | 300s |
 | `scheduler/` | EventBridge (채널별 스케줄 또는 daily-analytics-sync) | Job 생성 또는 sync-all 호출 | Lambda 256MB | 60s |
-| `dlq-notifier/` | 5개 DLQ SQS 이벤트 | Slack Webhook 알림 | Lambda 128MB | 30s |
+| `dlq-notifier/` | 5개 DLQ SQS 이벤트 | Slack Block Kit 알림 (jobId·channelId·메시지 본문) | Lambda 128MB | 30s |
+| `cloudwatch-notifier/` | CloudWatch SNS 이벤트 | Slack Block Kit 알림 (에러율 알람·복구) | Lambda 128MB | 30s |
 
 ## 공통 Worker 패턴 (모든 Worker Lambda)
 

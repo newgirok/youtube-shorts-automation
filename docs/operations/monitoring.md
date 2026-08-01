@@ -167,8 +167,6 @@ Lambda 런타임 예외를 코드 레벨(스택 트레이스, 파일·라인 정
 
 ### 구현 위치
 
-### 구현 위치
-
 `packages/shared/src/sentry.ts`에서 `initSentry`와 `Sentry` 인스턴스를 공통 제공한다.
 
 ```typescript

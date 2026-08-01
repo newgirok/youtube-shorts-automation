@@ -293,14 +293,13 @@
     - DLQ 적재 → Slack 알림 수신 확인
 
 - **P5-3.** CloudWatch 알람 설정 `[DevOps]`
-  - Lambda 에러율 > 5% (5분 윈도우) → SNS → 이메일 알람
-  - DLQ 메시지 1개 이상 → 즉시 SNS 알람
-  - 알람 대상 Worker 7개: script / tts / subtitle / render / upload / scheduler / dlq-notifier
+  - Lambda 에러율 > 5% (5분 윈도우) → SNS → cloudwatch-notifier Lambda → Slack Block Kit 알림
+  - 알람 대상 Worker 8개: script / tts / subtitle / render / upload / scheduler / dlq-notifier / cloudwatch-notifier
 
 **완료 기준** ✅
 - [x] scheduler-worker CloudWatch 로그 정상 (채널별 스케줄 시각에 실행)
 - [x] DLQ 적재 시 Slack 알림 수신
-- [x] CloudWatch 알람 7개 + SNS 이메일 연결
+- [x] CloudWatch Lambda 에러율 알람 8개 → SNS → Slack 연결
 
 ---
 

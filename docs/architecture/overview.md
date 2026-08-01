@@ -65,7 +65,8 @@ Lambda는 실행 시간 15분 이내, 메모리 3GB 이하인 경량 작업에 �
 | **subtitle-worker** | `apps/workers/subtitle` | `audio.mp3`, `script.json` | `ffprobe`로 오디오 길이 측정 후 글자 비례 타임스탬프 할당, 20자 이하 청크 분할 | `subtitle.srt` → S3 |
 | **render-worker** | `apps/workers/render` | `audio.mp3`, `subtitle.srt`, scenes[] | Pexels 동영상/이미지 다운로드 → zoompan 클립 → FFmpeg concat + 헤더 오버레이 + ASS 자막 burn-in → FFmpeg `-vframes 1` 썸네일 추출 | `output.mp4`, `thumbnail.jpg` → S3 |
 | **scheduler-worker** | `apps/workers/scheduler` | EventBridge 채널별 규칙 `{ channelId }` 또는 일일 Analytics `{ type: 'daily-analytics-sync' }` | 채널 단건 Job 생성 또는 `POST /channels/sync-all` 호출 | Job 생성 / 전체 채널 Analytics 갱신 |
-| **dlq-notifier** | `apps/workers/dlq-notifier` | 5개 DLQ SQS 이벤트 | jobId·failReason 파싱 → Slack Webhook 알림 | Slack 알림 전송 |
+| **dlq-notifier** | `apps/workers/dlq-notifier` | 5개 DLQ SQS 이벤트 | jobId·failReason 파싱 → Slack Block Kit 알림 | Slack 알림 전송 |
+| **cloudwatch-notifier** | `apps/workers/cloudwatch-notifier` | CloudWatch SNS 이벤트 | Lambda 에러율 알람·복구 파싱 → Slack Block Kit 알림 | Slack 알림 전송 |
 
 render-worker는 Lambda Container Image로 패키징됩니다 (3008MB, 600s).
 
@@ -93,7 +94,7 @@ render-worker는 Lambda Container Image로 패키징됩니다 (3008MB, 600s).
 | **렌더링** | FFmpeg (zoompan 효과, ASS 자막 burn-in, 썸네일 추출) | [ADR 004](../adr/004-render-engine.md) |
 | **뉴스 수집** | Google News RSS | `POST /jobs/auto-news` 엔드포인트 |
 | **IaC** | Terraform + Serverless Framework | [ADR 006](../adr/006-iac-terraform-serverless.md) |
-| **모니터링** | CloudWatch, Sentry | |
+| **모니터링** | CloudWatch, Sentry, cloudwatch-notifier Lambda | Lambda 에러율 알람 → SNS → Slack Block Kit |
 | **스케줄러** | EventBridge Scheduler | 채널별 일일 Job 자동 생성 |
 
 ---
@@ -112,7 +113,8 @@ youtube-shorts-automation/        ← Turborepo 루트
 │       ├── render/               ← Pexels + FFmpeg → output.mp4 (Lambda Container Image)
 │       ├── upload/               ← YouTube Data API (Lambda)
 │       ├── scheduler/            ← EventBridge 채널별 규칙 → Job 생성 / daily-analytics-sync → sync-all (Lambda)
-│       └── dlq-notifier/         ← 5개 DLQ → Slack Webhook (Lambda)
+│       ├── dlq-notifier/         ← 5개 DLQ → Slack Block Kit (Lambda)
+│       └── cloudwatch-notifier/  ← CloudWatch SNS → Slack Block Kit (Lambda)
 ├── packages/
 │   └── shared/                   ← Prisma 스키마, S3 클라이언트, logger, 공유 타입
 ├── infra/                        ← Terraform (S3, SQS, IAM, EventBridge, ECR)
@@ -178,7 +180,7 @@ packages/shared/
 | **AWS S3** | 중간 산출물 저장 | ~$0.023/GB/월 |
 | **AWS SQS** | Worker 간 비동기 메시지 큐 | 무료 티어 100만 요청/월 |
 | **Sentry** | Lambda 런타임 에러 추적 | 무료 플랜 |
-| **AWS Lambda** | 모든 Worker(script/tts/subtitle/render/upload/scheduler/dlq-notifier) + api 실행 | 무료 티어 100만 호출/월 |
+| **AWS Lambda** | 모든 Worker(script/tts/subtitle/render/upload/scheduler/dlq-notifier/cloudwatch-notifier) + api 실행 | 무료 티어 100만 호출/월 |
 | **AWS EventBridge** | 채널별 일일 스케줄 | 무료 |
 | **AWS Secrets Manager** | 암호화 키, API 시크릿 관리 | ~$0.40/시크릿/월 |
 

@@ -20,6 +20,7 @@ Terraform과 Serverless Framework를 CDK로 통일하지 말 것.
 | upload-worker | Lambda | 256MB | 300s |
 | scheduler-worker | Lambda | 256MB | 60s |
 | dlq-notifier | Lambda | 128MB | 30s |
+| cloudwatch-notifier | Lambda | 128MB | 30s |
 
 **모든 Worker가 Lambda로 운영 중** (subtitle, render 포함) — Fargate ECS Worker 없음.
 기준: 실행시간 > 15분 또는 메모리 > 3GB → Fargate, 그 외 → Lambda.
