@@ -1,26 +1,20 @@
-# ADR 002: TTS 엔진 — msedge-tts (→ Phase 7: Clova Voice)
+# ADR 002: TTS 엔진 — msedge-tts
 
 **상태:** Accepted
 
 ## 배경
 
-한국어 YouTube Shorts용 TTS가 필요하다. 선택지: Edge-TTS(무료), Clova Voice(유료), ElevenLabs(유료).
+한국어 YouTube Shorts용 TTS가 필요하다. 선택지: msedge-tts(무료), Clova Voice(유료), ElevenLabs(유료).
 
 ## 결정
 
-**Phase 1~6:** `msedge-tts` npm 패키지 `ko-KR-InJoonNeural +20%` 사용
+`msedge-tts` npm 패키지 `ko-KR-InJoonNeural +20%` 사용
 
 - API 키 불필요
 - Microsoft Azure 기반으로 음질 양호
 - 무료 — 파이프라인 운영 비용 없음
 - Lambda Layer 불필요 — 순수 Node.js WebSocket 클라이언트
 - VTT 미생성 — subtitle-worker는 `script.json`의 `script` 필드 + 오디오 길이 기반 글자 비례 SRT 생성
-
-**Phase 7 이후:** Clova Voice로 전환 검토
-
-- 더 자연스러운 한국어 억양
-- 감정 표현 지원 (구독 유도 CTA에 효과적)
-- 월정액 비용 발생 → 수익화 이후 전환
 
 ## 결과
 
