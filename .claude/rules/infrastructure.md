@@ -31,6 +31,7 @@ Terraform과 Serverless Framework를 CDK로 통일하지 말 것.
 - [ ] 이전 단계 Worker에 다음 큐 전송 로직 추가
 - [ ] `JobStatus` enum에 새 상태 추가
 - [ ] Visibility Timeout = Worker 타임아웃 × 2 적용
+- [ ] CloudWatch Lambda 에러율 알람은 `locals.lambda_workers` 맵에 추가하면 자동 생성됨 (DLQ 알람은 별도 추가하지 않음 — dlq-notifier가 커버)
 
 ## Serverless Framework SSM 참조 주의사항
 `serverless.yml`의 `${ssm:...}` 값은 `sls deploy` 시점에 해결되어 Lambda 환경변수에 직접 저장됨.

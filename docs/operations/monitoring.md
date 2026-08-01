@@ -1,15 +1,13 @@
 # 모니터링 가이드
 
-## 모니터링 전략 개요
+## 모니터링 채널 구성
 
-| Phase | 구현 항목 | 상태 |
-|-------|-----------|------|
-| Phase 1~2 | 로컬 Docker Compose 로그, `docker compose logs -f` | ✅ 완료 |
-| Phase 3 | Supabase 대시보드 (DB 상태 확인) | ✅ 완료 |
-| Phase 4 | CloudWatch 로그 그룹 (각 Worker Lambda) | ✅ 완료 |
-| Phase 5-3 | Lambda 에러율 알람 + DLQ 깊이 알람 → SNS 이메일 | ✅ 완료 |
-| Phase 5-2 | SQS DLQ 알림 (dlq-notifier Lambda, Slack Webhook) | ✅ 완료 |
-| Phase 7 | Sentry, AWS Budget Alert | ✅ 완료 |
+| 채널 | 도구 | 대상 |
+|------|------|------|
+| **Slack** | dlq-notifier Lambda | DLQ 적재 — jobId·channelId 포함 |
+| **Slack** | Sentry | Lambda 런타임 예외 — 스택 트레이스 |
+| **이메일** | CloudWatch → SNS | Lambda 에러율 > 5% (타임아웃 등 Sentry 사각지대) |
+| **이메일** | AWS Budget Alert | 월 비용 $10 초과 |
 
 ---
 
@@ -45,11 +43,7 @@ prod-{worker}-error-rate  →  5분 윈도우 에러율 > 5%  →  SNS → 이�
 - Metric Math: `IF(invocations > 0, errors / invocations * 100, 0)`
 - `treat_missing_data = notBreaching` (호출 없을 때 알람 억제)
 
-**DLQ 메시지 깊이 > 0 알람** — DLQ 5개 개별 적용
-
-```
-prod-{queue}-dlq-depth  →  ApproximateNumberOfMessagesVisible > 0  →  SNS → 이메일
-```
+> **DLQ 깊이 알람 없음**: DLQ 적재 알림은 dlq-notifier Lambda → Slack이 담당하므로 CloudWatch DLQ 알람은 운영하지 않는다.
 
 **SNS 알림 대상**: `prod-shorts-alerts` 토픽 → `newgirok@gmail.com`
 
@@ -158,9 +152,20 @@ API가 `status = PENDING`으로 초기화하고 script-queue에 메시지를 재
 
 ---
 
-## Sentry
+## Sentry → Slack 연동
 
-Lambda 런타임 예외를 코드 레벨(스택 트레이스, 파일·라인 정보)로 추적한다.
+Lambda 런타임 예외를 코드 레벨(스택 트레이스, 파일·라인 정보)로 추적하고 Slack으로 즉시 알린다.
+
+### Slack 연동 설정 (sentry.io UI)
+
+1. **sentry.io → Settings → Integrations → Slack → Install**
+2. Slack 워크스페이스 인증 후 `#ops-alerts` 채널 연결
+3. **Alerts → Alert Rules → Create Alert Rule**
+   - When: `A new issue is created`
+   - Filter: `Project: youtube-shorts-automation`
+   - Action: `Send a Slack notification to #ops-alerts`
+
+### 구현 위치
 
 ### 구현 위치
 
