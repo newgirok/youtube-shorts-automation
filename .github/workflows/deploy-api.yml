@@ -94,7 +94,7 @@ jobs:
             --arg commit  "$COMMIT_URL" \
             '{attachments:[{color:$color,blocks:[
               {type:"section",text:{type:"mrkdwn",text:$title}},
-              {type:"section",text:{type:"mrkdwn",text:("🚀  *Platform*    AWS Lambda\n📦  *App*    API\n⏰  *Time*    "+$time+"\n🔧  *Trigger*    "+$trigger)}},
+              {type:"section",text:{type:"mrkdwn",text:("🚀  *플랫폼*    AWS Lambda\n📦  *앱*    API\n⏰  *시각*    "+$time+"\n🔧  *트리거*    "+$trigger)}},
               {type:"divider"},
               {type:"section",text:{type:"mrkdwn",text:$msg}},
               {type:"context",elements:[{type:"mrkdwn",text:$meta}]},
