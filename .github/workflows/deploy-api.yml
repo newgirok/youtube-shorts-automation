@@ -85,7 +85,7 @@ jobs:
 
           PAYLOAD=$(jq -n \
             --arg color   "$COLOR" \
-            --arg title   "${ICON} *[PRD] ${REPO} • Deploy API*" \
+            --arg title   "${ICON} *[PRD] Deploy API*" \
             --arg time    "$TIME" \
             --arg trigger "$TRIGGER" \
             --arg msg     "${FIRST_LINE:-커밋 메시지 없음}" \

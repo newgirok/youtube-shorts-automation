@@ -108,7 +108,7 @@ jobs:
 
           PAYLOAD=$(jq -n \
             --arg color   "$COLOR" \
-            --arg title   "${ICON} *[PRD] ${REPO} • Deploy Web*" \
+            --arg title   "${ICON} *[PRD] Deploy Web*" \
             --arg server  "$EC2_HOST" \
             --arg time    "$TIME" \
             --arg trigger "$TRIGGER" \
