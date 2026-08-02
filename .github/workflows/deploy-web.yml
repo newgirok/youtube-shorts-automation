@@ -86,6 +86,7 @@ jobs:
           AUTHOR_EMAIL: ${{ github.event.head_commit.author.email }}
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           RUN_URL: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          EC2_HOST: ${{ secrets.EC2_HOST }}
         run: |
           SHORT_SHA="${SHA:0:7}"
           COMMIT_URL="https://github.com/$REPO/commit/$SHA"
@@ -100,37 +101,30 @@ jobs:
           fi
 
           if [ "$STATUS" = "success" ]; then
-            COLOR="#2eb886"; ICON="✅"; LABEL="배포 완료"
+            COLOR="#2eb886"; ICON="✅"
           else
-            COLOR="#e01e5a"; ICON="❌"; LABEL="배포 실패"
+            COLOR="#e01e5a"; ICON="❌"
           fi
 
           PAYLOAD=$(jq -n \
             --arg color   "$COLOR" \
-            --arg title   "${ICON} *[PRD] ${REPO} • Deploy Web — ${LABEL}*" \
-            --arg server  "$REPO" \
-            --arg app     "Web" \
+            --arg title   "${ICON} *[PRD] ${REPO} • Deploy Web*" \
+            --arg server  "$EC2_HOST" \
             --arg time    "$TIME" \
             --arg trigger "$TRIGGER" \
             --arg msg     "${FIRST_LINE:-커밋 메시지 없음}" \
-            --arg details "브랜치: $REF | 커밋: $SHORT_SHA | 작성자: $AUTHOR" \
+            --arg meta    "브랜치: ${REF}  ·  커밋: ${SHORT_SHA}  ·  작성자: ${AUTHOR}" \
             --arg run     "$RUN_URL" \
             --arg commit  "$COMMIT_URL" \
             '{attachments:[{color:$color,blocks:[
               {type:"section",text:{type:"mrkdwn",text:$title}},
+              {type:"section",text:{type:"mrkdwn",text:("🖥️  *Server*    "+$server+" (EC2)\n📦  *App*    Web\n⏰  *Time*    "+$time+"\n🔧  *Trigger*    "+$trigger)}},
               {type:"divider"},
-              {type:"section",fields:[
-                {type:"mrkdwn",text:("🖥️ *Server*\n`"+$server+"`")},
-                {type:"mrkdwn",text:("📦 *App*\n"+$app)},
-                {type:"mrkdwn",text:("⏰ *Time*\n"+$time)},
-                {type:"mrkdwn",text:("🔧 *Trigger*\n"+$trigger)}
-              ]},
-              {type:"divider"},
-              {type:"section",text:{type:"mrkdwn",text:("*Commit Message*\n```"+$msg+"```")}},
-              {type:"section",text:{type:"mrkdwn",text:("*Details*\n```"+$details+"```")}},
+              {type:"section",text:{type:"mrkdwn",text:$msg}},
+              {type:"context",elements:[{type:"mrkdwn",text:$meta}]},
               {type:"actions",elements:[
-                {type:"button",text:{type:"plain_text",text:"Actions 보기 →"},url:$run},
-                {type:"button",text:{type:"plain_text",text:"커밋 보기 →"},url:$commit}
+                {type:"button",text:{type:"plain_text",text:"배포 로그"},url:$run},
+                {type:"button",text:{type:"plain_text",text:"커밋"},url:$commit}
               ]}
             ]}]}')
 
