@@ -96,7 +96,7 @@ const _handler: SQSHandler = async (event) => {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `🔴 *[PRD] ${functionName} • ${label}*\nDLQ | \`${queueName}\``,
+                text: `🔴 *[DLQ] ${label} — Job 처리 실패*\n${functionName} | ${queueName}`,
               },
             },
             { type: 'section', text: { type: 'mrkdwn', text: infoText } },

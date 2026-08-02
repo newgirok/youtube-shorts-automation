@@ -12,6 +12,17 @@ if (process.env.SENTRY_DSN) {
 
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL!;
 
+const WORKER_LABELS: Record<string, string> = {
+  'script': 'Script (Gemini)',
+  'tts': 'TTS (msedge-tts)',
+  'subtitle': 'Subtitle',
+  'render': 'Render (FFmpeg)',
+  'upload': 'Upload (YouTube)',
+  'scheduler': 'Scheduler',
+  'dlq-notifier': 'DLQ Notifier',
+  'cloudwatch-notifier': 'CloudWatch Notifier',
+};
+
 interface CloudWatchDimension {
   name?: string;
   value?: string;
@@ -69,17 +80,22 @@ const _handler: SNSHandler = async (event) => {
     const fnDim = alarm.Trigger.Dimensions?.find((d) => (d.name ?? d.Name) === 'FunctionName');
     const functionNameFromDimension = fnDim?.value ?? fnDim?.Value;
     // Dimensions 없을 때 AlarmName(예: prod-script-error-rate)에서 역산
-    const workerNameFromAlarm = alarm.AlarmName.replace(/^prod-/, '').replace(/-error-rate$/, '');
-    const functionName = functionNameFromDimension ?? `shorts-${workerNameFromAlarm}-prod-handler`;
-    const workerName = functionName.replace('shorts-', '').replace('-prod-handler', '');
+    const workerKey = alarm.AlarmName.replace(/^prod-/, '').replace(/-error-rate$/, '');
+    const functionName = functionNameFromDimension ?? `shorts-${workerKey}-prod-handler`;
+    const workerLabel = WORKER_LABELS[workerKey] ?? workerKey;
     const metricName = alarm.Trigger.MetricName ?? 'Errors';
     const time = new Date(alarm.StateChangeTime)
       .toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' })
       .replace('T', ' ');
 
+    const title = isAlarm
+      ? `🔴 *[ALARM] ${workerLabel} — 에러율 초과*`
+      : `🟢 *[OK] ${workerLabel} — 에러율 정상*`;
+    const subtitle = `${functionName} | ${alarm.AlarmName}`;
+
     const infoText = [
       `⚙️  *Function*    \`${functionName}\``,
-      `🏷️  *Worker*    ${workerName}`,
+      `🏷️  *Worker*    ${workerLabel}`,
       `⏰  *Time*    ${time}`,
       `📊  *Metric*    ${metricName} > ${alarm.Trigger.Threshold}%`,
     ].join('\n');
@@ -93,10 +109,7 @@ const _handler: SNSHandler = async (event) => {
           blocks: [
             {
               type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `${isAlarm ? '🔴' : '🟢'} *[PRD] ${functionName} • ${workerName}*\n${alarm.NewStateValue} | ${alarm.AlarmName}`,
-              },
+              text: { type: 'mrkdwn', text: `${title}\n${subtitle}` },
             },
             { type: 'section', text: { type: 'mrkdwn', text: infoText } },
             { type: 'divider' },
