@@ -69,36 +69,38 @@ workflow 파일 자체도 제외 — CI 수정 테스트는 `workflow_dispatch` 
 
 모든 워크플로우는 배포 완료·실패 시 Slack Block Kit 알림을 전송한다.
 
-**레이아웃 (7블록)**:
+**레이아웃 (세로 배치, 6블록)**:
 ```
-✅ *[PRD] newgirok/youtube-shorts-automation • Deploy API — 배포 완료*
+✅ *[PRD] newgirok/youtube-shorts-automation • Deploy API*
+
+🚀  *Platform*    AWS Lambda       ← deploy-api / deploy-workers
+🖥️  *Server*    13.124.x.x (EC2)  ← deploy-web (EC2_HOST 시크릿)
+📦  *App*    API | Workers | Web
+⏰  *Time*    2026-08-02 15:45:33
+🔧  *Trigger*    push → main
 ──────────────────────────────────
-🖥️ Server  `newgirok/youtube-shorts-automation`  📦 App      API
-⏰ Time    2026-08-02 15:45:33                   🔧 Trigger  push → main
-──────────────────────────────────
-*Commit Message*
-```fix(ci): 커밋 메시지 한 줄```
-*Details*
-```브랜치: main | 커밋: abc1234 | 작성자: newgirok <newgirok@gmail.com>```
-[Actions 보기 →]  [커밋 보기 →]
+fix(ci): 커밋 메시지 한 줄
+브랜치: main  ·  커밋: abc1234  ·  작성자: newgirok
+[ 배포 로그 ]  [ 커밋 ]
 ```
 
 **블록 구조**:
-- `section` — 헤더(`✅/❌ *[PRD] {repo} • Deploy {App} — 완료/실패*`)
+- `section` — 헤더(`✅/❌ *[PRD] {repo} • Deploy {App}*`) — 한글 상태 접미사 없음
+- `section` — Platform/Server + App + Time + Trigger 세로 나열 (단일 mrkdwn)
 - `divider`
-- `section.fields` — 4개 필드 (2열): 🖥️ Server / 📦 App / ⏰ Time / 🔧 Trigger
-- `divider`
-- `section` — `*Commit Message*` + 커밋 메시지 코드 블록
-- `section` — `*Details*` + 브랜치·커밋·작성자 코드 블록
-- `actions` — Actions 보기 / 커밋 보기 버튼
+- `section` — 커밋 메시지 첫 줄
+- `context` — 브랜치 · 커밋 · 작성자 (작은 글씨)
+- `actions` — `배포 로그` / `커밋` 버튼 (화살표 없음)
 
 **구현 요점**:
+- deploy-api / deploy-workers: `Platform = AWS Lambda` (서버리스, EC2 없음)
+- deploy-web: `Server = $EC2_HOST (EC2)` — env에 `EC2_HOST: ${{ secrets.EC2_HOST }}` 추가
 - 커밋 메시지: `head -1`으로 첫 줄만 추출
-- 작성자: `AUTHOR_NAME` + `AUTHOR_EMAIL` → `"${AUTHOR_NAME} <${AUTHOR_EMAIL}>"` 조합
+- 작성자: `"${AUTHOR_NAME} <${AUTHOR_EMAIL}>"` 조합
 - 시각: `TZ=Asia/Seoul date "+%Y-%m-%d %H:%M:%S"`
-- 트리거: `EVENT_NAME` → `workflow_dispatch` 또는 `push → {branch}`
-- 성공: 컬러바 `#2eb886` / 실패: `#e01e5a`
-- payload는 `jq -n --arg ...` 로 구성 (특수문자 안전 처리)
+- 트리거: `workflow_dispatch` 또는 `push → {branch}`
+- 성공: `#2eb886` / 실패: `#e01e5a`
+- payload: `jq -n --arg ...` 로 구성 (특수문자 안전 처리)
 - `SLACK_WEBHOOK_URL`은 GitHub Secret으로 관리
 
 ### deploy-workers 특이사항

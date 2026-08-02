@@ -66,15 +66,16 @@ prod-{worker}-error-rate  →  5분 윈도우 에러율 > 5%  →  SNS(prod-shor
 ### Slack Block Kit 알림 형식
 
 ```
-🔴 *[DLQ] render-queue*
-FAILED | shorts-render-worker-prod-handler
+🔴 *[PRD] shorts-render-worker-prod-handler • Render (FFmpeg)*
+DLQ | `prod-render-queue-dlq`
+
+⚙️  *Function*    `shorts-render-worker-prod-handler`
+🏷️  *Worker*    Render (FFmpeg)
+⏰  *Time*    2026-08-01 22:40:33
+📬  *Queue*    `prod-render-queue-dlq`
 ──────────────────────────────────
-🖥️ Function  `shorts-render-worker-prod-handler`  📦 Queue  render-queue
-⏰ Time      2026-08-01 22:40:33                   🔧 Type   DLQ
-──────────────────────────────────
-*Error Message*
-```jobId: job_abc123\nchannelId: ch_xyz\n수신횟수: 3```
-*Raw Body* (생략됨)
+jobId: job_abc123  ·  channelId: ch_xyz  ·  수신: 3회
+```{ "jobId": "job_abc123", ... }```
 `aws logs tail /aws/lambda/shorts-render-worker-prod-handler --follow --since 1h`
 ```
 
