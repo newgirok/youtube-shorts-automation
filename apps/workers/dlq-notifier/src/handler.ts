@@ -59,7 +59,9 @@ const _handler: SQSHandler = async (event) => {
     const label = QUEUE_LABELS[queueName] ?? queueName;
     const functionName = QUEUE_TO_FUNCTION[queueName] ?? queueName;
     const receiveCount = record.attributes.ApproximateReceiveCount;
-    const time = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+    const time = new Date()
+      .toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' })
+      .replace('T', ' ');
 
     let jobId = '알 수 없음';
     let channelId = '알 수 없음';
@@ -75,12 +77,14 @@ const _handler: SQSHandler = async (event) => {
       channelId = record.body.match(/channelId[:"' ]*([^,}\s'"]+)/)?.[1] ?? '알 수 없음';
     }
 
-    const errorMessage = [
-      `jobId: ${jobId}`,
-      `channelId: ${channelId}`,
-      `수신 횟수: ${receiveCount}회 (3회 초과 → DLQ 이동)`,
+    const infoText = [
+      `⚙️  *Function*    \`${functionName}\``,
+      `🏷️  *Worker*    ${label}`,
+      `⏰  *Time*    ${time}`,
+      `📬  *Queue*    \`${queueName}\``,
     ].join('\n');
 
+    const errorText = `jobId: ${jobId}  ·  channelId: ${channelId}  ·  수신: ${receiveCount}회`;
     const logCommand = `aws logs tail /aws/lambda/${functionName} --follow --since 1h`;
 
     const payload = {
@@ -92,38 +96,17 @@ const _handler: SQSHandler = async (event) => {
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `🔴 *[PRD] ${functionName} • ${label}*\nDLQ 적재 | \`${queueName}\``,
+                text: `🔴 *[PRD] ${functionName} • ${label}*\nDLQ | \`${queueName}\``,
               },
             },
+            { type: 'section', text: { type: 'mrkdwn', text: infoText } },
             { type: 'divider' },
+            { type: 'section', text: { type: 'mrkdwn', text: errorText } },
             {
               type: 'section',
-              fields: [
-                { type: 'mrkdwn', text: `🖥️ *Server*\n\`${functionName}\`` },
-                { type: 'mrkdwn', text: `📦 *Container*\n${label}` },
-                { type: 'mrkdwn', text: `⏰ *Time*\n${time}` },
-                { type: 'mrkdwn', text: `🔧 *Type*\n\`${queueName}\`` },
-              ],
+              text: { type: 'mrkdwn', text: `\`\`\`${rawBody.slice(0, 2000)}\`\`\`` },
             },
-            { type: 'divider' },
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `*Error Message*\n\`\`\`${errorMessage}\`\`\``,
-              },
-            },
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `*Message Body*\n\`\`\`${rawBody.slice(0, 2000)}\`\`\``,
-              },
-            },
-            {
-              type: 'context',
-              elements: [{ type: 'mrkdwn', text: `\`${logCommand}\`` }],
-            },
+            { type: 'context', elements: [{ type: 'mrkdwn', text: `\`${logCommand}\`` }] },
           ],
         },
       ],

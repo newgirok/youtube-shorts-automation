@@ -33,7 +33,7 @@ const QUEUE_TO_FUNCTION: Record<string, string> = {
 ## 메시지 파싱 전략
 
 정상 JSON인 경우 `JSON.parse()`로 파싱 → `jobId`, `channelId` 추출.
-비정상 메시지(JSON 파싱 실패)는 regex로 필드를 추출해 "알 수 없음" 방지:
+비정상 메시지(JSON 파싱 실패)는 regex로 필드를 추출:
 
 ```typescript
 try {
@@ -49,19 +49,20 @@ try {
 ## Slack 알림 형식 (Block Kit)
 
 `attachments` + `blocks` 구조 — 빨간 왼쪽 보더(`#e01e5a`).
+Time 포맷: `sv-SE` 로케일 → `YYYY-MM-DD HH:MM:SS` (KST).
 
 ```
-🔴 *[PRD] {functionName} • {label}*
-DLQ 적재 | `{queueName}`
-─────────────────────────────
-🖥️ Server    | `{functionName}`     📦 Container | {label}
-⏰ Time      | {KST 시각}           🔧 Type      | `{queueName}`
-─────────────────────────────
-*Error Message*
-```jobId / channelId / 수신 횟수```
-*Message Body*
-```{원문 JSON (최대 2000자)}```
-`aws logs tail /aws/lambda/{functionName} --follow --since 1h`
+🔴 *[PRD] shorts-script-worker-prod-handler • Script (Gemini)*
+DLQ | `prod-script-queue-dlq`
+
+⚙️  *Function*    `shorts-script-worker-prod-handler`
+🏷️  *Worker*    Script (Gemini)
+⏰  *Time*    2026-08-02 03:06:40
+📬  *Queue*    `prod-script-queue-dlq`
+──────────────────────────────────────────
+jobId: abc123  ·  channelId: ch456  ·  수신: 3회
+```{ "jobId": "abc123", ... }```
+`aws logs tail /aws/lambda/shorts-script-worker-prod-handler --follow --since 1h`
 ```
 
 ## 환경변수
@@ -69,6 +70,7 @@ DLQ 적재 | `{queueName}`
 | 변수 | 설명 |
 |---|---|
 | `SLACK_WEBHOOK_URL` | Slack Incoming Webhook URL |
+| `SENTRY_DSN` | Sentry DSN |
 
 ## SQS 메시지 구조
 
