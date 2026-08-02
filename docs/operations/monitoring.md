@@ -66,8 +66,8 @@ prod-{worker}-error-rate  →  5분 윈도우 에러율 > 5%  →  SNS(prod-shor
 ### Slack Block Kit 알림 형식
 
 ```
-🔴 *[PRD] shorts-render-worker-prod-handler • Render (FFmpeg)*
-DLQ | `prod-render-queue-dlq`
+🔴 *[DLQ] Render (FFmpeg) — Job 처리 실패*
+shorts-render-worker-prod-handler | prod-render-queue-dlq
 
 ⚙️  *Function*    `shorts-render-worker-prod-handler`
 🏷️  *Worker*    Render (FFmpeg)

@@ -71,7 +71,7 @@ workflow 파일 자체도 제외 — CI 수정 테스트는 `workflow_dispatch` 
 
 **레이아웃 (세로 배치, 6블록)**:
 ```
-✅ *[PRD] newgirok/youtube-shorts-automation • Deploy API*
+✅ *[PRD] Deploy API*
 
 🚀  *Platform*    AWS Lambda       ← deploy-api / deploy-workers
 🖥️  *Server*    13.124.x.x (EC2)  ← deploy-web (EC2_HOST 시크릿)
@@ -85,7 +85,7 @@ fix(ci): 커밋 메시지 한 줄
 ```
 
 **블록 구조**:
-- `section` — 헤더(`✅/❌ *[PRD] {repo} • Deploy {App}*`) — 한글 상태 접미사 없음
+- `section` — 헤더(`✅/❌ *[PRD] Deploy {App}*`) — repo명·한글 접미사 없음
 - `section` — Platform/Server + App + Time + Trigger 세로 나열 (단일 mrkdwn)
 - `divider`
 - `section` — 커밋 메시지 첫 줄
