@@ -118,7 +118,7 @@ jobs:
             --arg commit  "$COMMIT_URL" \
             '{attachments:[{color:$color,blocks:[
               {type:"section",text:{type:"mrkdwn",text:$title}},
-              {type:"section",text:{type:"mrkdwn",text:("🖥️  *Server*    "+$server+" (EC2)\n📦  *App*    Web\n⏰  *Time*    "+$time+"\n🔧  *Trigger*    "+$trigger)}},
+              {type:"section",text:{type:"mrkdwn",text:("🖥️  *서버*    "+$server+" (EC2)\n📦  *앱*    Web\n⏰  *시각*    "+$time+"\n🔧  *트리거*    "+$trigger)}},
               {type:"divider"},
               {type:"section",text:{type:"mrkdwn",text:$msg}},
               {type:"context",elements:[{type:"mrkdwn",text:$meta}]},
