@@ -12,6 +12,13 @@ if (process.env.SENTRY_DSN) {
 
 const SLACK_WEBHOOK_URL = process.env.SLACK_WEBHOOK_URL!;
 
+interface CloudWatchDimension {
+  name?: string;
+  value?: string;
+  Name?: string;
+  Value?: string;
+}
+
 interface CloudWatchAlarm {
   AlarmName: string;
   AlarmDescription: string;
@@ -19,12 +26,12 @@ interface CloudWatchAlarm {
   NewStateReason: string;
   StateChangeTime: string;
   Trigger: {
-    MetricName: string;
+    MetricName?: string;
     Namespace: string;
     Period: number;
     Statistic: string;
     Threshold: number;
-    Dimensions: Array<{ name: string; value: string }>;
+    Dimensions?: CloudWatchDimension[];
   };
 }
 
@@ -58,18 +65,23 @@ const _handler: SNSHandler = async (event) => {
     const alarm = JSON.parse(record.Sns.Message) as CloudWatchAlarm;
     const isAlarm = alarm.NewStateValue === 'ALARM';
 
-    const functionName =
-      alarm.Trigger.Dimensions?.find((d) => d.name === 'FunctionName')?.value ?? '알 수 없음';
+    // CloudWatch SNS는 name/value(소문자) 또는 Name/Value(대문자) 두 형식 모두 가능
+    const fnDim = alarm.Trigger.Dimensions?.find((d) => (d.name ?? d.Name) === 'FunctionName');
+    const functionNameFromDimension = fnDim?.value ?? fnDim?.Value;
+    // Dimensions 없을 때 AlarmName(예: prod-script-error-rate)에서 역산
+    const workerNameFromAlarm = alarm.AlarmName.replace(/^prod-/, '').replace(/-error-rate$/, '');
+    const functionName = functionNameFromDimension ?? `shorts-${workerNameFromAlarm}-prod-handler`;
     const workerName = functionName.replace('shorts-', '').replace('-prod-handler', '');
-    const time = new Date(alarm.StateChangeTime).toLocaleString('ko-KR', {
-      timeZone: 'Asia/Seoul',
-    });
+    const metricName = alarm.Trigger.MetricName ?? 'Errors';
+    const time = new Date(alarm.StateChangeTime)
+      .toLocaleString('sv-SE', { timeZone: 'Asia/Seoul' })
+      .replace('T', ' ');
 
-    const alarmDetails = [
-      `Metric: ${alarm.Trigger.MetricName}`,
-      `Threshold: > ${alarm.Trigger.Threshold}%`,
-      `Period: ${alarm.Trigger.Period}s`,
-      `Namespace: ${alarm.Trigger.Namespace}`,
+    const infoText = [
+      `⚙️  *Function*    \`${functionName}\``,
+      `🏷️  *Worker*    ${workerName}`,
+      `⏰  *Time*    ${time}`,
+      `📊  *Metric*    ${metricName} > ${alarm.Trigger.Threshold}%`,
     ].join('\n');
 
     const logCommand = `aws logs tail /aws/lambda/${functionName} --follow --since 1h`;
@@ -86,35 +98,22 @@ const _handler: SNSHandler = async (event) => {
                 text: `${isAlarm ? '🔴' : '🟢'} *[PRD] ${functionName} • ${workerName}*\n${alarm.NewStateValue} | ${alarm.AlarmName}`,
               },
             },
+            { type: 'section', text: { type: 'mrkdwn', text: infoText } },
             { type: 'divider' },
             {
               type: 'section',
-              fields: [
-                { type: 'mrkdwn', text: `🖥️ *Server*\n\`${functionName}\`` },
-                { type: 'mrkdwn', text: `📦 *Container*\n${workerName}` },
-                { type: 'mrkdwn', text: `⏰ *Time*\n${time}` },
-                { type: 'mrkdwn', text: `🔧 *Type*\n${alarm.Trigger.MetricName}` },
-              ],
-            },
-            { type: 'divider' },
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `*Error Message*\n\`\`\`${alarm.NewStateReason}\`\`\``,
-              },
-            },
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `*Alarm Details*\n\`\`\`${alarmDetails}\`\`\``,
-              },
+              text: { type: 'mrkdwn', text: `\`\`\`${alarm.NewStateReason}\`\`\`` },
             },
             {
               type: 'context',
-              elements: [{ type: 'mrkdwn', text: `\`${logCommand}\`` }],
+              elements: [
+                {
+                  type: 'mrkdwn',
+                  text: `Period: ${alarm.Trigger.Period}s  ·  Namespace: ${alarm.Trigger.Namespace}`,
+                },
+              ],
             },
+            { type: 'context', elements: [{ type: 'mrkdwn', text: `\`${logCommand}\`` }] },
           ],
         },
       ],
