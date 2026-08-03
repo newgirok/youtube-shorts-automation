@@ -23,11 +23,35 @@ const WORKER_LABELS: Record<string, string> = {
   'cloudwatch-notifier': 'CloudWatch Notifier',
 };
 
+// Terraform lambda_workers 맵과 동기화 — 폴백 시 정확한 함수명 보장
+const FUNCTION_NAMES: Record<string, string> = {
+  'script': 'shorts-script-worker-prod-handler',
+  'tts': 'shorts-tts-worker-prod-handler',
+  'subtitle': 'shorts-subtitle-worker-prod-handler',
+  'render': 'shorts-render-worker-prod-handler',
+  'upload': 'shorts-upload-worker-prod-handler',
+  'scheduler': 'shorts-scheduler-worker-prod-handler',
+  'dlq-notifier': 'shorts-dlq-notifier-prod-handler',
+  'cloudwatch-notifier': 'shorts-cloudwatch-notifier-prod-handler',
+};
+
 interface CloudWatchDimension {
   name?: string;
   value?: string;
   Name?: string;
   Value?: string;
+}
+
+interface CloudWatchMetricItem {
+  Id: string;
+  Expression?: string;
+  MetricStat?: {
+    Metric: {
+      Namespace: string;
+      MetricName: string;
+      Dimensions?: CloudWatchDimension[];
+    };
+  };
 }
 
 interface CloudWatchAlarm {
@@ -38,11 +62,12 @@ interface CloudWatchAlarm {
   StateChangeTime: string;
   Trigger: {
     MetricName?: string;
-    Namespace: string;
+    Namespace?: string;
     Period: number;
     Statistic: string;
     Threshold: number;
     Dimensions?: CloudWatchDimension[];
+    Metrics?: CloudWatchMetricItem[];
   };
 }
 
@@ -78,10 +103,29 @@ const _handler: SNSHandler = async (event) => {
 
     // CloudWatch SNS는 name/value(소문자) 또는 Name/Value(대문자) 두 형식 모두 가능
     const fnDim = alarm.Trigger.Dimensions?.find((d) => (d.name ?? d.Name) === 'FunctionName');
-    const functionNameFromDimension = fnDim?.value ?? fnDim?.Value;
+    let functionNameFromDimension = fnDim?.value ?? fnDim?.Value;
+    // 수식 알람(metric_query)은 Dimensions가 최상위에 없고 Metrics[] 안에 nested 됨
+    if (!functionNameFromDimension && alarm.Trigger.Metrics) {
+      for (const m of alarm.Trigger.Metrics) {
+        const dim = m.MetricStat?.Metric.Dimensions?.find((d) => (d.name ?? d.Name) === 'FunctionName');
+        if (dim) {
+          functionNameFromDimension = dim.value ?? dim.Value;
+          break;
+        }
+      }
+    }
     // Dimensions 없을 때 AlarmName(예: prod-script-error-rate)에서 역산
-    const workerKey = alarm.AlarmName.replace(/^prod-/, '').replace(/-error-rate$/, '');
-    const functionName = functionNameFromDimension ?? `shorts-${workerKey}-prod-handler`;
+    // Terraform 키는 언더스코어(dlq_notifier)지만 알람명/레이블은 대시(dlq-notifier) 기준
+    const workerKey = alarm.AlarmName
+      .replace(/^prod-/, '')
+      .replace(/-error-rate$/, '')
+      .replace(/_/g, '-');
+    const functionName = functionNameFromDimension ?? FUNCTION_NAMES[workerKey] ?? `shorts-${workerKey}-prod-handler`;
+    // 수식 알람은 Namespace가 최상위에 없으므로 Metrics에서 추출
+    const namespace =
+      alarm.Trigger.Namespace ??
+      alarm.Trigger.Metrics?.find((m) => m.MetricStat)?.MetricStat?.Metric.Namespace ??
+      'AWS/Lambda';
     const workerLabel = WORKER_LABELS[workerKey] ?? workerKey;
     const metricName = alarm.Trigger.MetricName ?? 'Errors';
     const time = new Date(alarm.StateChangeTime)
@@ -122,7 +166,7 @@ const _handler: SNSHandler = async (event) => {
               elements: [
                 {
                   type: 'mrkdwn',
-                  text: `Period: ${alarm.Trigger.Period}s  ·  Namespace: ${alarm.Trigger.Namespace}`,
+                  text: `Period: ${alarm.Trigger.Period}s  ·  Namespace: ${namespace}`,
                 },
               ],
             },
