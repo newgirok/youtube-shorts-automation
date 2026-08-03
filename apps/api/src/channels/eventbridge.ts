@@ -12,27 +12,43 @@ const log = createLogger({});
 
 const SCHEDULER_LAMBDA_ARN = process.env.SCHEDULER_LAMBDA_ARN!;
 
-// 표준 5필드 cron → EventBridge 6필드 cron 변환
+// 표준 5필드 cron(KST) → EventBridge 6필드 cron(UTC) 변환
 // 표준: min hour dom month dow (0=Sun)
 // EventBridge: min hour dom month dow year (SUN-SAT, dom/dow 중 하나는 반드시 ?)
+// EventBridge는 UTC 기준이므로 KST 시간에서 9시간을 뺀다.
+// KST 00:00~08:59 → 자정을 넘겨 UTC 전날 15:00~23:59 → 주간 스케줄의 요일도 하루 앞으로 조정
 function toEventBridgeCron(cron: string): string {
   const parts = cron.trim().split(/\s+/);
   if (parts.length !== 5) throw new Error(`지원하지 않는 cron 형식 (5필드 필요): ${cron}`);
 
   const DOW_NAMES = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+  const KST_OFFSET = 9;
 
   const convertDow = (dow: string) =>
     dow.replace(/\b([0-6])\b/g, (_, n: string) => DOW_NAMES[parseInt(n)] ?? n);
 
   const [min, hour, dom, month, dow] = parts as [string, string, string, string, string];
 
+  // KST → UTC 시간 변환 (hour='*'인 매시간 스케줄은 변환 불필요)
+  let ebHour = hour;
+  let adjustedDow = dow;
+  if (hour !== '*') {
+    const kstHour = parseInt(hour, 10);
+    const utcHour = (kstHour - KST_OFFSET + 24) % 24;
+    ebHour = String(utcHour);
+    // KST 시간이 09:00 미만이면 UTC로 변환 시 전날이 됨 → 주간 스케줄 요일 하루 앞으로 조정
+    if (kstHour < KST_OFFSET && dom === '*' && dow !== '*') {
+      adjustedDow = dow.replace(/\b([0-6])\b/g, (_, n: string) => String((parseInt(n, 10) - 1 + 7) % 7));
+    }
+  }
+
   // dom과 dow 둘 다 *가 아니면 dom 우선, dow=? 처리
   let ebDom = dom;
   let ebDow: string;
 
-  if (dom === '*' && dow !== '*') {
+  if (dom === '*' && adjustedDow !== '*') {
     ebDom = '?';
-    ebDow = convertDow(dow);
+    ebDow = convertDow(adjustedDow);
   } else if (dom !== '*') {
     ebDow = '?';
   } else {
@@ -40,7 +56,7 @@ function toEventBridgeCron(cron: string): string {
     ebDow = '?';
   }
 
-  return `${min} ${hour} ${ebDom} ${month} ${ebDow} *`;
+  return `${min} ${ebHour} ${ebDom} ${month} ${ebDow} *`;
 }
 
 export async function createChannelRule(channelId: string, cronExpr: string): Promise<string> {
