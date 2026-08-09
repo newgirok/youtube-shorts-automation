@@ -66,8 +66,8 @@ YouTube 채널 CRUD 및 동기화.
 
 - `GET /channels` — isActive=true 채널 목록 (id, name, niche만 반환)
 - `GET /channels/:id` — 채널 상세 + YPP 자격 실시간 계산 (`isYPPQualified`, `uploadCount90d`, `shortsViews90d`)
-- `DELETE /channels/:id` — 채널 연결 해제 (isActive=false, 데이터 보존)
-- `PATCH /channels/:id/schedule` — 스케줄 설정 업데이트 (cronExpression, schedulerEnabled, schedulerCategory 중 일부 또는 전체)
+- `DELETE /channels/:id` — 채널 연결 해제 (isActive=false, 데이터 보존). `x-user-id` 헤더가 있으면 채널 소유자(`Channel.userId`) 일치 여부 검증 → 불일치 시 403
+- `PATCH /channels/:id/schedule` — 스케줄 설정 업데이트 (cronExpression, schedulerEnabled, schedulerCategory 중 일부 또는 전체). `x-user-id` 헤더가 있으면 소유권 검증 → 불일치 시 403
 - `GET /channels/:id/analytics` — DB에 저장된 최신 30일 일별 analytics 반환, 날짜 오름차순 (views, subscribers, estimatedRevenue, watchTimeMinutes)
 - `POST /channels/sync-all` — 모든 활성 채널 병렬 동기화 (매일 KST 06:00 EventBridge가 자동 호출)
 - `POST /channels/:id/sync` — 채널 통계 + Analytics + 영상 조회수 풀 동기화 (YouTube Data API + YouTube Analytics API)
@@ -129,6 +129,9 @@ Job 생성 및 상태 조회, 재시도.
 전역 `InternalKeyGuard` 적용 — 모든 요청에 `Authorization: Bearer {API_INTERNAL_SECRET}` 헤더 필요.
 추가로 `x-user-id` 헤더(web이 NextAuth session에서 추출해 전달)를 파싱해 `req.userId`에 주입.
 `GET /channels`는 `req.userId`가 있으면 해당 userId의 채널만 반환, 없으면 전체 반환(Worker 내부 호출 대비).
+
+**채널 소유권 검증**: `PATCH /channels/:id/schedule`, `DELETE /channels/:id`는 `x-user-id`가 있을 때 `Channel.userId`와 비교해 불일치 시 403을 반환한다. `x-user-id` 없이 호출되면 검증 생략 (scheduler-worker 등 내부 서비스 호환성 유지).
+
 예외: `@Public()` 데코레이터가 붙은 핸들러는 인증 제외.
 - `GET /health` — `@Public()`
 - `GET /jobs/:id/thumbnail` — `@Public()`

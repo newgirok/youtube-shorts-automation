@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { OAuth2Client } from 'google-auth-library';
 import { google } from 'googleapis';
 import { createLogger } from '@shorts/shared';
@@ -36,9 +36,10 @@ export class ChannelsService {
     return this.repo.getAnalytics(id);
   }
 
-  async updateSchedule(id: string, dto: UpdateScheduleDto) {
+  async updateSchedule(id: string, dto: UpdateScheduleDto, userId?: string) {
     const exists = await this.repo.findSchedulerConfig(id);
     if (!exists) throw new NotFoundException('채널을 찾을 수 없습니다.');
+    if (userId && exists.userId !== userId) throw new ForbiddenException();
 
     const data: Parameters<typeof this.repo.updateSchedule>[1] = {};
     if (dto.cronExpression !== undefined) data.uploadSchedule = dto.cronExpression;
@@ -146,9 +147,13 @@ export class ChannelsService {
     });
   }
 
-  async deactivate(id: string) {
+  async deactivate(id: string, userId?: string) {
     const channel = await this.repo.findById(id);
     if (!channel) throw new NotFoundException('채널을 찾을 수 없습니다.');
+    if (userId) {
+      const owner = await this.repo.findOwner(id);
+      if (owner?.userId !== userId) throw new ForbiddenException();
+    }
     return this.repo.deactivate(id);
   }
 

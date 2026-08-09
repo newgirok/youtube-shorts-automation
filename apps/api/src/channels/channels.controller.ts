@@ -28,17 +28,17 @@ export class ChannelsController {
   }
 
   @Patch(':id/schedule')
-  updateSchedule(@Param('id') id: string, @Body() body: unknown) {
+  updateSchedule(@Param('id') id: string, @Body() body: unknown, @CurrentUser() userId: string | undefined) {
     const result = UpdateScheduleSchema.safeParse(body);
     if (!result.success) {
       throw new BadRequestException(result.error.issues);
     }
-    return this.service.updateSchedule(id, result.data);
+    return this.service.updateSchedule(id, result.data, userId);
   }
 
   @Delete(':id')
-  deactivate(@Param('id') id: string) {
-    return this.service.deactivate(id);
+  deactivate(@Param('id') id: string, @CurrentUser() userId: string | undefined) {
+    return this.service.deactivate(id, userId);
   }
 
   @Get(':id/analytics')

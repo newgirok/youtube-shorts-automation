@@ -58,7 +58,14 @@ export class ChannelsRepository {
   findSchedulerConfig(id: string) {
     return prisma.channel.findUnique({
       where: { id },
-      select: { id: true, uploadSchedule: true, schedulerEnabled: true, eventBridgeRuleArn: true },
+      select: { id: true, uploadSchedule: true, schedulerEnabled: true, eventBridgeRuleArn: true, userId: true },
+    });
+  }
+
+  findOwner(id: string) {
+    return prisma.channel.findUnique({
+      where: { id },
+      select: { userId: true },
     });
   }
 
