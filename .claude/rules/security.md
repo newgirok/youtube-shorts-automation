@@ -35,6 +35,71 @@ yt-analytics.readonly — Analytics API
 }
 ```
 
+## SQS 메시지 검증 (Worker 공통)
+Worker handler.ts에서 `JSON.parse(record.body) as T` 타입 단언 사용 금지 — 반드시 Zod 스키마로 런타임 검증:
+
+```typescript
+import { z } from 'zod';
+
+const SQSMessageSchema = z.object({
+  jobId: z.string().min(1),
+  channelId: z.string().min(1),
+  // ...워커별 추가 필드
+});
+
+// try 블록 바깥에서 파싱 — 필드 누락 시 ZodError가 SQS DLQ로 직행
+const { jobId, channelId } = SQSMessageSchema.parse(JSON.parse(record.body));
+```
+
+`try` 블록 안에 넣으면 `jobId`가 없어 catch 블록에서 DB 업데이트 불가 — 반드시 `try` 외부에서 파싱.
+
+## 업로드 멱등성 (upload-worker 필수)
+SQS 재처리 시 YouTube 중복 업로드 방지 — `UPLOAD_PROCESSING` 상태 업데이트 **전에** `youtubeVideoId` 존재 여부 확인:
+
+```typescript
+const job = await prisma.job.findUnique({
+  where: { id: jobId },
+  select: { youtubeVideoId: true, scriptContent: true },
+});
+
+if (!job) { log.warn('Job 없음 — 스킵'); continue; }
+if (job.youtubeVideoId) {
+  log.info({ youtubeVideoId: job.youtubeVideoId }, '이미 업로드됨 — 재처리 스킵');
+  continue;
+}
+// 이후 status 업데이트 → 업로드 진행
+```
+
+## IAM 최소 권한 패턴 (Terraform)
+Lambda Worker IAM 정책에서 `Resource = "*"` 사용 금지 — 프로젝트 네임스페이스로 범위 제한:
+
+```hcl
+# SQS: 환경별 큐만 허용
+Resource = "arn:aws:sqs:ap-northeast-2:${var.account_id}:${var.env}-*"
+
+# SSM: 프로젝트 파라미터만 허용
+Resource = "arn:aws:ssm:ap-northeast-2:${var.account_id}:parameter/shorts.${var.env}.*"
+
+# EventBridge: API가 채널별 규칙을 동적 생성하므로 rule/* 허용 (account_id는 고정)
+Resource = "arn:aws:events:ap-northeast-2:${var.account_id}:rule/*"
+```
+
+IAM 모듈에 `account_id` 변수를 추가하고 `data.aws_caller_identity.current.account_id`로 주입.
+
+## S3 서버사이드 암호화
+S3 버킷에 SSE-AES256 필수 — S3 관리 키 사용, 추가 비용 없음:
+
+```hcl
+resource "aws_s3_bucket_server_side_encryption_configuration" "bucket" {
+  bucket = aws_s3_bucket.bucket.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+```
+
 ## 금지 사항
 - SQL 직접 쿼리 (Prisma 미사용 시 injection 위험)
 - 사용자 입력을 쉘 명령어에 직접 사용
