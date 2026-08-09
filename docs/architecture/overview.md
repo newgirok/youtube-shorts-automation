@@ -153,8 +153,8 @@ packages/shared/
 | `POST` | `/jobs/:id/retry` | FAILED Job 재시도 |
 | `GET` | `/channels` | 활성 채널 목록. `x-user-id` 헤더 있으면 해당 userId 소유 채널만 반환, 없으면 전체 (Worker 내부 호출 대비) |
 | `GET` | `/channels/:id` | 채널 상세 + YPP 통계 |
-| `PATCH` | `/channels/:id/schedule` | 업로드 cron 스케줄·`schedulerEnabled`·`schedulerCategory` 변경 |
-| `DELETE` | `/channels/:id` | 채널 연결 해제 (isActive=false, 데이터 보존) |
+| `PATCH` | `/channels/:id/schedule` | 업로드 cron 스케줄·`schedulerEnabled`·`schedulerCategory` 변경. `x-user-id` 헤더 있으면 소유권 검증 (불일치 시 403) |
+| `DELETE` | `/channels/:id` | 채널 연결 해제 (isActive=false, 데이터 보존). `x-user-id` 헤더 있으면 소유권 검증 (불일치 시 403) |
 | `GET` | `/channels/:id/analytics` | 최근 30일 일별 analytics |
 | `POST` | `/channels/sync-all` | 모든 활성 채널 병렬 풀 동기화 (매일 KST 06:00 EventBridge 자동 호출) |
 | `POST` | `/channels/:id/sync` | 채널 통계 + Analytics + 영상 조회수 풀 동기화 |
@@ -229,4 +229,4 @@ packages/shared/
 | [ADR 005](../adr/005-gemini-flash.md) | AI 모델 선택 (Gemini 2.5 Flash) |
 | [ADR 006](../adr/006-iac-terraform-serverless.md) | IaC 전략 |
 | [ADR 007](../adr/007-database-strategy.md) | DB 전략 (Supabase + pgBouncer) |
-| [ADR 009](../adr/009-fargate-sqs-long-polling.md) | Fargate SQS Long Polling |
+| [ADR 009](../adr/009-fargate-sqs-long-polling.md) | Lambda SQS Event Source Mapping |

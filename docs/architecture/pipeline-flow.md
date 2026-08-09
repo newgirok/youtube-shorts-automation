@@ -284,7 +284,7 @@ interface UploadMessage {
 2. `Job.status = 'FAILED'`, `Job.failReason` = 오류 메시지 저장
 3. SQS 메시지를 `deleteMessage` 하지 않으면 Visibility Timeout 후 자동 재배달
 4. `Max Receive Count = 3` 초과 시 DLQ(Dead Letter Queue)로 이동
-5. DLQ 적재 → CloudWatch 알람 → Slack/Discord 알림 (Phase 5에서 구현)
+5. DLQ 적재 → dlq-notifier Lambda → Slack 알림
 
 ### 재시도 카운트
 
@@ -319,6 +319,6 @@ SQS Standard Queue는 at-least-once 전달을 보장하므로 같은 메시지�
 ## 관련 문서
 
 - [ADR 003 — SQS Standard Queue](../adr/003-sqs-standard-queue.md)
-- [ADR 009 — Fargate SQS Long Polling (Superseded)](../adr/009-fargate-sqs-long-polling.md)
+- [ADR 009 — Lambda SQS Event Source Mapping](../adr/009-fargate-sqs-long-polling.md)
 - [아키텍처 개요](./overview.md)
 - [데이터 모델](./data-model.md)

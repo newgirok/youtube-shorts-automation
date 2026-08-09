@@ -25,6 +25,7 @@
 | upload-worker (Lambda) | `/aws/lambda/shorts-upload-worker-prod-handler` |
 | scheduler-worker (Lambda) | `/aws/lambda/shorts-scheduler-worker-prod-handler` |
 | dlq-notifier (Lambda) | `/aws/lambda/shorts-dlq-notifier-prod-handler` |
+| cloudwatch-notifier (Lambda) | `/aws/lambda/shorts-cloudwatch-notifier-prod-handler` |
 
 ### 핵심 메트릭
 
