@@ -161,3 +161,9 @@ aws lambda update-function-configuration \
   --function-name <function-name> \
   --environment "file://env.json"
 ```
+
+### NestJS 번들링 OOM 방지
+NestJS는 esbuild 번들링 시 메모리를 많이 소비한다. 힙 부족 오류(`FATAL ERROR: Reached heap limit`) 발생 시:
+```bash
+NODE_OPTIONS="--max-old-space-size=4096" npx serverless@3 deploy --stage prod
+```
