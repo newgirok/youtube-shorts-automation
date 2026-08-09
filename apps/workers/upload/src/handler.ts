@@ -3,6 +3,7 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { prisma, downloadFromS3, createLogger, initSentry, Sentry } from '@shorts/shared';
 initSentry();
+import { z } from 'zod';
 import { decrypt } from './crypto.js';
 import { uploadToYouTube } from './uploader.js';
 import { validateVideo } from './validator.js';
@@ -11,11 +12,11 @@ import { parseEnv } from './env.js';
 const toSafeMsg = (err: unknown) =>
   (err instanceof Error ? err.message : String(err)).replace(/�/g, "?");
 
-interface SQSMessage {
-  jobId: string;
-  channelId: string;
-  videoS3Key: string;
-}
+const SQSMessageSchema = z.object({
+  jobId: z.string().min(1),
+  channelId: z.string().min(1),
+  videoS3Key: z.string().min(1),
+});
 
 interface ScriptContent {
   title: string;
@@ -27,16 +28,34 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
   const env = parseEnv();
 
   for (const record of event.Records) {
-    const { jobId, channelId, videoS3Key } = JSON.parse(record.body) as SQSMessage;
+    const { jobId, channelId, videoS3Key } = SQSMessageSchema.parse(JSON.parse(record.body));
     const log = createLogger({ jobId, channelId });
 
     try {
       log.info('upload-worker 시작');
 
+      // Job 조회: youtubeVideoId 체크(멱등성) + scriptContent 통합
+      const job = await prisma.job.findUnique({
+        where: { id: jobId },
+        select: { youtubeVideoId: true, scriptContent: true },
+      });
+
+      if (!job) {
+        log.warn('Job 레코드 없음 — 스킵');
+        continue;
+      }
+
+      if (job.youtubeVideoId) {
+        log.info({ youtubeVideoId: job.youtubeVideoId }, '이미 업로드됨 — 재처리 스킵');
+        continue;
+      }
+
       await prisma.job.updateMany({
         where: { id: jobId },
         data: { status: 'UPLOAD_PROCESSING' },
       });
+
+      const scriptContent = job.scriptContent as unknown as ScriptContent;
 
       // 채널 정보 조회
       const channel = await prisma.channel.findUniqueOrThrow({
@@ -46,13 +65,6 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
 
       // refreshToken 복호화 (access_token은 DB에 저장하지 않음)
       const refreshToken = decrypt(channel.refreshToken, env.ENCRYPTION_KEY);
-
-      // Job 조회 (scriptContent)
-      const job = await prisma.job.findUniqueOrThrow({
-        where: { id: jobId },
-        select: { scriptContent: true },
-      });
-      const scriptContent = job.scriptContent as unknown as ScriptContent;
 
       // S3에서 영상 다운로드
       const videoPath = join('/tmp', `${jobId}-output.mp4`);

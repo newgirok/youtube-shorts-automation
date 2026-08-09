@@ -26,19 +26,20 @@ const toSafeMsg = (err: unknown) =>
 
 ## 처리 흐름
 
-1. SQS 메시지 수신: `{ jobId, channelId, videoS3Key }`
-2. DB에서 채널의 암호화된 refreshToken 조회 → AES-256-GCM 복호화
-3. Job의 scriptContent(title, description, hashtags) 조회
-4. S3에서 영상(`jobs/{jobId}/output.mp4`) 다운로드 → `/tmp/{jobId}-output.mp4` 저장
-5. ffprobe로 업로드 전 영상 품질 검증 (`validateVideo()`) — 실패 시 즉시 FAILED
+1. SQS 메시지 수신: `{ jobId, channelId, videoS3Key }` — Zod 스키마(`SQSMessageSchema`)로 런타임 검증
+2. Job 조회(`youtubeVideoId` + `scriptContent` 통합 select): Job 없으면 스킵, `youtubeVideoId` 있으면 중복 업로드 방지를 위해 즉시 스킵
+3. DB 상태를 `UPLOAD_PROCESSING`으로 업데이트 (멱등성 확인 후 수행)
+4. DB에서 채널의 암호화된 refreshToken 조회 → AES-256-GCM 복호화
+5. S3에서 영상(`jobs/{jobId}/output.mp4`) 다운로드 → `/tmp/{jobId}-output.mp4` 저장
+6. ffprobe로 업로드 전 영상 품질 검증 (`validateVideo()`) — 실패 시 즉시 FAILED
    - 비디오/오디오 스트림 존재 여부
    - 해상도: 1080×1920 필수
    - 길이: 5초 이상, 60초 이하
    - 영상/오디오 길이 차이 2초 이내 (화면 정지 의심 감지)
-6. YouTube Data API v3로 영상 업로드
-7. DB 업데이트: `youtubeVideoId`, `privacyStatus: 'public'`, `status: 'COMPLETED'`, `completedAt`
+7. YouTube Data API v3로 영상 업로드
+8. DB 업데이트: `youtubeVideoId`, `privacyStatus: 'public'`, `status: 'COMPLETED'`, `completedAt`
    - `thumbnailUrl`은 render-worker가 설정한 S3 프록시 URL을 그대로 유지 (YouTube URL로 덮어쓰지 않음)
-8. 실패 시: `status: 'FAILED'`, `failReason` 기록 후 예외 재throw (SQS 재시도)
+9. 실패 시: `status: 'FAILED'`, `failReason` 기록 후 예외 재throw (SQS 재시도)
 
 ## YouTube 업로드 메타데이터
 
@@ -55,3 +56,5 @@ containsSyntheticMedia:  true
 
 - refreshToken은 DB에서 암호화된 형태로 조회 → `crypto.ts`의 `decrypt(token, ENCRYPTION_KEY)`로 복호화 (AES-256-GCM, 형식: `${iv.hex}:${authTag.hex}:${encrypted.hex}`)
 - access_token은 DB에 저장하지 않음. OAuth2Client가 refresh_token으로 런타임에 자동 발급
+- SQS 메시지 필드 누락·타입 불일치 시 Zod가 즉시 throw → SQS가 DLQ로 직행 (malformed 메시지 무한 재시도 방지)
+- 업로드 전 `youtubeVideoId` 사전 조회: 이미 값이 있으면 `continue`로 스킵 — SQS 재처리 시 동일 영상 중복 업로드 방지
