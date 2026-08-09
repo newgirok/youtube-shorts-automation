@@ -11,7 +11,7 @@
 
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+  binaryTargets = ["native", "debian-openssl-1.1.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -32,20 +32,21 @@ enum JobStatus {
 }
 
 model Channel {
-  id                String    @id @default(cuid())
-  youtubeId         String    @unique
-  name              String
-  niche             String
-  refreshToken      String    // AES-256-GCM 암호화
-  uploadSchedule    String?
-  schedulerEnabled  Boolean   @default(false)
-  schedulerCategory String    @default("top")
-  isActive          Boolean   @default(true)
-  subscriberCount   Int       @default(0)
-  totalViews        BigInt    @default(0)
-  userId            String
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  id                   String    @id @default(cuid())
+  youtubeId            String    @unique
+  name                 String
+  niche                String
+  refreshToken         String    // AES-256-GCM 암호화
+  uploadSchedule       String?
+  schedulerEnabled     Boolean   @default(false)
+  schedulerCategory    String    @default("top")
+  eventBridgeRuleArn   String?
+  isActive             Boolean   @default(true)
+  subscriberCount      Int       @default(0)
+  totalViews           BigInt    @default(0)
+  userId               String
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
   user              User             @relation(fields: [userId], references: [id])
   jobs              Job[]
@@ -121,6 +122,7 @@ model User {
 | `20260525200000_restore_channel_analytics` | ChannelAnalytics 복원 |
 | `20260717022729_add_user_table` | `User` 테이블 추가 (로그인 허용 이메일 관리) |
 | `20260718000000_add_userid_to_channel` | `Channel.userId String` FK 추가 → `User` 소유권 연결, `@@index([userId])` |
+| `20260726000000_add_eventbridge_rule_arn` | `Channel.eventBridgeRuleArn String?` 추가 — 채널별 EventBridge 규칙 ARN 관리 |
 
 ---
 
@@ -146,9 +148,10 @@ model User {
 │ niche           String               │
 │ refreshToken    String (암호화)       │
 │ uploadSchedule  String?              │
-│ schedulerEnabled  Boolean            │
-│ schedulerCategory String             │
-│ isActive        Boolean              │
+│ schedulerEnabled    Boolean           │
+│ schedulerCategory   String           │
+│ eventBridgeRuleArn  String?          │
+│ isActive            Boolean          │
 │ subscriberCount Int                  │
 │ totalViews      BigInt               │
 │ userId          String (FK → User)   │
@@ -211,6 +214,7 @@ model User {
 | `uploadSchedule` | `String?` | cron 표현식 — 일일 업로드 시간 (null이면 스케줄 미설정) |
 | `schedulerEnabled` | `Boolean` | 자동 업로드 스케줄러 활성화 여부 |
 | `schedulerCategory` | `String` | 뉴스 자동 수집 카테고리 (`top` \| `business` \| `technology` \| `health` \| `science` \| `nation`) |
+| `eventBridgeRuleArn` | `String?` | `PATCH /channels/:id/schedule`로 스케줄 활성화 시 생성된 EventBridge 규칙 ARN. 비활성화 시 `null` |
 | `isActive` | `Boolean` | 비활성화 시 스케줄러·API 필터링에서 제외 |
 | `subscriberCount` | `Int` | sync 시 YouTube Data API `channels.list statistics.subscriberCount`에서 갱신 |
 | `totalViews` | `BigInt` | sync 시 YouTube Data API `channels.list statistics.viewCount`에서 갱신. 채널 전체 누적 조회수 (Job 조회수 합산이 아님) |
@@ -235,10 +239,12 @@ OAuth 연결 흐름: 웹 대시보드 → `GET /auth/youtube?userId={id}` → Go
 채널별 독립 EventBridge 규칙이 해당 채널의 `uploadSchedule` 시각에 scheduler-worker를 직접 트리거합니다. `PATCH /channels/:id/schedule` 호출 시 규칙이 자동 생성/삭제되며, scheduler-worker는 `{ channelId }` 페이로드를 수신해 Job을 생성합니다.
 
 ```
-"0 9 * * *"   → 매일 오전 9시 (UTC 기준)
-"0 18 * * *"  → 매일 오후 6시 (UTC 기준)
-"30 0 * * *"  → 매일 오전 00:30 (UTC)
+"0 9 * * *"   → 매일 오전 9시 (KST 기준)
+"0 18 * * *"  → 매일 오후 6시 (KST 기준)
+"0 * * * *"   → 매시간 정각
 ```
+
+`uploadSchedule`은 KST 기준 5필드 cron으로 저장하며, `PATCH /channels/:id/schedule` 호출 시 `eventbridge.ts`의 `toEventBridgeCron()`이 UTC로 변환해 EventBridge에 등록한다.
 
 ---
 
