@@ -2,14 +2,15 @@ import type { SQSHandler, SQSEvent } from 'aws-lambda';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { prisma, uploadToS3, jobKey, createLogger, initSentry, Sentry } from '@shorts/shared';
 initSentry();
+import { z } from 'zod';
 import { generateScript } from './script-generator.js';
 import { parseEnv } from './env.js';
 
-interface SQSMessage {
-  jobId: string;
-  channelId: string;
-  topic: string;
-}
+const SQSMessageSchema = z.object({
+  jobId: z.string().min(1),
+  channelId: z.string().min(1),
+  topic: z.string().min(1),
+});
 
 const sqs = new SQSClient({ region: process.env.AWS_REGION ?? 'ap-northeast-2' });
 
@@ -21,7 +22,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
   const env = parseEnv();
 
   for (const record of event.Records) {
-    const { jobId, channelId, topic } = JSON.parse(record.body) as SQSMessage;
+    const { jobId, channelId, topic } = SQSMessageSchema.parse(JSON.parse(record.body));
     const log = createLogger({ jobId, channelId });
 
     try {

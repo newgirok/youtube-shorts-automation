@@ -61,7 +61,7 @@ subtitle-worker는 항상 `script.json`의 `script` 필드 + 오디오 길이 �
 
 ## SQS 메시지 구조
 
-수신 (`tts-queue`):
+수신 (`tts-queue`) — `handler.ts`에서 Zod 스키마로 런타임 검증:
 ```typescript
 { jobId: string; channelId: string; scriptS3Key: string }
 // scriptS3Key = "jobs/{jobId}/script.json"

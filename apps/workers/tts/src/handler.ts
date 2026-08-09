@@ -11,14 +11,15 @@ import {
   Sentry,
 } from '@shorts/shared';
 initSentry();
+import { z } from 'zod';
 import { EdgeTTSAdapter } from './EdgeTTSAdapter.js';
 import { parseEnv } from './env.js';
 
-interface SQSMessage {
-  jobId: string;
-  channelId: string;
-  scriptS3Key: string;
-}
+const SQSMessageSchema = z.object({
+  jobId: z.string().min(1),
+  channelId: z.string().min(1),
+  scriptS3Key: z.string().min(1),
+});
 
 interface ScriptContent {
   title: string;
@@ -40,7 +41,7 @@ const _handler: SQSHandler = async (event: SQSEvent) => {
   const env = parseEnv();
 
   for (const record of event.Records) {
-    const { jobId, channelId, scriptS3Key } = JSON.parse(record.body) as SQSMessage;
+    const { jobId, channelId, scriptS3Key } = SQSMessageSchema.parse(JSON.parse(record.body));
     const log = createLogger({ jobId, channelId });
 
     try {

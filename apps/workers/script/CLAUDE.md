@@ -92,7 +92,7 @@ interface Scene {
 
 ## SQS 메시지 구조
 
-수신 (`script-queue`):
+수신 (`script-queue`) — `handler.ts`에서 Zod 스키마로 런타임 검증:
 ```typescript
 { jobId: string; channelId: string; topic: string }
 ```
