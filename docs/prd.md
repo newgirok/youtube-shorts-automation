@@ -124,6 +124,10 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 - ENCRYPTION_KEY는 AWS Secrets Manager에서 주입
 - OAuth 스코프: `youtube.upload`, `youtube.readonly`, `yt-analytics.readonly`
 - 환경변수 Zod 스키마로 앱 시작 시 검증
+- SQS 메시지 Zod 런타임 검증 — Worker handler에서 `JSON.parse(record.body)` 타입 단언 금지
+- 채널 소유권 검증 — `PATCH /channels/:id/schedule`, `DELETE /channels/:id`는 `x-user-id` 헤더가 있을 때 `Channel.userId`와 대조, 불일치 시 403
+- S3 버킷 서버사이드 암호화 SSE-AES256 적용
+- IAM 정책 최소 권한 — SQS·SSM·EventBridge 리소스를 프로젝트 네임스페이스(`prod-*`, `shorts.prod.*`)로 제한
 
 ---
 
@@ -149,7 +153,7 @@ PENDING → SCRIPT_PROCESSING → TTS_PROCESSING → SUBTITLE_PROCESSING
 | Frontend | Next.js 15 (App Router, React 19), TailwindCSS, shadcn/ui, TanStack Query v5, Zustand v4 |
 | Backend | NestJS v11, Fastify Adapter, TypeScript 5.x strict, Zod |
 | Queue | AWS SQS (Standard Queue + DLQ) |
-| Database | PostgreSQL (Supabase → RDS), Prisma v5 |
+| Database | PostgreSQL (Supabase + pgBouncer), Prisma v5 |
 | Infra | AWS Lambda (Node.js 20), API Gateway, EventBridge, S3, CloudWatch, ECR, IAM, GitHub Actions |
 | Rendering | FFmpeg (zoompan 효과, ASS 자막, 썸네일 추출) |
 | AI | Google Gemini 2.5 Flash |
@@ -205,11 +209,12 @@ model Channel {
   youtubeId         String    @unique
   name              String
   niche             String
-  refreshToken      String    // AES-256-GCM 암호화
-  uploadSchedule    String?
-  schedulerEnabled  Boolean   @default(false)
-  schedulerCategory String    @default("top")
-  isActive          Boolean   @default(true)
+  refreshToken         String    // AES-256-GCM 암호화
+  uploadSchedule       String?
+  schedulerEnabled     Boolean   @default(false)
+  schedulerCategory    String    @default("top")
+  eventBridgeRuleArn   String?
+  isActive             Boolean   @default(true)
   subscriberCount   Int       @default(0)
   totalViews        BigInt    @default(0)  // YouTube Data API channels.list statistics.viewCount
   userId            String
@@ -291,7 +296,7 @@ enum JobStatus {
 | api (NestJS Lambda) | 30초 | — |
 | script-worker | 60초 | 120초 |
 | tts-worker | 120초 | 240초 |
-| subtitle-worker | 300초 | 600초 |
+| subtitle-worker | 120초 | 600초 |
 | render-worker | 600초 | 1,200초 |
 | upload-worker | 300초 | 600초 |
 
