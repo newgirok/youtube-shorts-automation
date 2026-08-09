@@ -67,6 +67,7 @@ module "iam" {
   source     = "../../modules/iam"
   env        = "prod"
   bucket_arn = module.s3.bucket_arn
+  account_id = data.aws_caller_identity.current.account_id
 }
 
 # ── ECR ───────────────────────────────────────────────────────────────────────
