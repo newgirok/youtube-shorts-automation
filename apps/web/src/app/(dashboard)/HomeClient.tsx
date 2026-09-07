@@ -221,11 +221,18 @@ function JobCarousel({ jobs }: { jobs: JobType[] }) {
   );
 }
 
-export function HomeClient({ channels, userId = '', firstChannelId = '', initialJobs = [] }: { channels: Channel[]; userId?: string; firstChannelId?: string; initialJobs?: JobType[] }) {
+export function HomeClient({ channels: initialChannels, userId = '', firstChannelId = '', initialJobs = [] }: { channels: Channel[]; userId?: string; firstChannelId?: string; initialJobs?: JobType[] }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { selectedChannelId, setSelectedChannelId, clearSelectedChannelId } = useChannelStore();
   const userHeaders = userId ? { 'x-user-id': userId } : {};
+
+  // 채널 목록은 클라이언트 쿼리로 관리 — 연결 해제/재연결 후 창 포커스 시 자동 재조회
+  const { data: channels = [] } = useQuery<Channel[]>({
+    queryKey: ['channels'],
+    queryFn: () => apiGet<Channel[]>('/channels', userHeaders),
+    initialData: initialChannels,
+  });
 
   const [topic, setTopic] = useState('');
   const [submitting, setSubmitting] = useState(false);
