@@ -59,7 +59,7 @@ src/
 │   ├── (dashboard)/
 │   │   ├── layout.tsx            — 사이드바 포함 레이아웃 (서버)
 │   │   ├── page.tsx              — 홈 (서버, channels + 첫 채널 jobs SSR prefetch 후 HomeClient 전달)
-│   │   ├── HomeClient.tsx        — 토픽 입력 폼 + 갤러리 카루셀 (클라이언트). firstChannelId·initialJobs props로 SSR 데이터 수신
+│   │   ├── HomeClient.tsx        — 토픽 입력 폼 + 갤러리 카루셀 (클라이언트). channels·firstChannelId·initialJobs props로 SSR 데이터 수신
 │   │   ├── dashboard/[id]/page.tsx — Job 상세: 상태 배지·privacyStatus·타임라인·스크립트 (클라이언트)
 │   │   └── channels/[id]/
 │   │       ├── page.tsx          — 채널 초기 데이터 로드 (서버)
@@ -158,16 +158,17 @@ interface AnalyticsRow {
 - 상세 페이지: `isPrivate` 분기가 iframe·썸네일보다 먼저 평가 → 비공개이면 플레이스홀더만 렌더링
 
 ### 홈 초기 로딩 전략
-- `page.tsx`(서버): channels 조회 후 첫 채널의 jobs도 서버에서 즉시 조회 → `firstChannelId`, `initialJobs` props로 HomeClient에 전달
-- `HomeClient` `useQuery`: `activeChannelId === firstChannelId`이면 `initialData`로 SSR 데이터 사용 → 클라이언트 첫 렌더에 jobs 즉시 표시, Lambda 추가 호출 없음
+- `page.tsx`(서버): channels 조회 후 첫 채널의 jobs도 서버에서 즉시 조회 → `channels`, `firstChannelId`, `initialJobs` props로 HomeClient에 전달
+- `HomeClient` 채널 목록: `useQuery(['channels'])`가 서버 `channels`를 `initialData`로 사용 → 첫 렌더는 SSR 데이터 그대로, 이후 창 포커스 시 자동 재조회(`refetchOnWindowFocus` 기본값)로 OAuth 팝업 종료 후 목록 갱신
+- `HomeClient` jobs `useQuery`: `activeChannelId === firstChannelId`이면 `initialData`로 SSR 데이터 사용 → 클라이언트 첫 렌더에 jobs 즉시 표시, Lambda 추가 호출 없음
 - 다른 채널 선택 시(Zustand `selectedChannelId` 불일치) 해당 채널 jobs는 클라이언트 fetch
 
 ### 데이터 갱신 전략
 
 | 상황 | 방식 | 주기 |
 |---|---|---|
-| 활성 Job 존재 (PROCESSING 상태) | DB 폴링 | 2초 |
-| 활성 Job 없음 | 폴링 끄기 (`refetchInterval: false`) → 탭 포커스 시 자동 재조회 | TanStack Query `refetchOnWindowFocus` 기본값 |
+| 활성 Job 존재 (PROCESSING 상태) 또는 Job 0건 | DB 폴링 | 2초 |
+| Job 모두 완료·실패 | 폴링 끄기 (`refetchInterval: false`) → 탭 포커스 시 자동 재조회 | TanStack Query `refetchOnWindowFocus` 기본값 |
 | 조회수·비공개·삭제 상태 갱신 | `POST /channels/:id/sync-videos` 주기 호출 | 10분 |
 
 - `refetchInterval: false` 상태에서 TanStack Query는 `refetchOnWindowFocus: true`(기본값)로 동작 → 사용자가 탭을 포커스하면 즉시 DB 재조회
@@ -187,9 +188,10 @@ interface AnalyticsRow {
 
 ### 채널 연결 해제
 - `useYoutubeConnect` 훅 (`src/hooks/useYoutubeConnect.ts`): YouTube 연결/해제 로직을 단일 훅으로 통합. `Sidebar.tsx`와 `BottomNav.tsx` 모두 이 훅을 사용. **향후 연결/해제 로직을 두 컴포넌트에 각각 구현하지 말 것.**
-- YouTube 버튼 클릭: 미연결 → `userId` 파라미터 포함 `window.open()` 팝업 열기, 연결 → confirm → `DELETE /channels/:id` → `clearSelectedChannelId()` → `/` 이동
+- YouTube 버튼 클릭: 미연결 → `userId` 파라미터 포함 `window.open()` 팝업 열기, 연결 → confirm → `DELETE /channels/:id` (`x-user-id` 헤더로 소유권 검증) → `clearSelectedChannelId()` → `['jobs']`·`['channel']`·`['analytics']` 쿼리 제거 + `['channels']` invalidate → `router.push('/')` + `router.refresh()`
+- 해제 API 실패 시 alert 후 중단 — store·쿼리 캐시는 그대로 유지
 - 순서 중요: API 호출 완료 후 store 초기화 → 홈 이동 (순서 바뀌면 홈 서버 fetch 시점에 DB가 아직 active라 재설정됨)
-- `HomeClient.tsx`: 서버에서 받은 `channels` 목록에 `selectedChannelId`가 없으면 자동 초기화 (`clearSelectedChannelId`)
+- `HomeClient.tsx`: `channels` 쿼리 결과 기준으로 선택 채널 보정 — 목록이 비면 `clearSelectedChannelId()`, 선택 채널이 없거나 목록에 없으면 첫 채널로 `setSelectedChannelId()`
 - `ChannelClient.tsx`: 마운트 시 `setSelectedChannelId(initial.id)` 호출 — OAuth 후 `/channels/:id`로 직접 랜딩해도 GNB 즉시 표시
 
 ### 토픽 입력 textarea 동작
@@ -287,7 +289,7 @@ const NEWS_CATEGORIES = [
 - **jwt 콜백**: 로그인 시(`user` 파라미터 있을 때) Prisma DB 조회 → `token.userId = user.id` 저장. JWT 갱신마다 재조회하지 않음.
 - **session 콜백**: `token.userId` → `session.user.id` 노출. `Session` 타입에 `user.id: string` 확장 선언(`declare module 'next-auth'`).
 - 웹 서버 컴포넌트에서 `await auth()` → `session.user.id` 추출 → API 호출 시 `x-user-id` 헤더로 전달.
-- **Sidebar·BottomNav**: `useYoutubeConnect` 훅이 내부적으로 `useSession()` hook으로 `session.user.id` 읽어 YouTube OAuth 연결 팝업 URL(`/auth/youtube?userId=...`)에 포함.
+- **Sidebar·BottomNav**: `useYoutubeConnect` 훅이 내부적으로 `useSession()` hook으로 `session.user.id` 읽어 YouTube OAuth 연결 팝업 URL(`/auth/youtube?userId=...`)과 연결 해제 요청의 `x-user-id` 헤더에 사용.
 - `src/middleware.ts`: `api|_next/static|_next/image|_next|login|close|popup|favicon.ico|이미지·영상 확장자(.jpg/.jpeg/.png/.gif/.svg/.webp/.ico/.mp4/.webm/.ogg)` 경로 제외 후 미인증 접근을 `/login`으로 리다이렉트
 
 ### YouTube OAuth 채널 연결 흐름

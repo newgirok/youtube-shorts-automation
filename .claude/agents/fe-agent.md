@@ -29,9 +29,9 @@ disallowedTools:
 ### `/` (홈)
 - 토픽 입력 textarea + 생성하기 버튼 — 채널 미연결 시 disabled
 - 카테고리 버튼 (종합·정치·경제·사회) — `POST /jobs/auto-news` 호출
-- 연/월 필터 + Job 카드 갤러리 카루셀 (activeChannelId 있을 때만 표시)
-- 진행 중 Job 있으면 2초, 모두 완료·실패 시 30초 폴링
-- 서버 컴포넌트(page.tsx)에서 `GET /channels` fetch → HomeClient에 prop 전달
+- 연/월 필터 + Job 카드 갤러리 카루셀 (채널 연결 여부와 무관하게 항상 표시)
+- 진행 중 Job이 있거나 Job이 없으면 2초 폴링, 모두 완료·실패면 폴링 중지 (탭 포커스 시 재조회)
+- 서버 컴포넌트(page.tsx)에서 `GET /channels` fetch → HomeClient prop → `useQuery(['channels'])`의 `initialData`로 사용
 
 ### `/dashboard/[id]`
 - StatusTimeline: PENDING → 스크립트 → TTS → 자막 → 렌더링 → 업로드 → 완료
