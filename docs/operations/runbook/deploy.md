@@ -2,15 +2,17 @@
 
 ## 배포 환경 구분
 
-| Phase | 배포 대상 | 방법 |
-|-------|-----------|------|
-| Phase 1~2 | 로컬 | Docker Compose |
-| Phase 3 | Supabase | prisma migrate deploy |
-| Phase 4+ | AWS | Lambda (Serverless Framework), API Gateway |
+| 대상 | 환경 | 배포 방법 |
+|------|------|-----------|
+| 로컬 개발 | Docker Compose + LocalStack | `docker compose up -d` |
+| DB | Supabase PostgreSQL | `prisma migrate deploy` (`DIRECT_URL`) |
+| API | AWS Lambda + API Gateway (HTTP API) | `deploy-api.yml` → Serverless Framework v3 |
+| Workers | AWS Lambda (render-worker는 Container Image) | `deploy-workers.yml` → Serverless Framework v3 |
+| Web | EC2 t3.micro (Docker Compose: nginx + Next.js) | `deploy-web.yml` → ECR push → SSH `docker compose up -d` |
 
 ---
 
-## 로컬 개발 (Phase 1~2)
+## 로컬 개발
 
 ### Docker Compose 기동
 
@@ -56,9 +58,27 @@ Dockerfile(`apps/web/Dockerfile`) builder 스테이지에 `DOCKER_BUILD=true`가
 
 ---
 
+## Web 배포 (EC2)
+
+`main` 푸시 시 `apps/web/**` 등 path filter에 걸리면 `deploy-web.yml`이 자동 실행됩니다 (수동: `workflow_dispatch`).
+
+1. SSM의 `NEXT_PUBLIC_API_URL`, `NEXT_PUBLIC_API_SECRET`을 build-arg로 주입해 이미지 빌드
+2. ECR `web:latest`, `web:{sha}` 푸시
+3. EC2 SSH 접속 → `/home/ec2-user/app`에서 `docker compose pull && docker compose up -d`
+
+EC2 구성 (`infra/terraform/envs/prod/ec2-web-init.sh`가 최초 부팅 시 생성):
+
+| 항목 | 내용 |
+|------|------|
+| `/home/ec2-user/app/docker-compose.yml` | `nginx`(80/443, TLS 종단) + `web`(Next.js, 3001) |
+| `/home/ec2-user/app/nginx/conf.d/web.conf` | 80 → 443 리다이렉트, `web:3001` 리버스 프록시 |
+| `web.service` (systemd) | 시작 시 SSM → `/etc/web.env` 재생성 → ECR 로그인 → `docker compose pull` → `docker compose up` |
+
+---
+
 ## EC2 SSL 인증서 발급 (최초 1회 / 도메인 변경 시)
 
-EC2에 직접 nginx를 띄우는 구조라 ACM 대신 Let's Encrypt(certbot)를 사용합니다.
+ALB·CloudFront 없이 EC2의 nginx 컨테이너가 TLS를 종단하는 구조라 ACM 대신 Let's Encrypt(certbot)를 사용합니다.
 
 ### 사전 조건
 
@@ -68,7 +88,7 @@ EC2에 직접 nginx를 띄우는 구조라 ACM 대신 Let's Encrypt(certbot)를 
 ### 인증서 발급
 
 ```bash
-# EC2 SSH 접속 후
+# EC2 접속 후 (SSH 또는 Session Manager)
 
 # 1. certbot 설치
 sudo dnf install -y python3-certbot
@@ -127,45 +147,51 @@ aws ssm put-parameter --name "shorts.prod.NEXTAUTH_URL" \
 
 aws ssm put-parameter --name "shorts.prod.WEB_ORIGIN" \
   --value "https://shortsautomation.com" --type String --overwrite --region ap-northeast-2
+
+aws ssm put-parameter --name "shorts.prod.YOUTUBE_REDIRECT_URI" \
+  --value "https://shortsautomation.com/api/auth/youtube/callback" --type String --overwrite --region ap-northeast-2
 ```
 
 Google Cloud Console → OAuth 2.0 클라이언트 → 승인된 리디렉션 URI에도 추가:
 ```
 https://shortsautomation.com/api/auth/callback/google
+https://shortsautomation.com/api/auth/youtube/callback
 ```
+
+`NEXTAUTH_URL`은 `sudo systemctl restart web`으로 `/etc/web.env`를 재생성해야 반영되고, `WEB_ORIGIN`·`YOUTUBE_REDIRECT_URI`는 API 재배포 시 반영됩니다.
 
 ---
 
-## API 배포 (Lambda, Phase 4+)
+## API 배포 (Lambda)
 
-GitHub Actions `deploy-api.yml` 워크플로우 (`workflow_dispatch` 트리거)가 배포를 자동으로 수행합니다.
+`main` 푸시 시 `apps/api/src/**` 등 path filter에 걸리면 `deploy-api.yml`이 자동 실행됩니다 (수동: `workflow_dispatch`).
 
-수동 배포가 필요한 경우:
+수동 배포가 필요한 경우 — 워크플로우와 동일하게 shared 빌드 후 Prisma 엔진을 복사하고 배포합니다:
 
 ```bash
-cd apps/api
-npx serverless deploy
+pnpm --filter @shorts/shared prisma:generate && pnpm --filter @shorts/shared build
+cp "$(find node_modules/.pnpm -name 'libquery_engine-rhel-openssl-3.0.x.so.node' | head -1)" apps/api/
+cd apps/api && npx serverless@3 deploy --stage prod
 ```
 
 > **ESM 주의**: `@shorts/api`, `@shorts/shared`를 포함한 모든 패키지가 `"type": "module"` (ESM)로 전환되어 있습니다. `require()` 또는 CommonJS 전용 라이브러리 추가 시 호환성을 확인하세요. `tsconfig.base.json`의 `module`은 `NodeNext`로 고정합니다.
 
-### API Gateway URL 확인 및 OAuth 설정
+### API Gateway URL 반영
 
 배포 후 터미널 출력 또는 AWS 콘솔에서 API Gateway URL 확인 후:
 
 1. SSM 업데이트:
    ```bash
-   aws ssm put-parameter --name "shorts.prod.YOUTUBE_REDIRECT_URI" \
-     --value "https://{api-id}.execute-api.ap-northeast-2.amazonaws.com/auth/youtube/callback" \
-     --type String --overwrite
-   aws ssm put-parameter --name "shorts.prod.WEB_ORIGIN" \
-     --value "https://{web-url}" --type String --overwrite
    aws ssm put-parameter --name "shorts.prod.API_BASE_URL" \
      --value "https://{api-id}.execute-api.ap-northeast-2.amazonaws.com" \
      --type String --overwrite
+   aws ssm put-parameter --name "shorts.prod.NEXT_PUBLIC_API_URL" \
+     --value "https://{api-id}.execute-api.ap-northeast-2.amazonaws.com" \
+     --type String --overwrite
    ```
-2. Google Cloud Console → OAuth 2.0 클라이언트 → 승인된 리디렉션 URI에 추가
-3. `serverless deploy` 재실행 (YOUTUBE_REDIRECT_URI, API_BASE_URL 적용)
+2. API·scheduler-worker 재배포 (`API_BASE_URL` 적용), Web 재배포 (`NEXT_PUBLIC_API_URL`은 빌드 시 주입)
+
+YouTube OAuth 콜백은 Web 도메인(`https://shortsautomation.com/api/auth/youtube/callback`)의 Next.js 프록시가 받아 API로 전달하므로, API URL이 바뀌어도 `YOUTUBE_REDIRECT_URI`와 GCP 승인 URI는 그대로 둡니다.
 
 > **SSM 업데이트 즉시 반영 주의**: Serverless Framework는 배포 시 SSM 값을 Lambda 환경변수에 직접 복사한다. SSM 업데이트 후 Lambda 재배포 없이 즉시 반영하려면 `aws lambda update-function-configuration`으로 직접 수정해야 한다.
 > ```bash
@@ -178,24 +204,21 @@ npx serverless deploy
 
 ---
 
-## Lambda Workers 배포 (Serverless Framework, Phase 4+)
+## Lambda Workers 배포 (Serverless Framework)
 
-GitHub Actions `deploy-workers.yml` 워크플로우가 Workers를 배포합니다. matrix 전략으로 script/tts/subtitle/upload는 `npx serverless deploy`, render는 Docker build → ECR push → serverless deploy 순으로 실행됩니다.
+`main` 푸시 시 `apps/workers/**/src/**` 등 path filter에 걸리면 `deploy-workers.yml`이 자동 실행됩니다 (수동: `workflow_dispatch`). matrix로 script/tts/subtitle/upload/scheduler/dlq-notifier/cloudwatch-notifier를 배포하고, render는 Docker build → ECR push → `serverless deploy` 순으로 배포합니다.
 
-수동 배포가 필요한 경우:
+수동 배포가 필요한 경우 — esbuild Worker는 API와 동일하게 shared 빌드 후 Prisma 엔진을 해당 Worker 디렉토리에 복사하고 배포합니다:
 
 ```bash
-# script, tts, subtitle, upload Worker (esbuild)
-cd apps/workers/script   && npx serverless deploy --stage prod
-cd apps/workers/tts      && npx serverless deploy --stage prod
-cd apps/workers/subtitle && npx serverless deploy --stage prod
-cd apps/workers/upload   && npx serverless deploy --stage prod
+# esbuild Worker: script, tts, subtitle, upload, scheduler, dlq-notifier, cloudwatch-notifier
+cd apps/workers/script && npx serverless@3 deploy --stage prod
 
-# render-worker (Lambda Container Image — Docker 빌드 후 배포)
-docker build -f apps/workers/render/Dockerfile \
+# render-worker (Lambda Container Image) — pnpm --filter @shorts/render-worker build 후 진행
+docker build --platform linux/amd64 --provenance=false -f apps/workers/render/Dockerfile \
   -t 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker:latest .
 docker push 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com/render-worker:latest
-cd apps/workers/render && npx serverless deploy --stage prod
+cd apps/workers/render && npx serverless@3 deploy --stage prod
 ```
 
 ### ECR 로그인 (Windows)
@@ -209,7 +232,7 @@ $pass = $decoded.Split(':')[1]
 docker login --username AWS --password $pass 682251233572.dkr.ecr.ap-northeast-2.amazonaws.com
 ```
 
-> **P4-2 완료**: 각 Worker 디렉토리에 `serverless.yml`이 존재합니다. SSM 파라미터 이름 형식: `shorts.prod.{KEY}` (점 구분자, 슬래시 없음).
+> SSM 파라미터 이름 형식: `shorts.prod.{KEY}` (점 구분자, 슬래시 없음).
 
 ---
 
@@ -234,21 +257,11 @@ DATABASE_URL=postgresql://postgres:postgres@localhost:5432/shorts \
 pnpm --filter @shorts/shared prisma:migrate
 ```
 
-### 최근 마이그레이션 이력
-
-| 파일 | 내용 |
-|------|------|
-| `20260511123832_init` | 초기 스키마 생성 |
-| `20260519000000_add_watch_time_minutes` | `ChannelAnalytics.watchTimeMinutes` 컬럼 추가 |
-| `20260520000000_add_privacy_status` | `Job.privacyStatus` 컬럼 추가 (기본값 `public`) |
-| `20260525152454_add_scheduler_fields` | `Channel.schedulerEnabled`, `schedulerCategory`, `uploadSchedule` 컬럼 추가 |
-| `20260525180000_add_job_thumbnail_url` | `Job.thumbnailUrl` 컬럼 추가 |
-| `20260525190000_drop_channel_analytics` | `ChannelAnalytics` 테이블 삭제 |
-| `20260525200000_restore_channel_analytics` | `ChannelAnalytics` 테이블 복원 |
+스키마와 마이그레이션 목록은 [데이터 모델](../../architecture/data-model.md)을 참고하세요.
 
 ---
 
-## Supabase 연결 (Phase 3, P3-1~P3-2)
+## Supabase 연결
 
 ### 1. 연결 문자열 확인
 
@@ -282,15 +295,17 @@ datasource db {
 
 ```bash
 # DIRECT_URL을 사용해 마이그레이션 적용
-pnpm prisma migrate deploy
+pnpm --filter @shorts/shared prisma:migrate
 ```
 
-### 4. Secrets Manager에 저장
+### 4. SSM Parameter Store에 저장
+
+Lambda는 배포 시 `${ssm:shorts.prod.DATABASE_URL}`로 주입받습니다. `DIRECT_URL`은 마이그레이션 전용이라 Lambda에 넣지 않습니다.
 
 ```bash
-aws secretsmanager create-secret \
-  --name "shorts/prod/database" \
-  --secret-string '{"DATABASE_URL":"...","DIRECT_URL":"..."}'
+aws ssm put-parameter --name "shorts.prod.DATABASE_URL" \
+  --value "postgresql://postgres.[ref]:[password]@aws-1-ap-northeast-2.pooler.supabase.com:6543/postgres?connection_limit=1" \
+  --type SecureString --overwrite --region ap-northeast-2
 ```
 
 ---
@@ -300,11 +315,11 @@ aws secretsmanager create-secret \
 ### Lambda 롤백 (Serverless Framework)
 
 ```bash
-# 이전 배포 목록 확인
-serverless deploy list --stage prod
+# 이전 배포 목록 확인 (해당 서비스 디렉토리에서 실행)
+npx serverless@3 deploy list --stage prod
 
 # 특정 타임스탬프로 롤백
-serverless rollback --timestamp 2024-01-15T12:00:00.000Z --stage prod
+npx serverless@3 rollback --timestamp 2024-01-15T12:00:00.000Z --stage prod
 ```
 
 ---
@@ -330,16 +345,6 @@ serverless rollback --timestamp 2024-01-15T12:00:00.000Z --stage prod
 - Provisioned Concurrency 설정 (비용 증가 주의)
 - 또는 SQS Visibility Timeout을 Lambda 타임아웃의 2배로 설정 (현재 표준 적용됨)
 - Bundle 사이즈 최소화 (`esbuild` 번들링, `devDependencies` 제외)
-
-## pnpm 스크립트를 통한 Lambda Worker 배포
-
-각 Worker에 `deploy:prod` 스크립트가 정의되어 있는 경우 루트에서도 배포 가능합니다.
-
-```bash
-pnpm --filter @shorts/script-worker deploy:prod
-pnpm --filter @shorts/tts-worker deploy:prod
-pnpm --filter @shorts/upload-worker deploy:prod
-```
 
 ---
 
