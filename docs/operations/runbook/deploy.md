@@ -90,13 +90,34 @@ sudo docker compose start nginx
 
 인증서 발급 위치: `/etc/letsencrypt/live/shortsautomation.com/`
 
-### 자동 갱신 확인
+### 자동 갱신
 
-`ec2-web-init.sh`에 아래 cron이 이미 등록되어 있습니다:
+standalone 방식은 갱신 때도 certbot이 80포트를 직접 열어야 하므로, nginx 컨테이너가 80포트를 점유한 상태에서는 `certbot renew`가 실패합니다. 그래서 `ec2-web-init.sh`가 갱신 시점에만 nginx를 내렸다 올리는 훅과 cron을 등록합니다:
 
+| 파일 | 내용 |
+|------|------|
+| `/etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh` | `docker compose -f /home/ec2-user/app/docker-compose.yml stop nginx` |
+| `/etc/letsencrypt/renewal-hooks/post/start-nginx.sh` | `docker compose -f /home/ec2-user/app/docker-compose.yml start nginx` |
+| `/etc/cron.d/certbot-renew` | `0 0,12 * * * root certbot renew --quiet` |
+
+훅은 실제 갱신 대상이 있을 때만 실행되므로 nginx 중단은 갱신 시점(약 60일 주기)에 수 초뿐입니다.
+
+`user_data`는 최초 부팅 시 1회만 실행되고 Terraform에서 `ignore_changes` 처리되어 있으므로, 기존 인스턴스에는 직접 적용합니다:
+
+```bash
+sudo mkdir -p /etc/letsencrypt/renewal-hooks/pre /etc/letsencrypt/renewal-hooks/post
+printf '#!/bin/bash\ndocker compose -f /home/ec2-user/app/docker-compose.yml stop nginx\n' \
+  | sudo tee /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh
+printf '#!/bin/bash\ndocker compose -f /home/ec2-user/app/docker-compose.yml start nginx\n' \
+  | sudo tee /etc/letsencrypt/renewal-hooks/post/start-nginx.sh
+sudo chmod +x /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh /etc/letsencrypt/renewal-hooks/post/start-nginx.sh
+echo "0 0,12 * * * root certbot renew --quiet" | sudo tee /etc/cron.d/certbot-renew
+
+# 갱신 경로 검증 — 스테이징 서버로 훅까지 실행 (nginx 수 초 중단)
+sudo certbot renew --dry-run
 ```
-0 0,12 * * * root certbot renew --quiet && docker compose -f /home/ec2-user/app/docker-compose.yml exec nginx nginx -s reload
-```
+
+인증서가 이미 만료됐다면 훅 적용 후 `sudo certbot renew`로 즉시 갱신됩니다.
 
 ### SSM 파라미터 업데이트 (도메인 변경 시)
 

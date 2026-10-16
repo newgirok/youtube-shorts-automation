@@ -132,6 +132,20 @@ UNIT
 systemctl daemon-reload
 systemctl enable web
 
-# certbot 자동 갱신 — 갱신 후 nginx 컨테이너 reload
-echo "0 0,12 * * * root certbot renew --quiet && docker compose -f ${APP_DIR}/docker-compose.yml exec nginx nginx -s reload" \
-  > /etc/cron.d/certbot-renew
+# certbot 자동 갱신 — standalone 인증은 80포트를 직접 열어야 하므로 갱신 때만 nginx 컨테이너를 내렸다 올림
+# (pre/post 훅은 실제 갱신 대상이 있을 때만 실행되고, post 훅은 갱신 실패 시에도 실행됨)
+mkdir -p /etc/letsencrypt/renewal-hooks/pre /etc/letsencrypt/renewal-hooks/post
+
+cat > /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh << HOOK
+#!/bin/bash
+docker compose -f ${APP_DIR}/docker-compose.yml stop nginx
+HOOK
+
+cat > /etc/letsencrypt/renewal-hooks/post/start-nginx.sh << HOOK
+#!/bin/bash
+docker compose -f ${APP_DIR}/docker-compose.yml start nginx
+HOOK
+
+chmod +x /etc/letsencrypt/renewal-hooks/pre/stop-nginx.sh /etc/letsencrypt/renewal-hooks/post/start-nginx.sh
+
+echo "0 0,12 * * * root certbot renew --quiet" > /etc/cron.d/certbot-renew
